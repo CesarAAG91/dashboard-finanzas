@@ -1,0 +1,3815 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+
+<!--
+  viewport-fit=cover permite que el contenido use toda la pantalla del iPhone,
+  incluyendo la zona del notch, en vez de dejar franjas negras.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+<!--
+  Estas tres meta tags son las que le dicen a iOS que, cuando el usuario agregue
+  esta página a su pantalla de inicio, la abra como una aplicación de pantalla
+  completa (sin la barra de direcciones de Safari) en vez de como un sitio web.
+  Sin ellas, "Agregar a inicio" solo crea un acceso directo que abre Safari normal.
+-->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ciclo">
+
+<!--
+  El ícono que usa iOS para el acceso directo en pantalla de inicio.
+-->
+<link rel="apple-touch-icon" href="icon.png">
+
+<!--
+  El manifest es el equivalente de Android/Chrome a las meta tags de Apple:
+  le dice al navegador cómo se llama la app, con qué ícono y que debe abrir
+  en su propia ventana (display: standalone) en vez de como pestaña normal.
+-->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f766e">
+
+<title>Ciclo</title>
+
+<style>
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background-color: #0f172a;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 16px;
+    max-width: 640px;
+  }
+  h1 {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  p.descripcion {
+    color: #94a3b8;
+    font-size: 14px;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  section {
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #1e293b;
+  }
+  label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #cbd5e1;
+  }
+  label input,
+  label select {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+    padding: 8px;
+    background-color: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  label input[type="checkbox"] {
+    display: inline-block;
+    width: auto;
+    margin-top: 0;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  button {
+    background-color: #0f766e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:active {
+    background-color: #0d5f58;
+  }
+  .pista {
+    color: #64748b;
+    font-size: 12px;
+    margin: -4px 0 12px 0;
+  }
+  .costo-credito {
+    color: #f87171;
+    font-weight: bold;
+    margin: 8px 0;
+    min-height: 20px;
+    font-size: 14px;
+  }
+  ul.lista-items {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 0 0;
+  }
+  ul.lista-items li {
+    padding: 8px 0;
+    border-bottom: 1px solid #1e293b;
+    font-size: 14px;
+  }
+  ul.lista-items li.vacio {
+    color: #64748b;
+    font-style: italic;
+    border-bottom: none;
+  }
+  .detalle {
+    color: #94a3b8;
+    font-size: 12px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    height: 260px;
+    background-color: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .botones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  #mensajeEstado {
+    margin-top: 12px;
+    font-size: 13px;
+    min-height: 18px;
+  }
+  details summary {
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  /*
+    Captura (angosta, celular) y Análisis/Configuración (ancha, laptop)
+    nunca se muestran las dos a la vez. Dentro de la pantalla ancha,
+    Análisis y Configuración son pestañas — mostrarPestanaAncha() decide
+    cuál de las dos se ve, con Análisis por default.
+  */
+  #vistaCaptura {
+    display: block;
+  }
+  #vistaAncha {
+    display: none;
+  }
+  #vistaAnalisis {
+    display: block;
+  }
+  #vistaConfiguracion {
+    display: none;
+  }
+  @media (min-width: 641px) {
+    #vistaCaptura {
+      display: none;
+    }
+    #vistaAncha {
+      display: block;
+    }
+  }
+
+  /* Botones grandes para elegir categoría, subcategoría, fuente y tarjeta
+     de un toque, sin teclado alfabético. */
+  .botones-grandes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 16px 0;
+  }
+  .boton-grande {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 100px;
+    padding: 16px 8px;
+    font-size: 15px;
+    background-color: #1e293b;
+    color: #e2e8f0;
+    border: 2px solid #334155;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .boton-grande.seleccionado {
+    border-color: #0f766e;
+    background-color: #0f766e55;
+  }
+  .monto-grande {
+    font-size: 22px;
+    text-align: center;
+  }
+  .fila-pendiente {
+    cursor: pointer;
+  }
+  .pendiente-urgente {
+    border-left: 3px solid #f87171;
+    padding-left: 8px;
+  }
+  .confirmacion-pendiente,
+  .edicion-categoria,
+  .edicion-recurrente,
+  .edicion-deuda,
+  .edicion-tarjeta,
+  .edicion-ingreso {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #1e293b;
+    border-radius: 8px;
+  }
+  .avance-semanal-item {
+    margin-bottom: 14px;
+  }
+  .estado-deuda-item {
+    margin-bottom: 14px;
+  }
+  .barra-fondo {
+    background-color: #1e293b;
+    border-radius: 6px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .barra-relleno {
+    height: 100%;
+    background-color: #0f766e;
+  }
+  .barra-relleno.excedido {
+    background-color: #f87171;
+  }
+
+  /* Semáforo del ciclo: verde/amarillo/rojo son los umbrales de SPEC.md;
+     gris es "todavía no hay ingreso capturado para comparar". */
+  .semaforo {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .semaforo-verde {
+    background-color: #0f766e55;
+    color: #5eead4;
+  }
+  .semaforo-amarillo {
+    background-color: #eab30855;
+    color: #fde047;
+  }
+  .semaforo-rojo {
+    background-color: #f8717155;
+    color: #fca5a5;
+  }
+  .semaforo-gris {
+    background-color: #64748b55;
+    color: #cbd5e1;
+  }
+
+  /* Calendario de Análisis: grid de 7 columnas, un día por celda. Los
+     bordes reusan los mismos colores que el resto de la app: rojo de
+     pendiente urgente, verde de barra de avance, gris punteado para lo
+     que todavía es una proyección, no un compromiso real. */
+  .calendario-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .calendario-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .dia-calendario {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 6px 4px;
+    min-height: 44px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .dia-calendario.dia-vacio {
+    visibility: hidden;
+    cursor: default;
+  }
+  .dia-calendario.tiene-pendiente {
+    border-color: #94a3b8;
+  }
+  .dia-calendario.tiene-pendiente-urgente {
+    border-color: #f87171;
+  }
+  .dia-calendario.tiene-pagado {
+    border-color: #0f766e;
+  }
+  .dia-calendario.tiene-proyectado {
+    border-style: dashed;
+    border-color: #64748b;
+  }
+  .dia-calendario.dia-seleccionado {
+    outline: 2px solid #e2e8f0;
+  }
+
+  /* Trayectoria del semáforo (solo ciclo actual real): el fondo de cada día
+     es la salud financiera acumulada a esa fecha; el borde (arriba) sigue
+     indicando el estado de sus compromisos — son dos preguntas distintas. */
+  .dia-calendario.dia-semaforo-verde {
+    background-color: #0f766e55;
+  }
+  .dia-calendario.dia-semaforo-amarillo {
+    background-color: #eab30855;
+  }
+  .dia-calendario.dia-semaforo-rojo {
+    background-color: #f8717155;
+  }
+  .panel-detalle-dia {
+    margin-top: 12px;
+    padding: 10px;
+    background-color: #1e293b;
+    border-radius: 8px;
+  }
+  .item-dia {
+    margin-bottom: 10px;
+  }
+
+  /* Gráfica de trayectoria del semáforo: mismos colores de estado que
+     .semaforo-*, aplicados como trazo de línea en vez de fondo de chip. */
+  .grafica-trayectoria {
+    position: relative;
+    margin-top: 12px;
+    padding: 10px;
+    background-color: #1e293b;
+    border-radius: 8px;
+  }
+  .grafica-trayectoria svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .grafica-eje-texto {
+    fill: #94a3b8;
+    font-size: 10px;
+  }
+  .grafica-linea-referencia {
+    stroke: #334155;
+    stroke-width: 1;
+  }
+  .grafica-linea-hoy {
+    stroke: #64748b;
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+  }
+  .grafica-crosshair {
+    stroke: #e2e8f0;
+    stroke-width: 1;
+    pointer-events: none;
+    display: none;
+  }
+  .grafica-leyenda {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+  .grafica-leyenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .grafica-leyenda .marca {
+    width: 12px;
+    height: 2px;
+    border-radius: 1px;
+  }
+  .grafica-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background-color: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+    display: none;
+    transform: translate(-50%, -100%);
+  }
+  .grafica-tooltip .valor {
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Ciclo</h1>
+  <p class="descripcion">
+    En pantalla angosta (celular) se ve la Captura: pendientes, gasto nuevo
+    y el resumen de hoy. En pantalla ancha (laptop) se ven dos pestañas:
+    Análisis (balance del ciclo, próximos pagos y el calendario, con
+    proyección de los próximos ciclos) y Configuración (categorías, deudas,
+    tarjetas, recurrentes, ingresos y presupuesto semanal).
+  </p>
+
+  <!-- Aviso de respaldo: fuera de vistaCaptura y vistaAncha para que se -->
+  <!-- vea sin importar el ancho de pantalla ni la pestaña activa. Sin  -->
+  <!-- estilo todavía — solo el dato y la lógica de mostrar/ocultar. -->
+  <p id="avisoRespaldo" style="display: none;"></p>
+
+  <!-- ============================================================ -->
+  <!-- CAPTURA (pantalla angosta)                                     -->
+  <!-- ============================================================ -->
+  <div id="vistaCaptura">
+
+    <!-- PENDIENTES -->
+    <section>
+      <h2>Pendientes</h2>
+      <ul class="lista-items" id="listaPendientes"></ul>
+    </section>
+
+    <!-- GASTO NUEVO -->
+    <section>
+      <h2>Gasto nuevo</h2>
+
+      <p class="pista">Categoría</p>
+      <div class="botones-grandes" id="botonesCategoriaGasto"></div>
+
+      <div id="pasoSubcategoriaGasto" style="display: none;">
+        <p class="pista">Subcategoría</p>
+        <div class="botones-grandes" id="botonesSubcategoriaGasto"></div>
+      </div>
+
+      <div id="pasoDetalleGasto" style="display: none;">
+        <label>Monto
+          <input type="number" inputmode="decimal" min="0" step="0.01" id="montoGastoNuevo" class="monto-grande">
+        </label>
+
+        <p class="pista">Fuente</p>
+        <div class="botones-grandes" id="botonesFuenteGasto">
+          <button type="button" class="boton-grande" data-fuente="debito">Débito</button>
+          <button type="button" class="boton-grande" data-fuente="credito">Crédito</button>
+        </div>
+
+        <div id="pasoTarjetaGasto" style="display: none;">
+          <p class="pista">Tarjeta</p>
+          <div class="botones-grandes" id="botonesTarjetaGasto"></div>
+        </div>
+
+        <label>Descripción (opcional)
+          <input type="text" id="descripcionGastoNuevo">
+        </label>
+
+        <button type="button" id="botonGuardarGastoNuevo">Guardar gasto</button>
+      </div>
+    </section>
+
+    <!-- HOY -->
+    <section>
+      <h2>Hoy</h2>
+      <ul class="lista-items" id="listaGastosDeHoy"></ul>
+
+      <h2>Avance de la semana</h2>
+      <div id="contenedorAvanceSemanal"></div>
+    </section>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ANÁLISIS Y CONFIGURACIÓN (pantalla ancha)                      -->
+  <!-- ============================================================ -->
+  <div id="vistaAncha">
+
+    <div class="botones-grandes">
+      <button type="button" class="boton-grande seleccionado" data-pestana="analisis">Análisis</button>
+      <button type="button" class="boton-grande" data-pestana="configuracion">Configuración</button>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- ANÁLISIS                                                       -->
+    <!-- ============================================================ -->
+    <div id="vistaAnalisis">
+
+      <section id="seccionBalanceCiclo">
+        <h2>Balance del ciclo</h2>
+        <div id="contenedorBalanceCiclo"></div>
+        <div id="contenedorTrayectoriaSemaforo"></div>
+      </section>
+
+      <section>
+        <h2>Próximos pagos</h2>
+        <ul class="lista-items" id="listaProximosPagosAnalisis"></ul>
+      </section>
+
+      <section id="seccionMovimientos">
+        <h2>Movimientos del ciclo</h2>
+        <ul class="lista-items" id="listaMovimientosCiclo"></ul>
+      </section>
+
+      <section id="seccionCalendario">
+        <h2>Calendario</h2>
+        <div id="contenedorCalendario"></div>
+      </section>
+
+      <section id="seccionDeuda">
+        <h2>Deuda</h2>
+        <div id="contenedorDeuda"></div>
+      </section>
+
+    </div>
+
+  <!-- ============================================================ -->
+  <!-- CONFIGURACIÓN                                                  -->
+  <!-- ============================================================ -->
+  <div id="vistaConfiguracion">
+
+  <!-- ============================================================ -->
+  <!-- CATEGORÍAS                                                     -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Categorías</h2>
+    <form id="formCategoria">
+      <label>Nombre de la categoría (la función que satisface el gasto)
+        <input type="text" id="nombreCategoria" required>
+      </label>
+      <label>Subcategorías, separadas por coma (el vehículo del gasto)
+        <input type="text" id="subcategoriasCategoria" placeholder="Gasolina, Didi / Uber" required>
+      </label>
+      <label>
+        <input type="checkbox" id="esVariableSemanalCategoria">
+        Recibe presupuesto semanal (comida, transporte, entretenimiento, etc.)
+      </label>
+      <button type="submit">Agregar categoría</button>
+    </form>
+    <ul class="lista-items" id="listaCategorias"></ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- TARJETAS                                                       -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Tarjetas de crédito</h2>
+    <form id="formTarjeta">
+      <label>Nombre
+        <input type="text" id="nombreTarjeta" required>
+      </label>
+      <label>Día de corte (del 1 al 31)
+        <input type="number" id="diaCorteTarjeta" min="1" max="31" required>
+      </label>
+      <label>Día de pago (del 1 al 31)
+        <input type="number" id="diaPagoTarjeta" min="1" max="31" required>
+      </label>
+      <label>Línea de crédito total
+        <input type="number" id="lineaTotalTarjeta" min="0" step="0.01" required>
+      </label>
+      <p class="pista">La línea total es solo informativa: nunca se suma al disponible.</p>
+      <button type="submit">Agregar tarjeta</button>
+    </form>
+    <ul class="lista-items" id="listaTarjetas"></ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- DEUDAS                                                         -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Deudas</h2>
+    <form id="formDeuda">
+      <label>Nombre
+        <input type="text" id="nombreDeuda" required>
+      </label>
+      <label>Tipo
+        <select id="tipoDeuda">
+          <option value="prestamo">Préstamo</option>
+          <option value="msi">MSI (meses sin intereses)</option>
+        </select>
+      </label>
+      <label>Monto solicitado
+        <input type="number" id="montoSolicitadoDeuda" min="0" step="0.01" required>
+      </label>
+      <label>Monto por pago
+        <input type="number" id="montoPorPagoDeuda" min="0" step="0.01" required>
+      </label>
+      <label>Frecuencia de pago
+        <select id="frecuenciaDeuda">
+          <option value="quincenal">Quincenal</option>
+          <option value="mensual">Mensual</option>
+        </select>
+      </label>
+      <label>Número total de pagos
+        <input type="number" id="pagosTotalesDeuda" min="1" step="1" required>
+      </label>
+      <label>Pagos ya realizados (0 si es nueva)
+        <input type="number" id="pagosRealizadosDeuda" min="0" step="1" value="0">
+      </label>
+      <label>Fecha del primer pago
+        <input type="date" id="fechaPrimerPagoDeuda" required>
+      </label>
+      <label>Saldo real según el banco (opcional)
+        <input type="number" id="saldoManualDeuda" min="0" step="0.01">
+      </label>
+      <label>Fecha de ese saldo
+        <input type="date" id="fechaSaldoManualDeuda">
+      </label>
+      <p class="pista">El saldo real es opcional: solo hace falta si hiciste abonos
+        a capital extra y el saldo que calcula la app ya no coincide con tu estado
+        de cuenta. Si lo llenas, reemplaza al saldo calculado. El pago fijo mensual
+        no se ve afectado.</p>
+      <p class="pista">Los pagos de deuda siempre se registran como débito.</p>
+      <div class="costo-credito" id="previewCostoCredito"></div>
+      <button type="submit">Agregar deuda</button>
+    </form>
+    <ul class="lista-items" id="listaDeudas"></ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- RECURRENTES                                                    -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Gastos recurrentes</h2>
+    <form id="formRecurrente">
+      <label>Nombre
+        <input type="text" id="nombreRecurrente" required>
+      </label>
+      <label>Categoría
+        <select id="categoriaIdRecurrente" required></select>
+      </label>
+      <label>Subcategoría
+        <select id="subcategoriaRecurrente" required></select>
+      </label>
+      <p class="pista">Si no ves categorías arriba, agrega una primero en la sección de Categorías.</p>
+      <label>Frecuencia
+        <select id="frecuenciaRecurrente">
+          <option value="mensual">Mensual</option>
+          <option value="bimestral">Bimestral</option>
+          <option value="quincenal">Quincenal</option>
+        </select>
+      </label>
+      <label>Día del mes en que cae (del 1 al 31)
+        <input type="number" id="diaBaseRecurrente" min="1" max="31" required>
+      </label>
+      <div id="contenedorCicloDeInicio" style="display: none;">
+        <label>¿A partir de qué ciclo empieza?
+          <select id="cicloDeInicioRecurrente"></select>
+        </label>
+      </div>
+      <label>Monto estimado
+        <input type="number" id="montoEstimadoRecurrente" min="0" step="0.01" required>
+      </label>
+      <label>Fuente
+        <select id="fuenteRecurrente">
+          <option value="debito">Débito</option>
+          <option value="credito">Crédito</option>
+        </select>
+      </label>
+      <label>Vigente hasta (opcional)
+        <input type="date" id="vigenciaHastaRecurrente">
+      </label>
+      <p class="pista">Solo para compromisos con plazo forzoso (un seguro de 12 meses, una membresía con contrato). Déjalo vacío si se repite indefinidamente, como Totalplay.</p>
+      <label>Destinatario (opcional)
+        <input type="text" id="destinatarioRecurrente" placeholder="Casa 1, Casa 2">
+      </label>
+      <p class="pista">A quién o a qué corresponde, si quieres poder sumarlo aparte (ej. dos recurrentes de "Luz" en casas distintas). Déjalo vacío si no aplica.</p>
+      <button type="submit">Agregar recurrente</button>
+    </form>
+    <ul class="lista-items" id="listaRecurrentes"></ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- COMPROMISO ÚNICO                                               -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Compromiso único</h2>
+    <p class="pista">
+      Para una obligación de una sola vez, sin repetición (una colegiatura,
+      un pago aislado). No tiene regla detrás: se captura directamente como
+      el compromiso mismo.
+    </p>
+    <form id="formCompromisoUnico">
+      <label>Nombre
+        <input type="text" id="nombreCompromisoUnico" required>
+      </label>
+      <label>Fecha
+        <input type="date" id="fechaCompromisoUnico" required>
+      </label>
+      <label>Monto estimado
+        <input type="number" id="montoEstimadoCompromisoUnico" min="0" step="0.01" required>
+      </label>
+      <label>Categoría (opcional)
+        <select id="categoriaIdCompromisoUnico">
+          <option value="">Sin categoría</option>
+        </select>
+      </label>
+      <label>Subcategoría
+        <select id="subcategoriaCompromisoUnico" disabled></select>
+      </label>
+      <p class="pista">Elige una categoría solo si este compromiso debe contar en el avance semanal de una categoría variable. Si no aplica (como una colegiatura), déjalo en "Sin categoría".</p>
+      <label>Destinatario (opcional)
+        <input type="text" id="destinatarioCompromisoUnico" placeholder="Casa 1">
+      </label>
+      <p class="pista">A quién o a qué corresponde, si quieres poder sumarlo junto con otros gastos del mismo destinatario. Déjalo vacío si no aplica.</p>
+      <button type="submit">Agregar compromiso único</button>
+    </form>
+    <ul class="lista-items" id="listaCompromisosUnicos"></ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- INGRESOS                                                       -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Ingresos</h2>
+    <form id="formIngreso">
+      <label>Fecha
+        <input type="date" id="fechaIngreso" required>
+      </label>
+      <label>Monto
+        <input type="number" id="montoIngreso" min="0" step="0.01" required>
+      </label>
+      <label>Tipo
+        <select id="tipoIngreso">
+          <option value="mensual">Mensual</option>
+          <option value="extra">Extra</option>
+        </select>
+      </label>
+      <label>Nota (opcional)
+        <input type="text" id="notaIngreso">
+      </label>
+      <button type="submit">Agregar ingreso</button>
+    </form>
+    <ul class="lista-items" id="listaIngresos"></ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- INGRESO RECURRENTE ESPERADO (para proyectar ciclos futuros)    -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Ingreso mensual esperado</h2>
+    <p class="pista">No es un ingreso real capturado — es el monto que se
+      asume para proyectar ciclos futuros en Análisis, hasta que tú lo
+      cambies a mano. El ingreso real de cada ciclo se sigue capturando
+      arriba, en Ingresos, cuando de verdad cae.</p>
+    <div id="contenedorIngresoRecurrenteEsperado"></div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PRESUPUESTO SEMANAL                                            -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Presupuesto semanal del ciclo actual</h2>
+    <div id="contenedorPresupuestoSemanal"></div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- COMPROMISOS GENERADOS (vista de todos los compromisos, pagados -->
+  <!-- e pendientes; la pantalla de captura de Pendientes está arriba) -->
+  <!-- ============================================================ -->
+  <section>
+    <h2>Compromisos del ciclo actual</h2>
+    <p class="pista">Se generan solos a partir de recurrentes, deudas y tarjetas.</p>
+    <ul class="lista-items" id="listaCompromisos"></ul>
+  </section>
+
+  </div>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- DATOS GUARDADOS (depuración y respaldo)                       -->
+  <!-- ============================================================ -->
+  <details>
+    <summary>Ver datos guardados (JSON) / exportar / importar</summary>
+    <textarea id="areaDatos"></textarea>
+    <div class="botones">
+      <button id="botonGuardar">Guardar cambios</button>
+      <button id="botonExportar">Exportar JSON</button>
+      <button id="botonImportar">Importar JSON</button>
+      <input type="file" id="inputArchivo" accept="application/json" style="display: none;">
+    </div>
+    <div id="mensajeEstado"></div>
+  </details>
+
+<script>
+
+  // ============================================================
+  // ALMACENAMIENTO: estructura de datos, lectura y guardado
+  // ============================================================
+  //
+  // Todo lo que el usuario captura vive en un solo objeto JSON dentro de
+  // localStorage, un espacio de almacenamiento que el navegador reserva por
+  // sitio y que persiste aunque se cierre la pestaña o la app.
+
+  const CLAVE_ALMACENAMIENTO = "datosDashboardFinanzas";
+
+  // ============================================================
+  // CONSTANTES DE NEGOCIO
+  // ============================================================
+  //
+  // Nombradas y agrupadas aquí (no sueltas dentro de una función) para que
+  // se puedan ajustar sin tener que buscar dónde están escondidas.
+
+  // Un pendiente se resalta cuando faltan estos días o menos para su fecha
+  // programada. Incluye los que ya vencieron (días negativos): un compromiso
+  // vencido debe seguir viéndose urgente, no dejar de estarlo.
+  const DIAS_PARA_PENDIENTE_URGENTE = 3;
+
+  // A partir de cuántos días sin exportar un respaldo (JSON) se muestra el
+  // aviso en pantalla. localStorage en iOS puede borrarse tras periodos de
+  // inactividad, así que el respaldo no es opcional.
+  const DIAS_PARA_AVISO_DE_RESPALDO = 7;
+
+  // Ventana de tiempo, en minutos, en la que dos gastos de la misma
+  // categoría y el mismo monto exacto se consideran un posible duplicado.
+  const MINUTOS_PARA_ALERTA_DUPLICADO = 30;
+
+  // Umbrales del semáforo del ciclo: qué porcentaje del ingreso ya conocido
+  // se proyecta gastar. Nombradas aparte para poder ajustarlas sin tocar la
+  // función que las usa.
+  const UMBRAL_SEMAFORO_VERDE = 0.90;
+  const UMBRAL_SEMAFORO_AMARILLO = 1.00;
+
+  // Cuántos ciclos hacia adelante del actual se proyectan en el calendario
+  // de Análisis.
+  const CANTIDAD_DE_CICLOS_A_PROYECTAR = 6;
+
+  // Construye la estructura vacía con la que arranca la app la primera vez
+  // que se abre en un dispositivo. Ningún arreglo trae datos de ejemplo:
+  // todo lo captura el usuario desde cero.
+  function crearEstructuraVacia() {
+    return {
+      config: {
+        categorias: [],
+        tarjetas: [],
+        ingresoRecurrenteEsperado: { monto: 0, activo: true }
+      },
+      ciclos: [],
+      ingresos: [],
+      gastos: [],
+      recurrentes: [],
+      deudas: [],
+      compromisos: [],
+      // primerUso marca desde cuándo cuenta el aviso de respaldo si el
+      // usuario nunca ha exportado nada. ultimoRespaldo se llena cada vez
+      // que exporta un JSON (ver exportarJSON).
+      primerUso: formatearFechaISO(new Date()),
+      ultimoRespaldo: null
+    };
+  }
+
+  // Lee los datos guardados en este dispositivo. Si todavía no existe nada,
+  // crea la estructura vacía, la guarda de inmediato y la regresa, para que
+  // el resto de la app siempre pueda contar con un objeto válido.
+  function leerDatos() {
+    const textoGuardado = localStorage.getItem(CLAVE_ALMACENAMIENTO);
+
+    if (textoGuardado === null) {
+      const datosVacios = crearEstructuraVacia();
+      guardarDatos(datosVacios);
+      return datosVacios;
+    }
+
+    const datos = JSON.parse(textoGuardado);
+    if (completarCamposDeRespaldoFaltantes(datos)) {
+      guardarDatos(datos);
+    }
+    return datos;
+  }
+
+  // Datos guardados antes de que existiera el aviso de respaldo (o un
+  // archivo importado de una versión vieja de la app) no traen primerUso
+  // ni ultimoRespaldo. Se completan la primera vez que se leen, para que
+  // el aviso funcione sin que el usuario tenga que hacer nada.
+  function completarCamposDeRespaldoFaltantes(datos) {
+    let faltabaAlgo = false;
+
+    if (datos.primerUso === undefined) {
+      datos.primerUso = formatearFechaISO(new Date());
+      faltabaAlgo = true;
+    }
+    if (datos.ultimoRespaldo === undefined) {
+      datos.ultimoRespaldo = null;
+      faltabaAlgo = true;
+    }
+
+    return faltabaAlgo;
+  }
+
+  // Guarda el objeto de datos completo en este dispositivo. Siempre se
+  // guarda el objeto entero, nunca piezas sueltas, para que localStorage
+  // nunca quede a medio actualizar.
+  function guardarDatos(datos) {
+    localStorage.setItem(CLAVE_ALMACENAMIENTO, JSON.stringify(datos));
+  }
+
+  // Crea un identificador único para un registro nuevo (categoría, deuda,
+  // compromiso, etc.), combinando la hora exacta con un número al azar para
+  // que dos registros nunca terminen con el mismo id.
+  function generarId(prefijo) {
+    return prefijo + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+  }
+
+  // Convierte texto escrito por el usuario en HTML seguro para mostrar en
+  // pantalla, para que un nombre o nota con caracteres especiales no rompa
+  // ni interfiera con el resto de la página.
+  function escaparHTML(texto) {
+    const contenedorTemporal = document.createElement("div");
+    contenedorTemporal.textContent = texto;
+    return contenedorTemporal.innerHTML;
+  }
+
+  // Da formato de moneda mexicana a un número, para que las listas se lean
+  // como dinero ("$1,234.50") y no como números sueltos.
+  function formatearMoneda(monto) {
+    return "$" + Number(monto).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // ============================================================
+  // RESPALDO: exportar e importar JSON
+  // ============================================================
+
+  function exportarJSON() {
+    const datos = leerDatos();
+    const fecha = formatearFechaISO(new Date());
+
+    // Se registra la fecha de este respaldo en los propios datos antes de
+    // generar el archivo, para que quede incluida en el JSON exportado y
+    // el aviso de respaldo pueda calcularse contra ella la próxima vez.
+    datos.ultimoRespaldo = fecha;
+    guardarDatos(datos);
+
+    const contenido = JSON.stringify(datos, null, 2);
+    const archivo = new Blob([contenido], { type: "application/json" });
+
+    const enlaceDescarga = document.createElement("a");
+    enlaceDescarga.href = URL.createObjectURL(archivo);
+    enlaceDescarga.download = "ciclo-respaldo-" + fecha + ".json";
+    enlaceDescarga.click();
+
+    URL.revokeObjectURL(enlaceDescarga.href);
+    mostrarMensaje("Respaldo exportado.");
+    renderizarAvisoRespaldo();
+  }
+
+  function importarJSON(evento) {
+    const archivoElegido = evento.target.files[0];
+    if (!archivoElegido) {
+      return;
+    }
+
+    const lector = new FileReader();
+    lector.onload = function () {
+      try {
+        const datosImportados = JSON.parse(lector.result);
+        guardarDatos(datosImportados);
+        renderizarTodo();
+        mostrarMensaje("Datos importados correctamente.");
+      } catch (error) {
+        mostrarMensaje("Ese archivo no es un JSON válido. No se importó nada.");
+      }
+    };
+    lector.readAsText(archivoElegido);
+    evento.target.value = "";
+  }
+
+  // Cuántos días completos han pasado desde una fecha ("YYYY-MM-DD") hasta
+  // hoy. Mismo criterio de horas en cero que calcularDiasHastaFecha, para
+  // que un respaldo hecho más temprano hoy cuente como "0 días".
+  function calcularDiasDesdeFecha(fechaTexto) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fecha = crearFechaLocal(fechaTexto);
+    const milisegundosPorDia = 1000 * 60 * 60 * 24;
+    return Math.round((hoy - fecha) / milisegundosPorDia);
+  }
+
+  // El aviso se calcula contra el último respaldo o, si nunca ha habido
+  // uno, contra la fecha en que se empezó a usar la app en este
+  // dispositivo — así una instalación nueva no dispara el aviso de
+  // inmediato, pero tampoco se le perdona para siempre no respaldar.
+  function necesitaAvisoDeRespaldo(datos) {
+    const fechaDeReferencia = datos.ultimoRespaldo || datos.primerUso;
+    return calcularDiasDesdeFecha(fechaDeReferencia) > DIAS_PARA_AVISO_DE_RESPALDO;
+  }
+
+  // Muestra u oculta el aviso de respaldo. No hay botón para cerrarlo a
+  // mano: desaparece solo en cuanto se exporta un JSON, porque en ese
+  // momento deja de cumplirse la condición que lo activa.
+  function renderizarAvisoRespaldo() {
+    const datos = leerDatos();
+    const elementoAviso = document.getElementById("avisoRespaldo");
+
+    if (necesitaAvisoDeRespaldo(datos)) {
+      elementoAviso.textContent = "No has hecho un respaldo (exportar JSON) en más de " + DIAS_PARA_AVISO_DE_RESPALDO + " días.";
+      elementoAviso.style.display = "block";
+    } else {
+      elementoAviso.style.display = "none";
+    }
+  }
+
+  // ============================================================
+  // FECHAS Y CICLOS
+  // ============================================================
+  //
+  // El ciclo va del día en que cae el ingreso mensual de un mes al día
+  // anterior a como caiga el siguiente, no del 1 al 31. Esta sección
+  // calcula en qué ciclo cae una fecha cualquiera, y crea el registro del
+  // ciclo la primera vez que hace falta — el usuario nunca "abre" un ciclo
+  // a mano.
+
+  // Dos dígitos entrega el input date como texto "YYYY-MM-DD". Se arma la
+  // fecha con año, mes y día por separado (en vez de pasarle el texto
+  // completo a "new Date") porque de la otra forma JavaScript interpreta el
+  // texto como UTC y en algunas zonas horarias el día se corre uno hacia atrás.
+  function crearFechaLocal(textoFecha) {
+    const partes = textoFecha.split("-");
+    const anio = Number(partes[0]);
+    const mes = Number(partes[1]) - 1;
+    const dia = Number(partes[2]);
+    return new Date(anio, mes, dia);
+  }
+
+  // Hace el camino inverso: de un objeto Date a texto "YYYY-MM-DD", para
+  // guardarlo o compararlo como el resto de las fechas de la app.
+  function formatearFechaISO(fecha) {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    return anio + "-" + mes + "-" + dia;
+  }
+
+  // Cuántos días tiene un mes. El truco es que el "día 0" del mes siguiente
+  // es, por definición, el último día del mes actual.
+  function diasEnElMes(anio, mesIndiceCero) {
+    return new Date(anio, mesIndiceCero + 1, 0).getDate();
+  }
+
+  // Si el día pedido (de corte, o de pago, o base de un recurrente) no
+  // existe en ese mes — el caso típico es el 29, 30 o 31 en febrero — se usa
+  // el último día del mes en su lugar.
+  function diaAjustadoAlMes(anio, mesIndiceCero, dia) {
+    return Math.min(dia, diasEnElMes(anio, mesIndiceCero));
+  }
+
+  function sumarDias(fecha, cantidadDeDias) {
+    const resultado = new Date(fecha);
+    resultado.setDate(resultado.getDate() + cantidadDeDias);
+    return resultado;
+  }
+
+  // Suma meses de calendario conservando el día cuando se puede (y usando
+  // el último día del mes cuando el día original no existe ahí — ej. el 31
+  // sumado a un mes que solo tiene 30).
+  function sumarMeses(fecha, cantidadDeMeses) {
+    const diaOriginal = fecha.getDate();
+    const resultado = new Date(fecha.getFullYear(), fecha.getMonth() + cantidadDeMeses, 1);
+    const diaMaximo = diasEnElMes(resultado.getFullYear(), resultado.getMonth());
+    resultado.setDate(Math.min(diaOriginal, diaMaximo));
+    return resultado;
+  }
+
+  // El ingreso mensual del usuario cae un día antes de que termine el mes
+  // (el 30 en un mes de 31 días, el 29 en uno de 30, el 27 en febrero) y,
+  // si ese día cae en sábado o domingo, el banco lo deposita el viernes
+  // anterior. Esta función calcula esa fecha para un mes dado — es el punto
+  // en el que arranca el ciclo de ese mes. Los días festivos entre semana
+  // también recorren el depósito, pero no hay una regla fija para calcular
+  // cuáles (cambian cada año); esos casos quedan fuera a propósito, porque
+  // el ingreso siempre se captura con su fecha real de todos modos.
+  function calcularFechaDeCorteDelMes(anio, mesIndiceCero) {
+    const diaAntesDeFinDeMes = diasEnElMes(anio, mesIndiceCero) - 1;
+    const fecha = new Date(anio, mesIndiceCero, diaAntesDeFinDeMes);
+
+    if (fecha.getDay() === 6) {
+      return sumarDias(fecha, -1);
+    }
+    if (fecha.getDay() === 0) {
+      return sumarDias(fecha, -2);
+    }
+    return fecha;
+  }
+
+  // Dado un mes, calcula en qué fecha exacta empieza el ciclo que arranca
+  // ahí.
+  function calcularInicioDeCicloParaFecha(fecha) {
+    const anio = fecha.getFullYear();
+    const mes = fecha.getMonth();
+    const candidatoEsteMes = calcularFechaDeCorteDelMes(anio, mes);
+
+    if (candidatoEsteMes <= fecha) {
+      return candidatoEsteMes;
+    }
+
+    // La fecha es anterior al corte de este mes: el ciclo que la contiene
+    // empezó el mes anterior.
+    const mesAnterior = mes === 0 ? 11 : mes - 1;
+    const anioDelMesAnterior = mes === 0 ? anio - 1 : anio;
+    return calcularFechaDeCorteDelMes(anioDelMesAnterior, mesAnterior);
+  }
+
+  // El ciclo termina un día antes de que empiece el siguiente.
+  function calcularFinDeCiclo(fechaInicio) {
+    const mesSiguiente = fechaInicio.getMonth() === 11 ? 0 : fechaInicio.getMonth() + 1;
+    const anioDelMesSiguiente = fechaInicio.getMonth() === 11 ? fechaInicio.getFullYear() + 1 : fechaInicio.getFullYear();
+    const inicioDelSiguienteCiclo = calcularFechaDeCorteDelMes(anioDelMesSiguiente, mesSiguiente);
+    return sumarDias(inicioDelSiguienteCiclo, -1);
+  }
+
+  // El id de un ciclo es el año-mes en el que termina (ej. un ciclo de 29 de
+  // julio a 28 de agosto se llama "2026-08"), porque es el mes en el que
+  // vive la mayoría de sus días y en el que se cierra.
+  function generarIdDeCiclo(fechaFin) {
+    const anio = fechaFin.getFullYear();
+    const mes = String(fechaFin.getMonth() + 1).padStart(2, "0");
+    return anio + "-" + mes;
+  }
+
+  // Calcula el ciclo que sigue a uno dado, sin guardarlo en ningún lado —
+  // a diferencia de obtenerOCrearCicloParaFecha, esta función nunca toca
+  // localStorage. Sirve tanto para la proyección multi-ciclo (ciclos que
+  // todavía no existen) como, más abajo, para saber cuál sería "el
+  // siguiente ciclo" al dar de alta un recurrente bimestral.
+  function calcularSiguienteCicloSimulado(cicloAnterior) {
+    const fechaInicio = sumarDias(crearFechaLocal(cicloAnterior.fechaFin), 1);
+    const fechaFin = calcularFinDeCiclo(fechaInicio);
+    return {
+      id: generarIdDeCiclo(fechaFin),
+      fechaInicio: formatearFechaISO(fechaInicio),
+      fechaFin: formatearFechaISO(fechaFin)
+    };
+  }
+
+  // Encadena calcularSiguienteCicloSimulado la cantidad de veces que haga
+  // falta, a partir de un ciclo base (normalmente el ciclo actual real).
+  function generarCiclosSimulados(cicloBase, cantidadDeCiclos) {
+    const ciclos = [];
+    let anterior = cicloBase;
+    for (let i = 0; i < cantidadDeCiclos; i++) {
+      anterior = calcularSiguienteCicloSimulado(anterior);
+      ciclos.push(anterior);
+    }
+    return ciclos;
+  }
+
+  // Busca el ciclo que contiene una fecha dada. Si no existe todavía (por
+  // ejemplo, la primera vez que se abre la app, o al registrar un ingreso
+  // con fecha pasada que cae fuera de cualquier ciclo ya creado), lo crea y
+  // lo guarda en ese momento.
+  function obtenerOCrearCicloParaFecha(fecha) {
+    const datos = leerDatos();
+
+    const cicloExistente = datos.ciclos.find(function (ciclo) {
+      return fecha >= crearFechaLocal(ciclo.fechaInicio) && fecha <= crearFechaLocal(ciclo.fechaFin);
+    });
+
+    if (cicloExistente) {
+      return cicloExistente;
+    }
+
+    const fechaInicio = calcularInicioDeCicloParaFecha(fecha);
+    const fechaFin = calcularFinDeCiclo(fechaInicio);
+
+    // El presupuesto semanal (comida, transporte...) es un estimado estable,
+    // no algo que se decida ciclo a ciclo — así que un ciclo nuevo hereda los
+    // montos del ciclo anterior más reciente en vez de arrancar en blanco.
+    // Se puede seguir ajustando para este ciclo específico en cualquier
+    // momento, sin que eso afecte a los ciclos ya cerrados ni a los futuros.
+    const cicloAnterior = datos.ciclos
+      .filter(function (ciclo) { return crearFechaLocal(ciclo.fechaFin) < fechaInicio; })
+      .sort(function (a, b) { return crearFechaLocal(b.fechaFin) - crearFechaLocal(a.fechaFin); })[0];
+
+    const nuevoCiclo = {
+      id: generarIdDeCiclo(fechaFin),
+      fechaInicio: formatearFechaISO(fechaInicio),
+      fechaFin: formatearFechaISO(fechaFin),
+      presupuestoSemanal: cicloAnterior ? Object.assign({}, cicloAnterior.presupuestoSemanal) : {}
+    };
+
+    datos.ciclos.push(nuevoCiclo);
+    guardarDatos(datos);
+    return nuevoCiclo;
+  }
+
+  // Atajo para el caso más común: el ciclo que contiene el día de hoy.
+  function asegurarCicloActual() {
+    return obtenerOCrearCicloParaFecha(new Date());
+  }
+
+  // ============================================================
+  // GENERACIÓN AUTOMÁTICA DE COMPROMISOS
+  // ============================================================
+  //
+  // Un compromiso puede venir de un recurrente, una deuda o una tarjeta.
+  // Esta sección revisa las reglas activas y, para el ciclo dado, crea los
+  // compromisos que le correspondan — sin duplicar los que ya existen.
+
+  // Editar un recurrente o una deuda no debe dejar "huérfanos" los
+  // compromisos que ya se generaron de esa regla y que siguen sin pagar
+  // — si no, la edición se siente rota (arreglas el monto pero el
+  // pendiente en la pantalla sigue mostrando el número viejo). Los ya
+  // pagados nunca se tocan: son historia cerrada, no una proyección.
+  function obtenerCompromisosPendientesDeOrigen(datos, origen, origenId) {
+    return datos.compromisos.filter(function (c) { return c.origen === origen && c.origenId === origenId && !c.pagado; });
+  }
+
+  // "cambios" es un objeto con los campos del compromiso que deben quedar
+  // igual que la regla editada (típicamente nombre y montoEstimado).
+  function actualizarCompromisosPendientesDeOrigen(datos, origen, origenId, cambios) {
+    obtenerCompromisosPendientesDeOrigen(datos, origen, origenId).forEach(function (compromiso) {
+      Object.assign(compromiso, cambios);
+    });
+  }
+
+  // Cuando una regla se desactiva (ej. se liquidó una deuda antes de
+  // tiempo), un compromiso que ya se generó pero sigue sin pagar ya no va
+  // a suceder de verdad — dejarlo ahí lo contaría de más en compromisos
+  // pendientes y en la proyección de cierre para siempre. Se borra. Lo ya
+  // pagado no se toca.
+  function eliminarCompromisosPendientesDeOrigen(datos, origen, origenId) {
+    datos.compromisos = datos.compromisos.filter(function (c) {
+      return !(c.origen === origen && c.origenId === origenId && !c.pagado);
+    });
+  }
+
+  // Evita duplicados: un mismo origen no puede generar dos veces un
+  // compromiso con la misma fecha programada.
+  function agregarCompromisoSiNoExiste(datos, ciclo, origen, origenId, nombre, fecha, montoEstimado, pagoNde) {
+    const fechaTexto = formatearFechaISO(fecha);
+    const yaExiste = datos.compromisos.some(function (compromiso) {
+      return compromiso.origen === origen && compromiso.origenId === origenId && compromiso.fechaProgramada === fechaTexto;
+    });
+
+    if (yaExiste) {
+      return;
+    }
+
+    datos.compromisos.push({
+      id: generarId("cmp"),
+      cicloId: ciclo.id,
+      origen: origen,
+      origenId: origenId,
+      nombre: nombre,
+      fechaProgramada: fechaTexto,
+      montoEstimado: montoEstimado,
+      montoReal: null,
+      pagado: false,
+      pagoNde: pagoNde
+    });
+  }
+
+  // Un evento "mensual" ocurre una vez al mes en un día fijo. Como el ciclo
+  // cruza dos meses de calendario, se prueba ese día tanto en el mes en que
+  // empieza el ciclo como en el mes en que termina, y se usa el que sí caiga
+  // dentro del rango del ciclo.
+  function calcularFechaEnCicloParaDiaBase(ciclo, diaBase) {
+    const inicio = crearFechaLocal(ciclo.fechaInicio);
+    const fin = crearFechaLocal(ciclo.fechaFin);
+
+    const candidatoMesInicio = new Date(inicio.getFullYear(), inicio.getMonth(), diaAjustadoAlMes(inicio.getFullYear(), inicio.getMonth(), diaBase));
+    if (candidatoMesInicio >= inicio && candidatoMesInicio <= fin) {
+      return candidatoMesInicio;
+    }
+
+    const candidatoMesFin = new Date(fin.getFullYear(), fin.getMonth(), diaAjustadoAlMes(fin.getFullYear(), fin.getMonth(), diaBase));
+    if (candidatoMesFin >= inicio && candidatoMesFin <= fin) {
+      return candidatoMesFin;
+    }
+
+    return null;
+  }
+
+  // Un recurrente "quincenal" ocurre dos veces al mes: en diaBase, y quince
+  // días después (pasando al mes siguiente si se sale del actual). Se
+  // calculan las ocurrencias en los dos meses que toca el ciclo y se filtran
+  // las que caen dentro del rango.
+  function calcularFechasQuincenalesEnCiclo(ciclo, diaBase) {
+    const inicio = crearFechaLocal(ciclo.fechaInicio);
+    const fin = crearFechaLocal(ciclo.fechaFin);
+    const mesesAProbar = [
+      { anio: inicio.getFullYear(), mes: inicio.getMonth() },
+      { anio: fin.getFullYear(), mes: fin.getMonth() }
+    ];
+
+    const candidatas = [];
+    mesesAProbar.forEach(function (referencia) {
+      const diasDelMes = diasEnElMes(referencia.anio, referencia.mes);
+      candidatas.push(new Date(referencia.anio, referencia.mes, diaAjustadoAlMes(referencia.anio, referencia.mes, diaBase)));
+
+      const segundaQuincena = diaBase + 15;
+      if (segundaQuincena <= diasDelMes) {
+        candidatas.push(new Date(referencia.anio, referencia.mes, segundaQuincena));
+      } else {
+        const mesSiguiente = referencia.mes === 11 ? 0 : referencia.mes + 1;
+        const anioSiguiente = referencia.mes === 11 ? referencia.anio + 1 : referencia.anio;
+        candidatas.push(new Date(anioSiguiente, mesSiguiente, segundaQuincena - diasDelMes));
+      }
+    });
+
+    const fechasVistas = new Set();
+    return candidatas.filter(function (fecha) {
+      if (fecha < inicio || fecha > fin) {
+        return false;
+      }
+      const iso = formatearFechaISO(fecha);
+      if (fechasVistas.has(iso)) {
+        return false;
+      }
+      fechasVistas.add(iso);
+      return true;
+    });
+  }
+
+  // Un recurrente "bimestral" solo aplica cada dos ciclos, contando desde su
+  // cicloDeInicio. Se compara por diferencia de meses entre los ids de
+  // ciclo (formato "YYYY-MM"): si la diferencia es par, este ciclo le toca.
+  function estaEnFaseBimestral(ciclo, cicloDeInicioId) {
+    const partesInicio = cicloDeInicioId.split("-").map(Number);
+    const partesActual = ciclo.id.split("-").map(Number);
+    const diferenciaEnMeses = (partesActual[0] - partesInicio[0]) * 12 + (partesActual[1] - partesInicio[1]);
+    return diferenciaEnMeses >= 0 && diferenciaEnMeses % 2 === 0;
+  }
+
+  // Un recurrente sin vigenciaHasta se repite para siempre, como hasta ahora.
+  // Uno con vigenciaHasta deja de generar compromisos cuya fecha caiga
+  // después de ese límite — el plazo forzoso ya terminó (ej. una póliza de
+  // seguro de 12 meses).
+  function fechaDentroDeLaVigencia(fecha, vigenciaHasta) {
+    if (!vigenciaHasta) {
+      return true;
+    }
+    return fecha <= crearFechaLocal(vigenciaHasta);
+  }
+
+  // Misma lógica de ramas (mensual/quincenal/bimestral + vigencia) que
+  // antes generaba compromisos directamente, pero aquí es pura: arma una
+  // lista de candidatos en vez de escribir en datos.compromisos. Así la
+  // puede usar tanto la generación real (ciclo actual, se persiste) como
+  // la proyección multi-ciclo (ciclos simulados, nunca se persiste) sin
+  // duplicar las reglas de fechas.
+  function calcularCandidatosDeRecurrentesParaCiclo(ciclo, recurrentesActivos) {
+    const candidatos = [];
+
+    recurrentesActivos.forEach(function (recurrente) {
+      if (recurrente.frecuencia === "mensual") {
+        const fecha = calcularFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
+        if (fecha && fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
+          candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
+        }
+      } else if (recurrente.frecuencia === "quincenal") {
+        calcularFechasQuincenalesEnCiclo(ciclo, recurrente.diaBase).forEach(function (fecha) {
+          if (fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
+            candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
+          }
+        });
+      } else if (recurrente.frecuencia === "bimestral") {
+        if (recurrente.cicloDeInicio && estaEnFaseBimestral(ciclo, recurrente.cicloDeInicio)) {
+          const fecha = calcularFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
+          if (fecha && fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
+            candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
+          }
+        }
+      }
+    });
+
+    return candidatos;
+  }
+
+  // Todos los números de pago (k+1, k+2, ...) de una deuda cuya fecha cae
+  // dentro de un rango cualquiera, empezando en el pago real siguiente
+  // (deuda.pagosRealizados). Como la fecha de cada pago es creciente en k,
+  // basta con avanzar y cortar en cuanto nos pasamos del fin del rango —
+  // así un mismo ciclo puede capturar 0, 1 o más de un pago (típico en
+  // deudas quincenales dentro de un ciclo de ~30 días). Al depender solo
+  // de fechaPrimerPago y del número de pago (nunca de "avanzar" un
+  // contador ciclo a ciclo), cada rango se calcula de forma independiente
+  // de los demás — es imposible que un ciclo contamine a otro.
+  // La fecha del pago N de una deuda: fechaPrimerPago es, por definición, la
+  // fecha del pago #1 (cero intervalos después), así que el pago N cae
+  // (N-1) intervalos después. La comparten calcularNumerosDePagoEnRango
+  // (fechas de los pagos que le tocan a cada ciclo) y calcularEstadoDeDeuda
+  // (fechaLiquidacion es, con esta misma regla, la fecha del último pago).
+  function calcularFechaDelPagoNumero(deuda, numeroDePago) {
+    const fechaPrimerPago = crearFechaLocal(deuda.fechaPrimerPago);
+    const intervalosTranscurridos = numeroDePago - 1;
+    return deuda.frecuencia === "quincenal"
+      ? sumarDias(fechaPrimerPago, intervalosTranscurridos * 15)
+      : sumarMeses(fechaPrimerPago, intervalosTranscurridos);
+  }
+
+  function calcularNumerosDePagoEnRango(deuda, fechaInicioRango, fechaFinRango) {
+    const numeros = [];
+    let k = deuda.pagosRealizados;
+
+    while (k < deuda.pagosTotales) {
+      const fechaPago = calcularFechaDelPagoNumero(deuda, k + 1);
+
+      if (fechaPago > fechaFinRango) {
+        break;
+      }
+      if (fechaPago >= fechaInicioRango) {
+        numeros.push({ numeroDePago: k + 1, fecha: fechaPago });
+      }
+      k++;
+    }
+
+    return numeros;
+  }
+
+  // Junta las fórmulas de deuda de SPEC.md en un solo lugar, para que
+  // Configuración y Análisis lean el mismo cálculo en vez de duplicarlo.
+  // saldoManual, cuando existe, sustituye al saldo calculado — igual que ya
+  // hacía (por separado) la lista de deudas en Configuración.
+  function calcularEstadoDeDeuda(deuda) {
+    const montoTotalAPagar = deuda.montoPorPago * deuda.pagosTotales;
+    const costoDelCredito = montoTotalAPagar - deuda.montoSolicitado;
+    const porcentajeSobrante = costoDelCredito / deuda.montoSolicitado;
+
+    const saldoCalculado = deuda.montoPorPago * (deuda.pagosTotales - deuda.pagosRealizados);
+    const hayValorManual = deuda.saldoManual !== null && deuda.saldoManual !== undefined;
+    const saldoRestante = hayValorManual ? deuda.saldoManual : saldoCalculado;
+    const porcentajePagado = 1 - (saldoRestante / montoTotalAPagar);
+
+    return {
+      montoTotalAPagar: montoTotalAPagar,
+      costoDelCredito: costoDelCredito,
+      porcentajeSobrante: porcentajeSobrante,
+      saldoRestante: saldoRestante,
+      porcentajePagado: porcentajePagado,
+      fechaLiquidacion: calcularFechaDelPagoNumero(deuda, deuda.pagosTotales)
+    };
+  }
+
+  function calcularCandidatosDeDeudaParaCiclo(ciclo, deuda) {
+    if (!deuda.activa) {
+      return [];
+    }
+    const inicio = crearFechaLocal(ciclo.fechaInicio);
+    const fin = crearFechaLocal(ciclo.fechaFin);
+
+    return calcularNumerosDePagoEnRango(deuda, inicio, fin).map(function (item) {
+      return { origen: "deuda", origenId: deuda.id, nombre: deuda.nombre, fechaProgramada: formatearFechaISO(item.fecha), montoEstimado: deuda.montoPorPago, pagoNde: item.numeroDePago + " de " + deuda.pagosTotales };
+    });
+  }
+
+  function calcularCandidatosDeDeudasParaCiclo(ciclo, deudas) {
+    return deudas.reduce(function (acumulado, deuda) {
+      return acumulado.concat(calcularCandidatosDeDeudaParaCiclo(ciclo, deuda));
+    }, []);
+  }
+
+  // Punto de entrada único para "qué compromisos le tocan a este ciclo",
+  // sea real o simulado. Las tarjetas quedan fuera a propósito: su pago
+  // depende de gastos a crédito que en un ciclo futuro todavía no existen,
+  // así que no son proyectables sin inventar un número.
+  function calcularCandidatosDelCiclo(ciclo, datos) {
+    const recurrentesActivos = datos.recurrentes.filter(function (r) { return r.activo; });
+    return calcularCandidatosDeRecurrentesParaCiclo(ciclo, recurrentesActivos)
+      .concat(calcularCandidatosDeDeudasParaCiclo(ciclo, datos.deudas));
+  }
+
+  // Corte y pago son fechas distintas: una compra posterior al corte entra
+  // al pago siguiente, no al inmediato. Dado el día de pago de una
+  // instancia concreta, el corte que le corresponde es el mismo mes si
+  // diaPago cae después de diaCorte (ej. corte 5, pago 20); si no, el
+  // corte fue el mes anterior (ej. corte 25, pago 10 — el pago de este mes
+  // cubre lo que se cortó a fin del mes pasado). El periodo es del día
+  // siguiente al corte anterior a ese, hasta ese corte, inclusive.
+  function calcularPeriodoDeCorteParaPago(tarjeta, fechaPago) {
+    const corteEsDelMismoMes = tarjeta.diaPago > tarjeta.diaCorte;
+    const mesBaseDelCorte = corteEsDelMismoMes ? fechaPago : sumarMeses(fechaPago, -1);
+    const finPeriodo = new Date(mesBaseDelCorte.getFullYear(), mesBaseDelCorte.getMonth(), diaAjustadoAlMes(mesBaseDelCorte.getFullYear(), mesBaseDelCorte.getMonth(), tarjeta.diaCorte));
+    const corteAnterior = sumarMeses(finPeriodo, -1);
+    const inicioPeriodo = sumarDias(corteAnterior, 1);
+
+    return { inicio: inicioPeriodo, fin: finPeriodo };
+  }
+
+  // pagoTarjeta = compras a crédito de esa tarjeta dentro de su periodo de
+  // corte. Las deudas MSI quedan fuera a propósito: en este modelo son
+  // compromisos independientes pagados por débito, igual que un préstamo
+  // — no están ligadas a ninguna tarjeta (ver SPEC.md).
+  function calcularPagoTarjeta(tarjeta, fechaPago, datos) {
+    const periodo = calcularPeriodoDeCorteParaPago(tarjeta, fechaPago);
+    return datos.gastos
+      .filter(function (g) {
+        if (g.fuente !== "credito" || g.tarjetaId !== tarjeta.id) {
+          return false;
+        }
+        const fechaGasto = crearFechaLocal(g.fecha);
+        return fechaGasto >= periodo.inicio && fechaGasto <= periodo.fin;
+      })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+  }
+
+  function generarCompromisosDesdeTarjetas(ciclo, datos) {
+    datos.config.tarjetas.forEach(function (tarjeta) {
+      const fecha = calcularFechaEnCicloParaDiaBase(ciclo, tarjeta.diaPago);
+      if (fecha) {
+        const montoCalculado = calcularPagoTarjeta(tarjeta, fecha, datos);
+        agregarCompromisoSiNoExiste(datos, ciclo, "tarjeta", tarjeta.id, tarjeta.nombre, fecha, montoCalculado, null);
+      }
+    });
+  }
+
+  // A diferencia del resto de los compromisos (que se generan una sola vez
+  // y ya no cambian), uno de tarjeta sin pagar no tiene un monto fijo:
+  // cambia cada vez que se registra una compra a crédito dentro de su
+  // periodo de corte. Por eso se recalcula en cada render, nunca después
+  // de pagado — ahí ya es historia, y lo que importa es montoReal, no la
+  // estimación.
+  function actualizarMontosDeCompromisosDeTarjeta(datos) {
+    let huboCambios = false;
+
+    datos.compromisos.forEach(function (compromiso) {
+      if (compromiso.origen !== "tarjeta" || compromiso.pagado) {
+        return;
+      }
+      const tarjeta = datos.config.tarjetas.find(function (t) { return t.id === compromiso.origenId; });
+      if (!tarjeta) {
+        return;
+      }
+      const montoActualizado = calcularPagoTarjeta(tarjeta, crearFechaLocal(compromiso.fechaProgramada), datos);
+      if (montoActualizado !== compromiso.montoEstimado) {
+        compromiso.montoEstimado = montoActualizado;
+        huboCambios = true;
+      }
+    });
+
+    if (huboCambios) {
+      guardarDatos(datos);
+    }
+  }
+
+  function generarCompromisosDelCiclo(ciclo) {
+    const datos = leerDatos();
+    calcularCandidatosDelCiclo(ciclo, datos).forEach(function (candidato) {
+      agregarCompromisoSiNoExiste(datos, ciclo, candidato.origen, candidato.origenId, candidato.nombre, crearFechaLocal(candidato.fechaProgramada), candidato.montoEstimado, candidato.pagoNde);
+    });
+    generarCompromisosDesdeTarjetas(ciclo, datos);
+    guardarDatos(datos);
+  }
+
+  // ============================================================
+  // CÁLCULOS DEL CICLO
+  // ============================================================
+  //
+  // Disponible real, proyección de cierre y semáforo — las fórmulas de
+  // SPEC.md. Son funciones puras: reciben el ciclo y los datos, no leen
+  // localStorage por su cuenta, para poder reusarse tanto con el ciclo
+  // actual real como con ciclos simulados de la proyección multi-ciclo.
+
+  // Cuántos días completos dura un ciclo cualquiera (real o simulado).
+  function calcularDiasTotalesDelCiclo(ciclo) {
+    const inicio = crearFechaLocal(ciclo.fechaInicio);
+    const fin = crearFechaLocal(ciclo.fechaFin);
+    return Math.round((fin - inicio) / (1000 * 60 * 60 * 24)) + 1;
+  }
+
+  // Día del ciclo en el que está "hoy" — solo tiene sentido para el ciclo
+  // actual real, no para uno proyectado (ahí no hay un "hoy" dentro).
+  // Cuántos días de un rango cualquiera ya pasaron, contando desde "hoy" —
+  // la comparten calcularRangoDeDiasDelCiclo (el ciclo completo) y
+  // calcularRangoDeLaSemanaActual (una semana dentro del ciclo), porque es
+  // el mismo cálculo con distintas fechas de ancla.
+  function calcularRangoDeDias(fechaInicioTexto, fechaFinTexto) {
+    const inicio = crearFechaLocal(fechaInicioTexto);
+    const fin = crearFechaLocal(fechaFinTexto);
+    const hoy = crearFechaLocal(formatearFechaISO(new Date()));
+    const diasTotales = Math.round((fin - inicio) / (1000 * 60 * 60 * 24)) + 1;
+    const diasTranscurridosSinAcotar = Math.round((hoy - inicio) / (1000 * 60 * 60 * 24)) + 1;
+    const diasTranscurridos = Math.min(Math.max(diasTranscurridosSinAcotar, 1), diasTotales);
+    return {
+      diasTranscurridos: diasTranscurridos,
+      diasTotales: diasTotales,
+      diasRestantes: diasTotales - diasTranscurridos
+    };
+  }
+
+  function calcularRangoDeDiasDelCiclo(ciclo) {
+    return calcularRangoDeDias(ciclo.fechaInicio, ciclo.fechaFin);
+  }
+
+  // La semana N de un ciclo dura 7 días, salvo la última: un ciclo de
+  // ~29-31 días no es múltiplo exacto de 7, así que esa semana se corta
+  // donde se corta el ciclo, no en un séptimo día que no existe.
+  function calcularRangoDeLaSemanaActual(ciclo, numeroDeSemana) {
+    const inicioCiclo = crearFechaLocal(ciclo.fechaInicio);
+    const finCiclo = crearFechaLocal(ciclo.fechaFin);
+    const inicioSemana = sumarDias(inicioCiclo, (numeroDeSemana - 1) * 7);
+    const finSemanaSinAcotar = sumarDias(inicioSemana, 6);
+    const finSemana = finSemanaSinAcotar > finCiclo ? finCiclo : finSemanaSinAcotar;
+
+    return calcularRangoDeDias(formatearFechaISO(inicioSemana), formatearFechaISO(finSemana));
+  }
+
+  function calcularIngresosDelCiclo(ciclo, datos) {
+    return datos.ingresos
+      .filter(function (i) { return i.cicloId === ciclo.id; })
+      .reduce(function (suma, i) { return suma + Number(i.monto); }, 0);
+  }
+
+  function calcularCompromisosPendientesDelCiclo(ciclo, datos) {
+    return datos.compromisos
+      .filter(function (c) { return c.cicloId === ciclo.id && !c.pagado; })
+      .reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
+  }
+
+  // El dinero comprometido no está disponible aunque siga en la cuenta, y
+  // los gastos a crédito no salen de la cuenta hasta que se paga la
+  // tarjeta (eso ya está contemplado como compromiso) — por eso solo se
+  // resta el gasto a débito.
+  function calcularDisponibleReal(ciclo, datos) {
+    const gastosDebitoDelCiclo = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.fuente === "debito"; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    return calcularIngresosDelCiclo(ciclo, datos) - gastosDebitoDelCiclo - calcularCompromisosPendientesDelCiclo(ciclo, datos);
+  }
+
+  // Todos los compromisos del ciclo cuentan siempre, se hayan pagado o no
+  // — pagados con su montoReal, pendientes con su montoEstimado. Pagar un
+  // compromiso no puede "mejorar" la proyección de cierre: solo mueve su
+  // monto de estimado a real, nunca lo saca de la cuenta. (Antes se sumaban
+  // solo los pendientes, así que un compromiso desaparecía de la proyección
+  // en cuanto se pagaba — como si esa plata ya no importara.)
+  function calcularMontoComprometidoTotalDelCiclo(ciclo, datos) {
+    return datos.compromisos
+      .filter(function (c) { return c.cicloId === ciclo.id; })
+      .reduce(function (suma, c) { return suma + Number(c.pagado ? c.montoReal : c.montoEstimado); }, 0);
+  }
+
+  // Lo conocido (todos los compromisos del ciclo, pagados o no) se suma tal
+  // cual. Lo desconocido (gasto variable del resto del ciclo) se proyecta
+  // al ritmo diario que ya se lleva. "Variable" es todo gasto sin
+  // compromisoId — los fijos ya se cuentan aparte, en los compromisos.
+  function calcularProyeccionDeCierre(ciclo, datos) {
+    const rango = calcularRangoDeDiasDelCiclo(ciclo);
+    const gastoVariableAcumulado = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    const ritmoDiario = gastoVariableAcumulado / rango.diasTranscurridos;
+    const proyeccionVariable = gastoVariableAcumulado + (ritmoDiario * rango.diasRestantes);
+    return proyeccionVariable + calcularMontoComprometidoTotalDelCiclo(ciclo, datos);
+  }
+
+  // "gris" cuando el ciclo todavía no tiene ingreso capturado: dividir
+  // entre cero no tiene sentido, y no es ni verde ni rojo, es "todavía no
+  // se sabe".
+  function calcularColorDelSemaforo(proyeccionCierre, ingresosDelCiclo) {
+    if (ingresosDelCiclo <= 0) {
+      return "gris";
+    }
+    const porcentaje = proyeccionCierre / ingresosDelCiclo;
+    if (porcentaje <= UMBRAL_SEMAFORO_VERDE) {
+      return "verde";
+    }
+    if (porcentaje <= UMBRAL_SEMAFORO_AMARILLO) {
+      return "amarillo";
+    }
+    return "rojo";
+  }
+
+  // Cuántos pesos de holgura quedan antes de que la proyección de cierre
+  // cruce cada umbral del semáforo — la pregunta directa de "¿puedo
+  // gastarle más a esto sin pasarme?". Puede salir negativo: significa que
+  // ya se cruzó ese umbral.
+  function calcularMargenAntesDeUmbrales(proyeccionCierre, ingresosDelCiclo) {
+    return {
+      antesDeAmarillo: (ingresosDelCiclo * UMBRAL_SEMAFORO_VERDE) - proyeccionCierre,
+      antesDeRojo: (ingresosDelCiclo * UMBRAL_SEMAFORO_AMARILLO) - proyeccionCierre
+    };
+  }
+
+  // ============================================================
+  // SEMÁFORO SEMANAL POR CATEGORÍA
+  // ============================================================
+  //
+  // Misma idea que calcularProyeccionDeCierre, pero a escala de una semana
+  // dentro del ciclo. La diferencia es que aquí no hay "compromisos" que
+  // sumar aparte: todo el gasto de una categoría variable (comida,
+  // transporte, entretenimiento...) es desconocido por naturaleza, así que
+  // toda la proyección sale del ritmo diario que ya lleva esa semana,
+  // extrapolado a los días que le faltan. Reusa calcularColorDelSemaforo y
+  // calcularMargenAntesDeUmbrales tal cual — ambas son genéricas en un
+  // monto contra un total, no saben ni les importa si ese total es el
+  // ingreso del ciclo o el presupuesto semanal de una categoría.
+  function calcularProyeccionDeCierreSemanal(categoria, ciclo, datos, numeroDeSemana) {
+    const rango = calcularRangoDeLaSemanaActual(ciclo, numeroDeSemana);
+    const gastadoEnLaSemana = datos.gastos
+      .filter(function (g) { return g.categoriaId === categoria.id && g.cicloId === ciclo.id && g.semana === numeroDeSemana; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    const ritmoDiarioSemanal = gastadoEnLaSemana / rango.diasTranscurridos;
+    const proyeccionCierreSemanal = gastadoEnLaSemana + (ritmoDiarioSemanal * rango.diasRestantes);
+
+    return { gastadoEnLaSemana: gastadoEnLaSemana, proyeccionCierreSemanal: proyeccionCierreSemanal };
+  }
+
+  // ============================================================
+  // TRAYECTORIA DEL SEMÁFORO
+  // ============================================================
+  //
+  // El semáforo de arriba responde "¿a dónde voy a llegar si sigo así?" con
+  // un solo número de hoy. Esta sección responde una pregunta distinta y
+  // complementaria: "¿cómo se fue llenando el ciclo, día por día?" — para
+  // pintar el calendario y la gráfica de Análisis.
+  //
+  // Aquí un compromiso solo "cuenta" a partir de su fechaProgramada, no
+  // desde el día 1 del ciclo como en calcularProyeccionDeCierre (que los da
+  // por hechos desde el principio porque ya son certeza). Por eso esta
+  // curva sube en escalones conforme vencen los compromisos, en vez de
+  // partir con todo ya sumado. El día pasado usa el gasto variable real de
+  // ese día; el día futuro usa el mismo ritmo diario congelado de hoy que
+  // ya usa calcularProyeccionDeCierre. Por construcción, el último día del
+  // ciclo da el mismo número que calcularProyeccionDeCierre: es el mismo
+  // destino, visto como recorrido en vez de como punto final.
+  function calcularTrayectoriaDelSemaforo(ciclo, datos) {
+    const ingresosDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
+    const hoyISO = formatearFechaISO(new Date());
+    const rango = calcularRangoDeDiasDelCiclo(ciclo);
+
+    const gastosVariablesDelCiclo = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; });
+    const gastoVariableHastaHoy = gastosVariablesDelCiclo
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+    const ritmoDiario = gastoVariableHastaHoy / rango.diasTranscurridos;
+
+    // Un compromiso ya pagado cuenta desde la fecha real en que se pagó (la
+    // del gasto que lo liga vía compromisoId), no desde su fechaProgramada
+    // — si se pagó antes por un descuento de pronto pago (o después, ya
+    // vencido), el escalón de la curva tiene que aparecer ese día real, no
+    // en la fecha nominal. Uno que sigue pendiente no tiene fecha real
+    // todavía, así que usa fechaProgramada como mejor estimado.
+    const compromisosDelCiclo = datos.compromisos
+      .filter(function (c) { return c.cicloId === ciclo.id; })
+      .map(function (c) {
+        const gastoDelPago = c.pagado ? datos.gastos.find(function (g) { return g.compromisoId === c.id; }) : null;
+        return {
+          monto: Number(c.pagado ? c.montoReal : c.montoEstimado),
+          fechaEfectiva: gastoDelPago ? gastoDelPago.fecha : c.fechaProgramada
+        };
+      });
+
+    return generarDiasDelCiclo(ciclo).map(function (fechaISO, indice) {
+      const numeroDeDia = indice + 1;
+      const esFuturo = fechaISO > hoyISO;
+
+      const gastoVariableAcumulado = esFuturo
+        ? gastoVariableHastaHoy + (ritmoDiario * (numeroDeDia - rango.diasTranscurridos))
+        : gastosVariablesDelCiclo
+            .filter(function (g) { return g.fecha <= fechaISO; })
+            .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+      const montoComprometidoAcumulado = compromisosDelCiclo
+        .filter(function (c) { return c.fechaEfectiva <= fechaISO; })
+        .reduce(function (suma, c) { return suma + c.monto; }, 0);
+
+      const acumulado = gastoVariableAcumulado + montoComprometidoAcumulado;
+
+      return {
+        fechaISO: fechaISO,
+        acumulado: acumulado,
+        porcentaje: ingresosDelCiclo > 0 ? acumulado / ingresosDelCiclo : null,
+        color: calcularColorDelSemaforo(acumulado, ingresosDelCiclo),
+        esFuturo: esFuturo
+      };
+    });
+  }
+
+  // El primer día futuro en el que la trayectoria empeora respecto al color
+  // de hoy — "si sigues a este ritmo, se pondría amarillo/rojo el día X".
+  // null si no se proyecta ningún empeoramiento dentro de este ciclo (o si
+  // todavía no hay ingreso capturado para comparar).
+  function calcularProximoCambioDeColor(trayectoria) {
+    const ORDEN_SEMAFORO = { verde: 0, amarillo: 1, rojo: 2 };
+    const hoyISO = formatearFechaISO(new Date());
+    const indiceHoy = trayectoria.findIndex(function (dia) { return dia.fechaISO === hoyISO; });
+    if (indiceHoy === -1 || !(trayectoria[indiceHoy].color in ORDEN_SEMAFORO)) {
+      return null;
+    }
+
+    const colorDeHoy = trayectoria[indiceHoy].color;
+    const diaPeor = trayectoria.slice(indiceHoy + 1).find(function (dia) {
+      return ORDEN_SEMAFORO[dia.color] > ORDEN_SEMAFORO[colorDeHoy];
+    });
+    return diaPeor ? { fechaISO: diaPeor.fechaISO, color: diaPeor.color } : null;
+  }
+
+  // ============================================================
+  // PROYECCIÓN MULTI-CICLO
+  // ============================================================
+  //
+  // Encadena CANTIDAD_DE_CICLOS_A_PROYECTAR ciclos simulados a partir del
+  // ciclo actual, estimando el balance de cada uno con lo único que se
+  // puede saber de antemano: compromisos de recurrentes y deudas (con la
+  // misma regla determinista de siempre), el ingreso recurrente esperado,
+  // y el gasto variable a la tasa diaria del presupuesto semanal vigente.
+  // Nunca persiste nada — ni ciclos, ni compromisos.
+
+  // Cuánto se espera gastar en categorías variables (comida, transporte...)
+  // durante un ciclo completo, a partir del presupuesto SEMANAL ya
+  // capturado. Se usa una tasa diaria (presupuesto / 7) multiplicada por
+  // los días reales del ciclo, en vez de contar "semanas" del ciclo: un
+  // ciclo de ~30 días no son 5 semanas completas, son ~4.3 — usar 5
+  // sobreestimaría el gasto proyectado.
+  function calcularGastoVariableProyectado(ciclo, categoriasVariables, presupuestoSemanalBase) {
+    const diasTotales = calcularDiasTotalesDelCiclo(ciclo);
+    return categoriasVariables.reduce(function (suma, categoria) {
+      const tasaDiaria = (Number(presupuestoSemanalBase[categoria.id]) || 0) / 7;
+      return suma + (tasaDiaria * diasTotales);
+    }, 0);
+  }
+
+  // Si ya se capturó un ingreso real "mensual" para este ciclo (porque el
+  // usuario lo registró por adelantado, o porque ya llegó), ese dato real
+  // gana sobre el ingreso esperado — usarlos a los dos sería contarlo
+  // doble. Los ingresos "extra" ya capturados siempre se suman aparte,
+  // vengan o no acompañados de un ingreso mensual real.
+  function calcularIngresoProyectadoDelCiclo(ciclo, datos, montoIngresoEsperado) {
+    const ingresosRealesDelCiclo = datos.ingresos.filter(function (i) { return i.cicloId === ciclo.id; });
+    const huboMensualReal = ingresosRealesDelCiclo.some(function (i) { return i.tipo === "mensual"; });
+
+    if (huboMensualReal) {
+      return calcularIngresosDelCiclo(ciclo, datos);
+    }
+    const extrasReales = ingresosRealesDelCiclo.reduce(function (suma, i) { return suma + Number(i.monto); }, 0);
+    return montoIngresoEsperado + extrasReales;
+  }
+
+  // Balance de un solo ciclo simulado: lo que ya traía de remanente, más
+  // el ingreso (real ya capturado si existe, si no el esperado), menos los
+  // compromisos proyectados (recurrentes + deudas + compromisos único ya
+  // capturados a futuro para ese ciclo — son datos reales, no estimaciones)
+  // y el gasto variable proyectado.
+  function calcularBalanceProyectadoDelCiclo(ciclo, datos, remanenteInicial, montoIngresoEsperado, categoriasVariables, presupuestoSemanalBase) {
+    const ingresoDelCiclo = calcularIngresoProyectadoDelCiclo(ciclo, datos, montoIngresoEsperado);
+    const candidatos = calcularCandidatosDelCiclo(ciclo, datos);
+    const unicosFuturos = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.origen === "unico"; });
+    const totalCompromisos = candidatos.concat(unicosFuturos).reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
+    const gastoVariableProyectado = calcularGastoVariableProyectado(ciclo, categoriasVariables, presupuestoSemanalBase);
+    const balanceDelCiclo = remanenteInicial + ingresoDelCiclo - totalCompromisos - gastoVariableProyectado;
+
+    return {
+      ciclo: ciclo,
+      candidatos: candidatos,
+      unicosFuturos: unicosFuturos,
+      totalCompromisos: totalCompromisos,
+      gastoVariableProyectado: gastoVariableProyectado,
+      remanenteInicial: remanenteInicial,
+      montoIngresoEsperado: ingresoDelCiclo,
+      balanceDelCiclo: balanceDelCiclo
+    };
+  }
+
+  // El remanente de un ciclo simulado se encadena como punto de partida del
+  // siguiente ("flujo encadenado"): el saldo de cuenta no se reinicia entre
+  // ciclos, aunque el presupuesto se piense ciclo a ciclo. El primer
+  // remanente es el disponible real de hoy — pero solo si el ciclo actual
+  // ya tiene ingreso capturado. Sin ingreso capturado, disponibleReal resta
+  // compromisos pendientes contra cero ingreso y da un número negativo que
+  // no representa nada real (mismo criterio que el semáforo "gris": sin
+  // ingreso capturado, no hay nada que calcular todavía).
+  function calcularProyeccionMultiCiclo() {
+    const datos = leerDatos();
+    const cicloActual = asegurarCicloActual();
+    const ciclosSimulados = generarCiclosSimulados(cicloActual, CANTIDAD_DE_CICLOS_A_PROYECTAR);
+    const categoriasVariables = datos.config.categorias.filter(function (c) { return c.esVariableSemanal; });
+    const ingresoEsperado = datos.config.ingresoRecurrenteEsperado;
+    const montoIngresoEsperado = (ingresoEsperado && ingresoEsperado.activo) ? Number(ingresoEsperado.monto) : 0;
+
+    let remanente = calcularIngresosDelCiclo(cicloActual, datos) > 0 ? calcularDisponibleReal(cicloActual, datos) : 0;
+    return ciclosSimulados.map(function (ciclo) {
+      const resultado = calcularBalanceProyectadoDelCiclo(ciclo, datos, remanente, montoIngresoEsperado, categoriasVariables, cicloActual.presupuestoSemanal);
+      remanente = resultado.balanceDelCiclo;
+      return resultado;
+    });
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — CATEGORÍAS
+  // ============================================================
+
+  function manejarEnvioCategoria(evento) {
+    evento.preventDefault();
+
+    const nombre = document.getElementById("nombreCategoria").value.trim();
+    const subcategorias = document.getElementById("subcategoriasCategoria").value
+      .split(",")
+      .map(function (s) { return s.trim(); })
+      .filter(function (s) { return s.length > 0; });
+    const esVariableSemanal = document.getElementById("esVariableSemanalCategoria").checked;
+
+    if (nombre === "" || subcategorias.length === 0) {
+      return;
+    }
+
+    const datos = leerDatos();
+    datos.config.categorias.push({
+      id: generarId("cat"),
+      nombre: nombre,
+      subcategorias: subcategorias,
+      esVariableSemanal: esVariableSemanal
+    });
+    guardarDatos(datos);
+
+    document.getElementById("formCategoria").reset();
+    renderizarTodo();
+  }
+
+  function renderizarCategorias() {
+    const datos = leerDatos();
+    const lista = document.getElementById("listaCategorias");
+
+    if (datos.config.categorias.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay categorías.</li>";
+      return;
+    }
+
+    lista.innerHTML = datos.config.categorias.map(function (categoria) {
+      const etiquetaSemanal = categoria.esVariableSemanal ? "presupuesto semanal" : "sin presupuesto semanal";
+      return "<li data-categoria-id=\"" + categoria.id + "\">" +
+        "<div class=\"fila-categoria\"><strong>" + escaparHTML(categoria.nombre) + "</strong> — " +
+        escaparHTML(categoria.subcategorias.join(", ")) +
+        " <span class=\"detalle\">(" + etiquetaSemanal + ")</span></div>" +
+        "<button type=\"button\" class=\"boton-editar-categoria\">Editar</button>" +
+        "<div class=\"edicion-categoria\" id=\"edicion_" + categoria.id + "\" style=\"display: none;\">" +
+          "<label>Nombre<input type=\"text\" class=\"nombre-editado\" value=\"" + escaparHTML(categoria.nombre) + "\"></label>" +
+          "<label>Subcategorías, separadas por coma<input type=\"text\" class=\"subcategorias-editadas\" value=\"" + escaparHTML(categoria.subcategorias.join(", ")) + "\"></label>" +
+          "<label><input type=\"checkbox\" class=\"variable-semanal-editada\"" + (categoria.esVariableSemanal ? " checked" : "") + "> Recibe presupuesto semanal</label>" +
+          "<button type=\"button\" class=\"boton-guardar-categoria\">Guardar cambios</button>" +
+        "</div>" +
+      "</li>";
+    }).join("");
+
+    lista.querySelectorAll("li[data-categoria-id]").forEach(function (filaLi) {
+      const categoriaId = filaLi.getAttribute("data-categoria-id");
+
+      filaLi.querySelector(".boton-editar-categoria").addEventListener("click", function () {
+        const bloqueEdicion = document.getElementById("edicion_" + categoriaId);
+        bloqueEdicion.style.display = bloqueEdicion.style.display === "none" ? "block" : "none";
+      });
+
+      filaLi.querySelector(".boton-guardar-categoria").addEventListener("click", function () {
+        guardarEdicionDeCategoria(categoriaId, filaLi);
+      });
+    });
+  }
+
+  // Guarda los cambios de nombre, subcategorías y presupuesto semanal de una
+  // categoría ya existente. El id no cambia, así que los recurrentes y
+  // gastos que ya apuntan a esta categoría (por categoriaId, no por nombre)
+  // siguen intactos sin importar qué tanto cambie el nombre o la lista de
+  // subcategorías.
+  function guardarEdicionDeCategoria(categoriaId, filaLi) {
+    const nombre = filaLi.querySelector(".nombre-editado").value.trim();
+    const subcategorias = filaLi.querySelector(".subcategorias-editadas").value
+      .split(",")
+      .map(function (s) { return s.trim(); })
+      .filter(function (s) { return s.length > 0; });
+    const esVariableSemanal = filaLi.querySelector(".variable-semanal-editada").checked;
+
+    if (nombre === "" || subcategorias.length === 0) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaId; });
+    categoria.nombre = nombre;
+    categoria.subcategorias = subcategorias;
+    categoria.esVariableSemanal = esVariableSemanal;
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  // Llena un <select> con las categorías existentes. Se usa en el formulario
+  // de recurrentes, que necesita elegir a qué categoría pertenece cada uno.
+  function poblarSelectDeCategorias(selectElement) {
+    const datos = leerDatos();
+    selectElement.innerHTML = datos.config.categorias.map(function (categoria) {
+      return "<option value=\"" + categoria.id + "\">" + escaparHTML(categoria.nombre) + "</option>";
+    }).join("");
+  }
+
+  // Llena el <select> de subcategorías según la categoría elegida, porque
+  // las subcategorías dependen de a qué categoría pertenecen.
+  function poblarSelectDeSubcategorias(selectSubcategoria, categoriaId) {
+    const datos = leerDatos();
+    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaId; });
+
+    if (!categoria) {
+      selectSubcategoria.innerHTML = "";
+      return;
+    }
+
+    selectSubcategoria.innerHTML = categoria.subcategorias.map(function (sub) {
+      return "<option value=\"" + escaparHTML(sub) + "\">" + escaparHTML(sub) + "</option>";
+    }).join("");
+  }
+
+  function actualizarSelectsDelFormularioRecurrente() {
+    const selectCategoria = document.getElementById("categoriaIdRecurrente");
+    poblarSelectDeCategorias(selectCategoria);
+    poblarSelectDeSubcategorias(document.getElementById("subcategoriaRecurrente"), selectCategoria.value);
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — TARJETAS
+  // ============================================================
+
+  function manejarEnvioTarjeta(evento) {
+    evento.preventDefault();
+
+    const datos = leerDatos();
+    datos.config.tarjetas.push({
+      id: generarId("tar"),
+      nombre: document.getElementById("nombreTarjeta").value.trim(),
+      diaCorte: Number(document.getElementById("diaCorteTarjeta").value),
+      diaPago: Number(document.getElementById("diaPagoTarjeta").value),
+      lineaTotal: Number(document.getElementById("lineaTotalTarjeta").value)
+    });
+    guardarDatos(datos);
+
+    document.getElementById("formTarjeta").reset();
+
+    // Una tarjeta nueva puede generar de inmediato un compromiso en el
+    // ciclo actual si su día de pago cae dentro del rango.
+    generarCompromisosDelCiclo(asegurarCicloActual());
+    renderizarTodo();
+  }
+
+  function renderizarTarjetas() {
+    const datos = leerDatos();
+    const lista = document.getElementById("listaTarjetas");
+
+    if (datos.config.tarjetas.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay tarjetas.</li>";
+      return;
+    }
+
+    lista.innerHTML = datos.config.tarjetas.map(function (tarjeta) {
+      return "<li data-tarjeta-id=\"" + tarjeta.id + "\">" +
+        "<div><strong>" + escaparHTML(tarjeta.nombre) + "</strong> — corte día " + tarjeta.diaCorte +
+        ", pago día " + tarjeta.diaPago +
+        " <span class=\"detalle\">(línea: " + formatearMoneda(tarjeta.lineaTotal) + ")</span></div>" +
+        "<button type=\"button\" class=\"boton-editar-tarjeta\">Editar</button>" +
+        "<div class=\"edicion-tarjeta\" id=\"edicionTarjeta_" + tarjeta.id + "\" style=\"display: none;\">" +
+          "<p class=\"pista\">Día de corte (" + tarjeta.diaCorte + ") y día de pago (" + tarjeta.diaPago +
+            ") no se pueden editar aquí — cambian qué compras entran en cada periodo ya calculado. Si el banco " +
+            "de verdad te cambió esas fechas, es más seguro dar de alta la tarjeta de nuevo.</p>" +
+          "<label>Nombre<input type=\"text\" class=\"nombre-editado\" value=\"" + escaparHTML(tarjeta.nombre) + "\"></label>" +
+          "<label>Línea total<input type=\"number\" min=\"0\" step=\"0.01\" class=\"linea-total-editada\" value=\"" + tarjeta.lineaTotal + "\"></label>" +
+          "<button type=\"button\" class=\"boton-guardar-tarjeta\">Guardar cambios</button>" +
+        "</div>" +
+      "</li>";
+    }).join("");
+
+    lista.querySelectorAll("li[data-tarjeta-id]").forEach(function (filaLi) {
+      const tarjetaId = filaLi.getAttribute("data-tarjeta-id");
+
+      filaLi.querySelector(".boton-editar-tarjeta").addEventListener("click", function () {
+        const bloqueEdicion = document.getElementById("edicionTarjeta_" + tarjetaId);
+        bloqueEdicion.style.display = bloqueEdicion.style.display === "none" ? "block" : "none";
+      });
+
+      filaLi.querySelector(".boton-guardar-tarjeta").addEventListener("click", function () {
+        guardarEdicionDeTarjeta(tarjetaId, filaLi);
+      });
+    });
+  }
+
+  // No hay activo/inactivo para tarjetas ni cascada de monto: el monto de
+  // un compromiso de tarjeta ya se recalcula solo en cada render
+  // (actualizarMontosDeCompromisosDeTarjeta), así que solo hace falta
+  // refrescar el nombre de los compromisos pendientes.
+  function guardarEdicionDeTarjeta(tarjetaId, filaLi) {
+    const nombre = filaLi.querySelector(".nombre-editado").value.trim();
+    const lineaTotal = Number(filaLi.querySelector(".linea-total-editada").value);
+
+    if (nombre === "") {
+      return;
+    }
+
+    const datos = leerDatos();
+    const tarjeta = datos.config.tarjetas.find(function (t) { return t.id === tarjetaId; });
+    tarjeta.nombre = nombre;
+    tarjeta.lineaTotal = lineaTotal || 0;
+
+    actualizarCompromisosPendientesDeOrigen(datos, "tarjeta", tarjetaId, { nombre: nombre });
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — DEUDAS
+  // ============================================================
+
+  // Muestra en vivo, mientras se llena el formulario, cuánto cuesta el
+  // crédito en total: la diferencia entre lo que se va a pagar en total y
+  // lo que realmente se pidió prestado. Se pinta en rojo a propósito, para
+  // que el costo sea visible en el momento de decidir, no después.
+  function calcularCostoDelCreditoEnVivo() {
+    const montoPorPago = Number(document.getElementById("montoPorPagoDeuda").value) || 0;
+    const pagosTotales = Number(document.getElementById("pagosTotalesDeuda").value) || 0;
+    const montoSolicitado = Number(document.getElementById("montoSolicitadoDeuda").value) || 0;
+
+    const contenedor = document.getElementById("previewCostoCredito");
+
+    if (montoSolicitado <= 0 || pagosTotales <= 0) {
+      contenedor.textContent = "";
+      return;
+    }
+
+    const montoTotalAPagar = montoPorPago * pagosTotales;
+    const costoDelCredito = montoTotalAPagar - montoSolicitado;
+    const porcentajeSobrante = costoDelCredito / montoSolicitado;
+
+    contenedor.textContent = "Costo del crédito: " + formatearMoneda(costoDelCredito) +
+      " (" + (porcentajeSobrante * 100).toFixed(1) + "% sobre lo solicitado)";
+  }
+
+  function manejarEnvioDeuda(evento) {
+    evento.preventDefault();
+
+    const datos = leerDatos();
+    datos.deudas.push({
+      id: generarId("deu"),
+      nombre: document.getElementById("nombreDeuda").value.trim(),
+      tipo: document.getElementById("tipoDeuda").value,
+      montoSolicitado: Number(document.getElementById("montoSolicitadoDeuda").value),
+      montoPorPago: Number(document.getElementById("montoPorPagoDeuda").value),
+      frecuencia: document.getElementById("frecuenciaDeuda").value,
+      pagosTotales: Number(document.getElementById("pagosTotalesDeuda").value),
+      pagosRealizados: Number(document.getElementById("pagosRealizadosDeuda").value) || 0,
+      fechaPrimerPago: document.getElementById("fechaPrimerPagoDeuda").value,
+      saldoManual: Number(document.getElementById("saldoManualDeuda").value) || null,
+      fechaSaldoManual: document.getElementById("fechaSaldoManualDeuda").value || null,
+      fuente: "debito",
+      activa: true
+    });
+    guardarDatos(datos);
+
+    document.getElementById("formDeuda").reset();
+    document.getElementById("previewCostoCredito").textContent = "";
+
+    generarCompromisosDelCiclo(asegurarCicloActual());
+    renderizarTodo();
+  }
+
+  function renderizarDeudas() {
+    const datos = leerDatos();
+    const lista = document.getElementById("listaDeudas");
+
+    if (datos.deudas.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay deudas.</li>";
+      return;
+    }
+
+    lista.innerHTML = datos.deudas.map(function (deuda) {
+      const estado = calcularEstadoDeDeuda(deuda);
+      let etiquetaSaldo;
+      if (deuda.saldoManual !== null && deuda.saldoManual !== undefined) {
+        etiquetaSaldo = "saldo real: " + formatearMoneda(estado.saldoRestante) +
+          " al " + deuda.fechaSaldoManual;
+      } else {
+        etiquetaSaldo = "saldo restante: " + formatearMoneda(estado.saldoRestante);
+      }
+      const etiquetaActiva = deuda.activa ? "" : " (inactiva)";
+      return "<li data-deuda-id=\"" + deuda.id + "\">" +
+        "<div><strong>" + escaparHTML(deuda.nombre) + "</strong> — pago " + deuda.pagosRealizados +
+        " de " + deuda.pagosTotales +
+        " <span class=\"detalle\">(" + etiquetaSaldo + etiquetaActiva + ")</span></div>" +
+        "<button type=\"button\" class=\"boton-editar-deuda\">Editar</button>" +
+        "<div class=\"edicion-deuda\" id=\"edicionDeuda_" + deuda.id + "\" style=\"display: none;\">" +
+          "<p class=\"pista\">Fecha del primer pago (" + deuda.fechaPrimerPago + "), frecuencia (" + deuda.frecuencia +
+            "), pagos totales (" + deuda.pagosTotales + ") y pagos ya realizados (" + deuda.pagosRealizados +
+            ") no se pueden editar aquí — cambiarlos dejaría compromisos ya generados con fechas que no calzan " +
+            "con ninguna regla real. Si de verdad cambió el crédito, da de alta uno nuevo y desactiva este.</p>" +
+          "<label>Nombre<input type=\"text\" class=\"nombre-editado\" value=\"" + escaparHTML(deuda.nombre) + "\"></label>" +
+          "<label>Tipo<select class=\"tipo-editado\">" +
+            "<option value=\"prestamo\"" + (deuda.tipo === "prestamo" ? " selected" : "") + ">Préstamo</option>" +
+            "<option value=\"msi\"" + (deuda.tipo === "msi" ? " selected" : "") + ">MSI (meses sin intereses)</option>" +
+          "</select></label>" +
+          "<label>Monto solicitado<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-solicitado-editado\" value=\"" + deuda.montoSolicitado + "\"></label>" +
+          "<label>Monto por pago<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-por-pago-editado\" value=\"" + deuda.montoPorPago + "\"></label>" +
+          "<label>Saldo real según el banco (opcional)<input type=\"number\" min=\"0\" step=\"0.01\" class=\"saldo-manual-editado\" value=\"" + (deuda.saldoManual === null || deuda.saldoManual === undefined ? "" : deuda.saldoManual) + "\"></label>" +
+          "<label>Fecha de ese saldo<input type=\"date\" class=\"fecha-saldo-manual-editada\" value=\"" + (deuda.fechaSaldoManual || "") + "\"></label>" +
+          "<label><input type=\"checkbox\" class=\"activa-editada\"" + (deuda.activa ? " checked" : "") + "> Activa</label>" +
+          "<button type=\"button\" class=\"boton-guardar-deuda\">Guardar cambios</button>" +
+        "</div>" +
+      "</li>";
+    }).join("");
+
+    lista.querySelectorAll("li[data-deuda-id]").forEach(function (filaLi) {
+      const deudaId = filaLi.getAttribute("data-deuda-id");
+
+      filaLi.querySelector(".boton-editar-deuda").addEventListener("click", function () {
+        const bloqueEdicion = document.getElementById("edicionDeuda_" + deudaId);
+        bloqueEdicion.style.display = bloqueEdicion.style.display === "none" ? "block" : "none";
+      });
+
+      filaLi.querySelector(".boton-guardar-deuda").addEventListener("click", function () {
+        guardarEdicionDeDeuda(deudaId, filaLi);
+      });
+    });
+  }
+
+  // Igual que guardarEdicionDeRecurrente: si sigue activa, los compromisos
+  // ya generados y sin pagar de esta deuda se actualizan con el nombre y
+  // monto por pago nuevos; si se acaba de desactivar (ej. se liquidó
+  // antes de tiempo), esos compromisos se eliminan.
+  function guardarEdicionDeDeuda(deudaId, filaLi) {
+    const nombre = filaLi.querySelector(".nombre-editado").value.trim();
+    const montoPorPago = Number(filaLi.querySelector(".monto-por-pago-editado").value);
+    const montoSolicitado = Number(filaLi.querySelector(".monto-solicitado-editado").value);
+
+    if (nombre === "" || !montoPorPago || montoPorPago <= 0 || !montoSolicitado || montoSolicitado <= 0) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const deuda = datos.deudas.find(function (d) { return d.id === deudaId; });
+    const estabaActiva = deuda.activa;
+
+    deuda.nombre = nombre;
+    deuda.tipo = filaLi.querySelector(".tipo-editado").value;
+    deuda.montoSolicitado = montoSolicitado;
+    deuda.montoPorPago = montoPorPago;
+    deuda.saldoManual = Number(filaLi.querySelector(".saldo-manual-editado").value) || null;
+    deuda.fechaSaldoManual = filaLi.querySelector(".fecha-saldo-manual-editada").value || null;
+    deuda.activa = filaLi.querySelector(".activa-editada").checked;
+
+    if (estabaActiva && !deuda.activa) {
+      eliminarCompromisosPendientesDeOrigen(datos, "deuda", deudaId);
+    } else {
+      actualizarCompromisosPendientesDeOrigen(datos, "deuda", deudaId, { nombre: nombre, montoEstimado: montoPorPago });
+    }
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — RECURRENTES
+  // ============================================================
+
+  // El campo "a partir de qué ciclo empieza" solo tiene sentido para los
+  // recurrentes bimestrales (los demás se repiten en todos los ciclos), así
+  // que se muestra u oculta según la frecuencia elegida.
+  function manejarCambioFrecuenciaRecurrente() {
+    const frecuencia = document.getElementById("frecuenciaRecurrente").value;
+    const contenedor = document.getElementById("contenedorCicloDeInicio");
+
+    if (frecuencia === "bimestral") {
+      contenedor.style.display = "block";
+      poblarSelectDeCicloDeInicio();
+    } else {
+      contenedor.style.display = "none";
+    }
+  }
+
+  // Ofrece como ancla el ciclo actual o el siguiente. No tiene sentido
+  // anclar un recurrente nuevo a un ciclo que ya pasó.
+  function poblarSelectDeCicloDeInicio() {
+    const cicloActual = asegurarCicloActual();
+    const cicloSiguiente = calcularSiguienteCicloSimulado(cicloActual);
+
+    const select = document.getElementById("cicloDeInicioRecurrente");
+    select.innerHTML =
+      "<option value=\"" + cicloActual.id + "\">Este ciclo (" + cicloActual.id + ")</option>" +
+      "<option value=\"" + cicloSiguiente.id + "\">El siguiente ciclo (" + cicloSiguiente.id + ")</option>";
+  }
+
+  function manejarEnvioRecurrente(evento) {
+    evento.preventDefault();
+
+    const frecuencia = document.getElementById("frecuenciaRecurrente").value;
+    const cicloDeInicio = frecuencia === "bimestral"
+      ? document.getElementById("cicloDeInicioRecurrente").value
+      : null;
+
+    const vigenciaHasta = document.getElementById("vigenciaHastaRecurrente").value || null;
+    const destinatario = document.getElementById("destinatarioRecurrente").value.trim() || null;
+
+    const datos = leerDatos();
+    datos.recurrentes.push({
+      id: generarId("rec"),
+      nombre: document.getElementById("nombreRecurrente").value.trim(),
+      categoriaId: document.getElementById("categoriaIdRecurrente").value,
+      subcategoria: document.getElementById("subcategoriaRecurrente").value,
+      destinatario: destinatario,
+      frecuencia: frecuencia,
+      diaBase: Number(document.getElementById("diaBaseRecurrente").value),
+      cicloDeInicio: cicloDeInicio,
+      vigenciaHasta: vigenciaHasta,
+      montoEstimado: Number(document.getElementById("montoEstimadoRecurrente").value),
+      fuente: document.getElementById("fuenteRecurrente").value,
+      activo: true
+    });
+    guardarDatos(datos);
+
+    document.getElementById("formRecurrente").reset();
+    document.getElementById("contenedorCicloDeInicio").style.display = "none";
+
+    generarCompromisosDelCiclo(asegurarCicloActual());
+    renderizarTodo();
+  }
+
+  function renderizarRecurrentes() {
+    const datos = leerDatos();
+    const lista = document.getElementById("listaRecurrentes");
+
+    if (datos.recurrentes.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay gastos recurrentes.</li>";
+      return;
+    }
+
+    lista.innerHTML = datos.recurrentes.map(function (recurrente) {
+      const etiquetaVigencia = recurrente.vigenciaHasta ? ", vigente hasta " + recurrente.vigenciaHasta : "";
+      const etiquetaDestinatario = recurrente.destinatario ? ", " + escaparHTML(recurrente.destinatario) : "";
+      const etiquetaActivo = recurrente.activo ? "" : " (inactivo)";
+      return "<li data-recurrente-id=\"" + recurrente.id + "\">" +
+        "<div><strong>" + escaparHTML(recurrente.nombre) + "</strong> — " + recurrente.frecuencia +
+        ", día " + recurrente.diaBase +
+        " <span class=\"detalle\">(" + formatearMoneda(recurrente.montoEstimado) + " est." + etiquetaVigencia + etiquetaDestinatario + etiquetaActivo + ")</span></div>" +
+        "<button type=\"button\" class=\"boton-editar-recurrente\">Editar</button>" +
+        "<div class=\"edicion-recurrente\" id=\"edicionRecurrente_" + recurrente.id + "\" style=\"display: none;\">" +
+          "<p class=\"pista\">Frecuencia (" + recurrente.frecuencia + ") y día del mes (" + recurrente.diaBase +
+            ") no se pueden editar aquí — si de verdad cambiaron, da de alta un recurrente nuevo y pon " +
+            "\"vigente hasta\" hoy en este, o desactívalo.</p>" +
+          "<label>Nombre<input type=\"text\" class=\"nombre-editado\" value=\"" + escaparHTML(recurrente.nombre) + "\"></label>" +
+          "<label>Categoría<select class=\"categoria-editada\"></select></label>" +
+          "<label>Subcategoría<select class=\"subcategoria-editada\"></select></label>" +
+          "<label>Destinatario (opcional)<input type=\"text\" class=\"destinatario-editado\" value=\"" + escaparHTML(recurrente.destinatario || "") + "\"></label>" +
+          "<label>Monto estimado<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-editado\" value=\"" + recurrente.montoEstimado + "\"></label>" +
+          "<label>Fuente<select class=\"fuente-editada\">" +
+            "<option value=\"debito\">Débito</option>" +
+            "<option value=\"credito\">Crédito</option>" +
+          "</select></label>" +
+          "<label>Vigente hasta (opcional)<input type=\"date\" class=\"vigencia-editada\" value=\"" + (recurrente.vigenciaHasta || "") + "\"></label>" +
+          "<label><input type=\"checkbox\" class=\"activo-editado\"" + (recurrente.activo ? " checked" : "") + "> Activo</label>" +
+          "<button type=\"button\" class=\"boton-guardar-recurrente\">Guardar cambios</button>" +
+        "</div>" +
+      "</li>";
+    }).join("");
+
+    lista.querySelectorAll("li[data-recurrente-id]").forEach(function (filaLi) {
+      const recurrenteId = filaLi.getAttribute("data-recurrente-id");
+      const recurrente = datos.recurrentes.find(function (r) { return r.id === recurrenteId; });
+
+      filaLi.querySelector(".boton-editar-recurrente").addEventListener("click", function () {
+        const bloqueEdicion = document.getElementById("edicionRecurrente_" + recurrenteId);
+        const mostrar = bloqueEdicion.style.display === "none";
+        bloqueEdicion.style.display = mostrar ? "block" : "none";
+        if (mostrar) {
+          const selectCategoria = filaLi.querySelector(".categoria-editada");
+          poblarSelectDeCategorias(selectCategoria);
+          selectCategoria.value = recurrente.categoriaId;
+          poblarSelectDeSubcategorias(filaLi.querySelector(".subcategoria-editada"), recurrente.categoriaId);
+          filaLi.querySelector(".subcategoria-editada").value = recurrente.subcategoria;
+          filaLi.querySelector(".fuente-editada").value = recurrente.fuente;
+          selectCategoria.addEventListener("change", function () {
+            poblarSelectDeSubcategorias(filaLi.querySelector(".subcategoria-editada"), selectCategoria.value);
+          });
+        }
+      });
+
+      filaLi.querySelector(".boton-guardar-recurrente").addEventListener("click", function () {
+        guardarEdicionDeRecurrente(recurrenteId, filaLi);
+      });
+    });
+  }
+
+  // Actualiza los campos "seguros" de un recurrente (ver SPEC.md, sección
+  // "Edición de entidades"). Si sigue activo, los compromisos ya
+  // generados y todavía sin pagar de ese recurrente se actualizan con el
+  // nombre y monto nuevos. Si se acaba de desactivar, esos compromisos se
+  // eliminan en vez de actualizarse — ya no van a suceder de verdad.
+  function guardarEdicionDeRecurrente(recurrenteId, filaLi) {
+    const nombre = filaLi.querySelector(".nombre-editado").value.trim();
+    const montoEstimado = Number(filaLi.querySelector(".monto-editado").value);
+
+    if (nombre === "" || !montoEstimado || montoEstimado <= 0) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const recurrente = datos.recurrentes.find(function (r) { return r.id === recurrenteId; });
+    const estabaActivo = recurrente.activo;
+
+    recurrente.nombre = nombre;
+    recurrente.categoriaId = filaLi.querySelector(".categoria-editada").value;
+    recurrente.subcategoria = filaLi.querySelector(".subcategoria-editada").value;
+    recurrente.destinatario = filaLi.querySelector(".destinatario-editado").value.trim() || null;
+    recurrente.montoEstimado = montoEstimado;
+    recurrente.fuente = filaLi.querySelector(".fuente-editada").value;
+    recurrente.vigenciaHasta = filaLi.querySelector(".vigencia-editada").value || null;
+    recurrente.activo = filaLi.querySelector(".activo-editado").checked;
+
+    if (estabaActivo && !recurrente.activo) {
+      eliminarCompromisosPendientesDeOrigen(datos, "recurrente", recurrenteId);
+    } else {
+      actualizarCompromisosPendientesDeOrigen(datos, "recurrente", recurrenteId, { nombre: nombre, montoEstimado: montoEstimado });
+    }
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — COMPROMISO ÚNICO
+  // ============================================================
+  //
+  // Una obligación de una sola vez, sin regla detrás (ver SPEC.md, sección
+  // "compromisos únicos — alta"). A diferencia de recurrentes, deudas y
+  // tarjetas, aquí no se guarda ninguna regla en config: el formulario
+  // inserta directamente la instancia en datos.compromisos, con el ciclo
+  // calculado a partir de su fecha.
+
+  // La categoría es opcional, así que el select siempre ofrece "Sin
+  // categoría" además de las categorías existentes.
+  function actualizarSelectsDelFormularioCompromisoUnico() {
+    const datos = leerDatos();
+    const selectCategoria = document.getElementById("categoriaIdCompromisoUnico");
+
+    selectCategoria.innerHTML = "<option value=\"\">Sin categoría</option>" +
+      datos.config.categorias.map(function (categoria) {
+        return "<option value=\"" + categoria.id + "\">" + escaparHTML(categoria.nombre) + "</option>";
+      }).join("");
+
+    actualizarSubcategoriaCompromisoUnico();
+  }
+
+  // La subcategoría solo tiene sentido si se eligió una categoría. Si el
+  // usuario vuelve a "Sin categoría", el select de subcategoría se vacía y
+  // se deshabilita para que no quede un valor suelto sin categoría dueña.
+  function actualizarSubcategoriaCompromisoUnico() {
+    const categoriaId = document.getElementById("categoriaIdCompromisoUnico").value;
+    const selectSubcategoria = document.getElementById("subcategoriaCompromisoUnico");
+
+    if (categoriaId === "") {
+      selectSubcategoria.innerHTML = "";
+      selectSubcategoria.disabled = true;
+      return;
+    }
+
+    selectSubcategoria.disabled = false;
+    poblarSelectDeSubcategorias(selectSubcategoria, categoriaId);
+  }
+
+  function manejarEnvioCompromisoUnico(evento) {
+    evento.preventDefault();
+
+    const nombre = document.getElementById("nombreCompromisoUnico").value.trim();
+    const fechaTexto = document.getElementById("fechaCompromisoUnico").value;
+    const montoEstimado = Number(document.getElementById("montoEstimadoCompromisoUnico").value);
+    const categoriaId = document.getElementById("categoriaIdCompromisoUnico").value || null;
+    const subcategoria = categoriaId ? document.getElementById("subcategoriaCompromisoUnico").value : null;
+    const destinatario = document.getElementById("destinatarioCompromisoUnico").value.trim() || null;
+
+    if (nombre === "" || fechaTexto === "" || !montoEstimado || montoEstimado <= 0) {
+      return;
+    }
+
+    // No pasa por generarCompromisosDelCiclo(): no hay regla que regenerar
+    // en ciclos futuros, solo existe esta vez.
+    const ciclo = obtenerOCrearCicloParaFecha(crearFechaLocal(fechaTexto));
+    const datos = leerDatos();
+
+    datos.compromisos.push({
+      id: generarId("cmp"),
+      cicloId: ciclo.id,
+      origen: "unico",
+      origenId: null,
+      nombre: nombre,
+      categoriaId: categoriaId,
+      subcategoria: subcategoria,
+      destinatario: destinatario,
+      fechaProgramada: fechaTexto,
+      montoEstimado: montoEstimado,
+      montoReal: null,
+      pagado: false,
+      pagoNde: null
+    });
+    guardarDatos(datos);
+
+    document.getElementById("formCompromisoUnico").reset();
+    actualizarSelectsDelFormularioCompromisoUnico();
+    renderizarTodo();
+  }
+
+  function renderizarCompromisosUnicos() {
+    const datos = leerDatos();
+    const lista = document.getElementById("listaCompromisosUnicos");
+
+    const compromisosUnicos = datos.compromisos
+      .filter(function (c) { return c.origen === "unico"; })
+      .sort(function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : 1; });
+
+    if (compromisosUnicos.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay compromisos únicos.</li>";
+      return;
+    }
+
+    lista.innerHTML = compromisosUnicos.map(function (compromiso) {
+      const estado = compromiso.pagado ? "pagado" : "pendiente";
+      const etiquetaDestinatario = compromiso.destinatario ? ", " + escaparHTML(compromiso.destinatario) : "";
+      return "<li>" + compromiso.fechaProgramada + " — " + escaparHTML(compromiso.nombre) +
+        " <span class=\"detalle\">(" + formatearMoneda(compromiso.montoEstimado) + " est., " + estado + etiquetaDestinatario + ")</span></li>";
+    }).join("");
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — INGRESOS
+  // ============================================================
+
+  function manejarEnvioIngreso(evento) {
+    evento.preventDefault();
+
+    const fechaTexto = document.getElementById("fechaIngreso").value;
+    const cicloDelIngreso = obtenerOCrearCicloParaFecha(crearFechaLocal(fechaTexto));
+
+    const datos = leerDatos();
+    datos.ingresos.push({
+      id: generarId("ing"),
+      cicloId: cicloDelIngreso.id,
+      fecha: fechaTexto,
+      monto: Number(document.getElementById("montoIngreso").value),
+      tipo: document.getElementById("tipoIngreso").value,
+      nota: document.getElementById("notaIngreso").value.trim()
+    });
+    guardarDatos(datos);
+
+    document.getElementById("formIngreso").reset();
+    establecerFechaDeHoyEnFormularioIngreso();
+    renderizarTodo();
+  }
+
+  function establecerFechaDeHoyEnFormularioIngreso() {
+    document.getElementById("fechaIngreso").value = formatearFechaISO(new Date());
+  }
+
+  function renderizarIngresos() {
+    const datos = leerDatos();
+    const lista = document.getElementById("listaIngresos");
+
+    if (datos.ingresos.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay ingresos registrados.</li>";
+      return;
+    }
+
+    const ingresosOrdenados = datos.ingresos.slice().sort(function (a, b) {
+      return a.fecha < b.fecha ? 1 : -1;
+    });
+
+    lista.innerHTML = ingresosOrdenados.map(function (ingreso) {
+      const notaTexto = ingreso.nota ? ", " + escaparHTML(ingreso.nota) : "";
+      return "<li data-ingreso-id=\"" + ingreso.id + "\">" +
+        "<div>" + ingreso.fecha + " — " + formatearMoneda(ingreso.monto) +
+        " <span class=\"detalle\">(" + ingreso.tipo + notaTexto + ")</span></div>" +
+        "<button type=\"button\" class=\"boton-editar-ingreso\">Editar</button>" +
+        "<div class=\"edicion-ingreso\" id=\"edicionIngreso_" + ingreso.id + "\" style=\"display: none;\">" +
+          "<label>Fecha<input type=\"date\" class=\"fecha-editada\" value=\"" + ingreso.fecha + "\"></label>" +
+          "<label>Monto<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-editado\" value=\"" + ingreso.monto + "\"></label>" +
+          "<label>Tipo<select class=\"tipo-editado\">" +
+            "<option value=\"mensual\"" + (ingreso.tipo === "mensual" ? " selected" : "") + ">Mensual</option>" +
+            "<option value=\"extra\"" + (ingreso.tipo === "extra" ? " selected" : "") + ">Extra</option>" +
+          "</select></label>" +
+          "<label>Nota (opcional)<input type=\"text\" class=\"nota-editada\" value=\"" + escaparHTML(ingreso.nota || "") + "\"></label>" +
+          "<button type=\"button\" class=\"boton-guardar-ingreso\">Guardar cambios</button>" +
+        "</div>" +
+      "</li>";
+    }).join("");
+
+    lista.querySelectorAll("li[data-ingreso-id]").forEach(function (filaLi) {
+      const ingresoId = filaLi.getAttribute("data-ingreso-id");
+
+      filaLi.querySelector(".boton-editar-ingreso").addEventListener("click", function () {
+        const bloqueEdicion = document.getElementById("edicionIngreso_" + ingresoId);
+        bloqueEdicion.style.display = bloqueEdicion.style.display === "none" ? "block" : "none";
+      });
+
+      filaLi.querySelector(".boton-guardar-ingreso").addEventListener("click", function () {
+        guardarEdicionDeIngreso(ingresoId, filaLi);
+      });
+    });
+  }
+
+  // Nada más referencia un ingreso por id, así que no hay compromisos que
+  // actualizar aquí. La única cascada necesaria: si la fecha cambia de
+  // ciclo, cicloId tiene que recalcularse — si no, el ingreso se quedaría
+  // contando para el ciclo viejo aunque su fecha diga otra cosa.
+  function guardarEdicionDeIngreso(ingresoId, filaLi) {
+    const fecha = filaLi.querySelector(".fecha-editada").value;
+    const monto = Number(filaLi.querySelector(".monto-editado").value);
+
+    if (!fecha || !monto || monto <= 0) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const ingreso = datos.ingresos.find(function (i) { return i.id === ingresoId; });
+
+    ingreso.fecha = fecha;
+    ingreso.monto = monto;
+    ingreso.tipo = filaLi.querySelector(".tipo-editado").value;
+    ingreso.nota = filaLi.querySelector(".nota-editada").value.trim();
+    ingreso.cicloId = obtenerOCrearCicloParaFecha(crearFechaLocal(fecha)).id;
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — INGRESO RECURRENTE ESPERADO
+  // ============================================================
+  //
+  // Es un solo valor, no una lista: a diferencia de los recurrentes de
+  // gasto, no hay hoy más de una fuente de ingreso ni nada que la
+  // referencie por id. Sirve solo para proyectar ciclos futuros en
+  // Análisis — el ingreso real de cada ciclo se sigue capturando a mano en
+  // la sección de Ingresos, como siempre.
+
+  function renderizarIngresoRecurrenteEsperado() {
+    const datos = leerDatos();
+    const ingresoEsperado = datos.config.ingresoRecurrenteEsperado || { monto: 0, activo: true };
+    const contenedor = document.getElementById("contenedorIngresoRecurrenteEsperado");
+
+    contenedor.innerHTML =
+      "<label>Monto mensual esperado" +
+      "<input type=\"number\" min=\"0\" step=\"0.01\" id=\"montoIngresoRecurrenteEsperado\" value=\"" + ingresoEsperado.monto + "\"></label>" +
+      "<label><input type=\"checkbox\" id=\"activoIngresoRecurrenteEsperado\"" + (ingresoEsperado.activo ? " checked" : "") + "> Usarlo para proyectar</label>" +
+      "<button type=\"button\" id=\"botonGuardarIngresoRecurrenteEsperado\">Guardar</button>" +
+      "<div id=\"mensajeIngresoRecurrenteEsperado\" class=\"pista\"></div>";
+
+    document.getElementById("botonGuardarIngresoRecurrenteEsperado").addEventListener("click", guardarIngresoRecurrenteEsperado);
+  }
+
+  function guardarIngresoRecurrenteEsperado() {
+    const datos = leerDatos();
+    datos.config.ingresoRecurrenteEsperado = {
+      monto: Number(document.getElementById("montoIngresoRecurrenteEsperado").value) || 0,
+      activo: document.getElementById("activoIngresoRecurrenteEsperado").checked
+    };
+    guardarDatos(datos);
+    document.getElementById("mensajeIngresoRecurrenteEsperado").textContent = "Ingreso esperado guardado.";
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — PRESUPUESTO SEMANAL
+  // ============================================================
+  //
+  // Solo las categorías marcadas como "esVariableSemanal" reciben un tope
+  // por semana. El formulario se arma con JavaScript porque sus campos
+  // dependen de qué categorías existan en ese momento.
+
+  function renderizarPresupuestoSemanal() {
+    const datos = leerDatos();
+    const cicloActual = asegurarCicloActual();
+    const categoriasVariables = datos.config.categorias.filter(function (c) { return c.esVariableSemanal; });
+    const contenedor = document.getElementById("contenedorPresupuestoSemanal");
+
+    if (categoriasVariables.length === 0) {
+      contenedor.innerHTML = "<p class=\"pista\">Agrega primero una categoría marcada como \"presupuesto semanal\".</p>";
+      return;
+    }
+
+    const camposHTML = categoriasVariables.map(function (categoria) {
+      const valorActual = cicloActual.presupuestoSemanal[categoria.id] || "";
+      return "<label>" + escaparHTML(categoria.nombre) +
+        "<input type=\"number\" min=\"0\" step=\"0.01\" data-categoria-id=\"" + categoria.id + "\" value=\"" + valorActual + "\"></label>";
+    }).join("");
+
+    contenedor.innerHTML = camposHTML +
+      "<button type=\"button\" id=\"botonGuardarPresupuestoSemanal\">Guardar presupuesto semanal</button>" +
+      "<div id=\"mensajePresupuestoSemanal\" class=\"pista\"></div>";
+
+    document.getElementById("botonGuardarPresupuestoSemanal").addEventListener("click", guardarPresupuestoSemanal);
+  }
+
+  function guardarPresupuestoSemanal() {
+    const cicloActual = asegurarCicloActual();
+    const datos = leerDatos();
+    const cicloEnDatos = datos.ciclos.find(function (c) { return c.id === cicloActual.id; });
+
+    document.querySelectorAll("#contenedorPresupuestoSemanal input[data-categoria-id]").forEach(function (entrada) {
+      const categoriaId = entrada.getAttribute("data-categoria-id");
+      cicloEnDatos.presupuestoSemanal[categoriaId] = Number(entrada.value) || 0;
+    });
+
+    guardarDatos(datos);
+    document.getElementById("mensajePresupuestoSemanal").textContent = "Presupuesto semanal guardado.";
+  }
+
+  // ============================================================
+  // VISTA PREVIA DE COMPROMISOS
+  // ============================================================
+
+  function renderizarCompromisos() {
+    const datos = leerDatos();
+    const cicloActual = asegurarCicloActual();
+    const lista = document.getElementById("listaCompromisos");
+
+    const compromisosDelCiclo = datos.compromisos
+      .filter(function (c) { return c.cicloId === cicloActual.id; })
+      .sort(function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : 1; });
+
+    if (compromisosDelCiclo.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">No hay compromisos generados para este ciclo todavía.</li>";
+      return;
+    }
+
+    lista.innerHTML = compromisosDelCiclo.map(function (compromiso) {
+      const etiquetaPago = compromiso.pagoNde ? " (pago " + compromiso.pagoNde + ")" : "";
+      return "<li>" + compromiso.fechaProgramada + " — " + escaparHTML(compromiso.nombre) + etiquetaPago +
+        " <span class=\"detalle\">(" + compromiso.origen + ", " + formatearMoneda(compromiso.montoEstimado) + " est.)</span></li>";
+    }).join("");
+  }
+
+  // ============================================================
+  // ANÁLISIS — BALANCE Y PRÓXIMOS PAGOS
+  // ============================================================
+
+  const ETIQUETA_SEMAFORO = {
+    verde: "Vas bien",
+    amarillo: "Al límite",
+    rojo: "Te vas a pasar",
+    gris: "Falta capturar el ingreso"
+  };
+
+  function renderizarBalanceDelCiclo() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const contenedor = document.getElementById("contenedorBalanceCiclo");
+
+    const ingresosDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
+    const compromisosPendientes = calcularCompromisosPendientesDelCiclo(ciclo, datos);
+    const disponibleReal = calcularDisponibleReal(ciclo, datos);
+    const proyeccionCierre = calcularProyeccionDeCierre(ciclo, datos);
+    const color = calcularColorDelSemaforo(proyeccionCierre, ingresosDelCiclo);
+    const rango = calcularRangoDeDiasDelCiclo(ciclo);
+
+    // El margen solo tiene sentido con ingreso ya capturado (si no, no hay
+    // nada contra qué medir la holgura). En rojo ya no hay margen que
+    // mostrar hacia adelante, así que se avisa que ya se cruzó el 100%.
+    let margenHTML = "";
+    if (ingresosDelCiclo > 0) {
+      const margen = calcularMargenAntesDeUmbrales(proyeccionCierre, ingresosDelCiclo);
+      if (color === "rojo") {
+        margenHTML = "<p class=\"detalle\">Ya se pasó del 100% del ingreso proyectado.</p>";
+      } else if (color === "amarillo") {
+        margenHTML = "<p class=\"detalle\">Margen antes de rojo: " + formatearMoneda(margen.antesDeRojo) + "</p>";
+      } else {
+        margenHTML = "<p class=\"detalle\">Margen antes de amarillo: " + formatearMoneda(margen.antesDeAmarillo) + "</p>";
+      }
+    }
+
+    const proximoCambio = ingresosDelCiclo > 0 ? calcularProximoCambioDeColor(calcularTrayectoriaDelSemaforo(ciclo, datos)) : null;
+    const proximoCambioHTML = proximoCambio
+      ? "<p class=\"pista\">Si sigues a este ritmo, se pondría " + proximoCambio.color + " el " + proximoCambio.fechaISO + ".</p>"
+      : "";
+
+    contenedor.innerHTML =
+      "<div class=\"monto-grande\">" + formatearMoneda(disponibleReal) + "</div>" +
+      "<div class=\"semaforo semaforo-" + color + "\">" + ETIQUETA_SEMAFORO[color] + "</div>" +
+      "<p class=\"detalle\">Ingresos del ciclo: " + formatearMoneda(ingresosDelCiclo) + "</p>" +
+      "<p class=\"detalle\">Compromisos pendientes: " + formatearMoneda(compromisosPendientes) + "</p>" +
+      "<p class=\"detalle\">Proyección de cierre: " + formatearMoneda(proyeccionCierre) + "</p>" +
+      margenHTML +
+      proximoCambioHTML +
+      "<p class=\"pista\">" + ciclo.fechaInicio + " a " + ciclo.fechaFin +
+        " — día " + rango.diasTranscurridos + " de " + rango.diasTotales + "</p>";
+  }
+
+  // ============================================================
+  // ANÁLISIS — GRÁFICA DE TRAYECTORIA DEL SEMÁFORO
+  // ============================================================
+  //
+  // Dibuja calcularTrayectoriaDelSemaforo como una línea SVG hecha a mano
+  // (sin librerías de gráficas, por las restricciones del proyecto): un
+  // tramo por cada racha de color/condición pasado-futuro — pasado sólido,
+  // futuro punteado —, más las líneas de referencia de los umbrales del
+  // semáforo y un cursor que sigue al mouse o al dedo.
+
+  const COLOR_HEX_SEMAFORO = {
+    verde: "#5eead4",
+    amarillo: "#fde047",
+    rojo: "#fca5a5",
+    gris: "#94a3b8"
+  };
+
+  // Agrupa la trayectoria en tramos consecutivos que comparten color y
+  // condición pasado/futuro, repitiendo el punto de quiebre en el tramo
+  // anterior para que la línea se vea continua aunque cambie de color a
+  // la mitad.
+  function construirTramosDeTrayectoria(trayectoria) {
+    const tramos = [];
+    let tramoActual = null;
+
+    trayectoria.forEach(function (punto, indice) {
+      const clave = punto.color + "|" + punto.esFuturo;
+      const entrada = { indice: indice, porcentaje: punto.porcentaje };
+
+      if (!tramoActual || tramoActual.clave !== clave) {
+        const quiebre = indice > 0 ? [{ indice: indice - 1, porcentaje: trayectoria[indice - 1].porcentaje }] : [];
+        tramoActual = { clave: clave, color: punto.color, esFuturo: punto.esFuturo, entradas: quiebre.concat([entrada]) };
+        tramos.push(tramoActual);
+      } else {
+        tramoActual.entradas.push(entrada);
+      }
+    });
+
+    return tramos;
+  }
+
+  function renderizarTrayectoriaSemaforo() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const contenedor = document.getElementById("contenedorTrayectoriaSemaforo");
+    const ingresosDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
+
+    // Sin ingreso capturado no hay nada que graficar todavía — mismo
+    // criterio "gris" que ya usa el semáforo de Balance del ciclo.
+    if (ingresosDelCiclo <= 0) {
+      contenedor.innerHTML = "<div class=\"grafica-trayectoria\"><p class=\"pista\">Captura el ingreso del ciclo para ver la gráfica de trayectoria.</p></div>";
+      return;
+    }
+
+    const trayectoria = calcularTrayectoriaDelSemaforo(ciclo, datos);
+    const ANCHO = 640;
+    const ALTO = 200;
+    const MARGEN = { izquierda: 8, derecha: 34, arriba: 10, abajo: 20 };
+    const anchoGrafica = ANCHO - MARGEN.izquierda - MARGEN.derecha;
+    const altoGrafica = ALTO - MARGEN.arriba - MARGEN.abajo;
+
+    const maxObservado = trayectoria.reduce(function (max, d) { return Math.max(max, d.porcentaje); }, 0);
+    const porcentajeMaximoEje = Math.max(1.15, maxObservado * 1.1);
+
+    function coordenadaX(indice) {
+      return MARGEN.izquierda + (indice / (trayectoria.length - 1)) * anchoGrafica;
+    }
+    function coordenadaY(porcentaje) {
+      return MARGEN.arriba + (1 - (porcentaje / porcentajeMaximoEje)) * altoGrafica;
+    }
+
+    const yBase = coordenadaY(0);
+    let indiceHoy = 0;
+    trayectoria.forEach(function (dia, indice) {
+      if (!dia.esFuturo) { indiceHoy = indice; }
+    });
+
+    const tramos = construirTramosDeTrayectoria(trayectoria);
+    const tramosHTML = tramos.map(function (tramo) {
+      const colorHex = COLOR_HEX_SEMAFORO[tramo.color];
+      const puntosLinea = tramo.entradas.map(function (e) { return coordenadaX(e.indice) + "," + coordenadaY(e.porcentaje); }).join(" ");
+      const primeraX = coordenadaX(tramo.entradas[0].indice);
+      const ultimaX = coordenadaX(tramo.entradas[tramo.entradas.length - 1].indice);
+      const puntosArea = primeraX + "," + yBase + " " + puntosLinea + " " + ultimaX + "," + yBase;
+      const guionado = tramo.esFuturo ? " stroke-dasharray=\"5 4\"" : "";
+
+      return "<polygon points=\"" + puntosArea + "\" fill=\"" + colorHex + "\" opacity=\"0.1\"></polygon>" +
+        "<polyline points=\"" + puntosLinea + "\" fill=\"none\" stroke=\"" + colorHex + "\" stroke-width=\"2\" stroke-linejoin=\"round\" stroke-linecap=\"round\"" + guionado + "></polyline>";
+    }).join("");
+
+    const yVerde = coordenadaY(UMBRAL_SEMAFORO_VERDE);
+    const yAmarillo = coordenadaY(UMBRAL_SEMAFORO_AMARILLO);
+    const lineasReferenciaHTML =
+      "<line class=\"grafica-linea-referencia\" x1=\"" + MARGEN.izquierda + "\" x2=\"" + (ANCHO - MARGEN.derecha) + "\" y1=\"" + yVerde + "\" y2=\"" + yVerde + "\"></line>" +
+      "<text class=\"grafica-eje-texto\" x=\"" + (ANCHO - MARGEN.derecha + 4) + "\" y=\"" + (yVerde + 3) + "\">90%</text>" +
+      "<line class=\"grafica-linea-referencia\" x1=\"" + MARGEN.izquierda + "\" x2=\"" + (ANCHO - MARGEN.derecha) + "\" y1=\"" + yAmarillo + "\" y2=\"" + yAmarillo + "\"></line>" +
+      "<text class=\"grafica-eje-texto\" x=\"" + (ANCHO - MARGEN.derecha + 4) + "\" y=\"" + (yAmarillo + 3) + "\">100%</text>";
+
+    const lineaHoyHTML =
+      "<line class=\"grafica-linea-hoy\" x1=\"" + coordenadaX(indiceHoy) + "\" x2=\"" + coordenadaX(indiceHoy) + "\" y1=\"" + MARGEN.arriba + "\" y2=\"" + yBase + "\"></line>" +
+      "<text class=\"grafica-eje-texto\" x=\"" + coordenadaX(indiceHoy) + "\" y=\"" + (ALTO - 4) + "\" text-anchor=\"middle\">hoy</text>";
+
+    const puntoHoy = trayectoria[indiceHoy];
+    const puntoFinal = trayectoria[trayectoria.length - 1];
+    const marcadoresHTML =
+      "<circle cx=\"" + coordenadaX(indiceHoy) + "\" cy=\"" + coordenadaY(puntoHoy.porcentaje) + "\" r=\"4\" fill=\"" + COLOR_HEX_SEMAFORO[puntoHoy.color] + "\" stroke=\"#1e293b\" stroke-width=\"2\"></circle>" +
+      "<circle cx=\"" + coordenadaX(trayectoria.length - 1) + "\" cy=\"" + coordenadaY(puntoFinal.porcentaje) + "\" r=\"4\" fill=\"" + COLOR_HEX_SEMAFORO[puntoFinal.color] + "\" stroke=\"#1e293b\" stroke-width=\"2\"></circle>";
+
+    const etiquetaFinalHTML = "<text class=\"grafica-eje-texto\" x=\"" + (coordenadaX(trayectoria.length - 1) - 4) + "\" y=\"" + (coordenadaY(puntoFinal.porcentaje) - 8) + "\" text-anchor=\"end\">" +
+      Math.round(puntoFinal.porcentaje * 100) + "%" + (puntoFinal.esFuturo ? " proyectado" : "") + "</text>";
+
+    const crosshairHTML = "<line class=\"grafica-crosshair\" id=\"graficaCrosshair\" y1=\"" + MARGEN.arriba + "\" y2=\"" + yBase + "\"></line>";
+
+    const coloresPresentes = Array.from(new Set(trayectoria.map(function (d) { return d.color; }))).filter(function (c) { return c !== "gris"; });
+    const leyendaHTML = "<div class=\"grafica-leyenda\">" + coloresPresentes.map(function (c) {
+      return "<span><span class=\"marca\" style=\"background-color: " + COLOR_HEX_SEMAFORO[c] + ";\"></span>" + ETIQUETA_SEMAFORO[c] + "</span>";
+    }).join("") + "</div>";
+
+    contenedor.innerHTML =
+      "<div class=\"grafica-trayectoria\">" +
+        "<svg viewBox=\"0 0 " + ANCHO + " " + ALTO + "\" id=\"svgTrayectoriaSemaforo\">" +
+          lineasReferenciaHTML + lineaHoyHTML + tramosHTML + marcadoresHTML + etiquetaFinalHTML + crosshairHTML +
+        "</svg>" +
+        "<div class=\"grafica-tooltip\" id=\"tooltipTrayectoriaSemaforo\"></div>" +
+        leyendaHTML +
+      "</div>";
+
+    // Cursor: encuentra el día más cercano al puntero y mueve la línea
+    // vertical y el tooltip a esa posición — así se puede leer el valor
+    // exacto de cualquier día sin tener que acertarle a la línea.
+    const svg = document.getElementById("svgTrayectoriaSemaforo");
+    const crosshair = document.getElementById("graficaCrosshair");
+    const tooltip = document.getElementById("tooltipTrayectoriaSemaforo");
+
+    function actualizarCursor(clientX) {
+      const rectSVG = svg.getBoundingClientRect();
+      const rectContenedor = contenedor.getBoundingClientRect();
+      const xRelativo = ((clientX - rectSVG.left) / rectSVG.width) * ANCHO;
+      const indiceCercano = Math.round(((xRelativo - MARGEN.izquierda) / anchoGrafica) * (trayectoria.length - 1));
+      const indiceAcotado = Math.min(Math.max(indiceCercano, 0), trayectoria.length - 1);
+      const punto = trayectoria[indiceAcotado];
+
+      crosshair.setAttribute("x1", coordenadaX(indiceAcotado));
+      crosshair.setAttribute("x2", coordenadaX(indiceAcotado));
+      crosshair.style.display = "block";
+
+      const xPantalla = rectSVG.left + (coordenadaX(indiceAcotado) / ANCHO) * rectSVG.width - rectContenedor.left;
+      const yPantalla = rectSVG.top + (coordenadaY(punto.porcentaje) / ALTO) * rectSVG.height - rectContenedor.top;
+
+      tooltip.style.left = xPantalla + "px";
+      tooltip.style.top = (yPantalla - 8) + "px";
+      tooltip.style.display = "block";
+      tooltip.innerHTML = "<div>" + punto.fechaISO + (punto.esFuturo ? " (proyectado)" : "") + "</div>" +
+        "<div class=\"valor\">" + Math.round(punto.porcentaje * 100) + "% — " + ETIQUETA_SEMAFORO[punto.color] + "</div>";
+    }
+
+    svg.addEventListener("pointermove", function (evento) { actualizarCursor(evento.clientX); });
+    svg.addEventListener("pointerleave", function () {
+      crosshair.style.display = "none";
+      tooltip.style.display = "none";
+    });
+  }
+
+  // De solo lectura, a diferencia de Pendientes (Captura): la acción de
+  // marcar como pagado se queda concentrada ahí y en el panel de detalle
+  // del calendario, para no duplicarla en dos superficies de la misma
+  // pantalla ancha.
+  function renderizarProximosPagosAnalisis() {
+    const datos = leerDatos();
+    const cicloActual = asegurarCicloActual();
+    const lista = document.getElementById("listaProximosPagosAnalisis");
+
+    const pendientes = obtenerPendientesDelCiclo(datos, cicloActual.id);
+
+    if (pendientes.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">No hay pendientes en este ciclo.</li>";
+      return;
+    }
+
+    lista.innerHTML = pendientes.map(function (compromiso) {
+      const esUrgente = calcularDiasHastaFecha(compromiso.fechaProgramada) <= DIAS_PARA_PENDIENTE_URGENTE;
+      const etiquetaPago = compromiso.pagoNde ? " (pago " + compromiso.pagoNde + ")" : "";
+      return "<li class=\"" + (esUrgente ? "pendiente-urgente" : "") + "\">" +
+        compromiso.fechaProgramada + " — " + escaparHTML(compromiso.nombre) + etiquetaPago +
+        " <span class=\"detalle\">(" + formatearMoneda(compromiso.montoEstimado) + " est.)</span></li>";
+    }).join("");
+  }
+
+  // Movimientos son hechos, no promesas: solo gastos ya registrados
+  // (datos.gastos), sea que hayan cerrado un compromiso o que sean gasto
+  // libre — a diferencia de Próximos pagos, que son compromisos que
+  // todavía no suceden. Más reciente arriba, mismo criterio que ya usa
+  // "Hoy" en Captura.
+  function obtenerMovimientosDelCiclo(datos, cicloId) {
+    return datos.gastos
+      .filter(function (g) { return g.cicloId === cicloId; })
+      .sort(function (a, b) {
+        if (a.fecha !== b.fecha) {
+          return a.fecha < b.fecha ? 1 : -1;
+        }
+        return a.hora < b.hora ? 1 : -1;
+      });
+  }
+
+  function renderizarMovimientosDelCiclo() {
+    const datos = leerDatos();
+    const cicloActual = asegurarCicloActual();
+    const lista = document.getElementById("listaMovimientosCiclo");
+    const movimientos = obtenerMovimientosDelCiclo(datos, cicloActual.id);
+
+    if (movimientos.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay gastos registrados en este ciclo.</li>";
+      return;
+    }
+
+    lista.innerHTML = movimientos.map(function (gasto) {
+      const categoria = datos.config.categorias.find(function (c) { return c.id === gasto.categoriaId; });
+      const etiquetaCategoria = categoria
+        ? escaparHTML(categoria.nombre) + " — " + escaparHTML(gasto.subcategoria)
+        : escaparHTML(gasto.descripcion || "Sin categoría");
+
+      const etiquetaDestinatario = gasto.destinatario ? ", " + escaparHTML(gasto.destinatario) : "";
+
+      let etiquetaOrigen;
+      if (gasto.compromisoId) {
+        const compromiso = datos.compromisos.find(function (c) { return c.id === gasto.compromisoId; });
+        etiquetaOrigen = compromiso ? "compromiso: " + escaparHTML(compromiso.nombre) : "compromiso";
+      } else {
+        etiquetaOrigen = "gasto libre";
+      }
+
+      return "<li>" + gasto.fecha + " " + gasto.hora + " — " + etiquetaCategoria +
+        " <span class=\"detalle\">(" + formatearMoneda(gasto.monto) + ", " + gasto.fuente + etiquetaDestinatario + ", " + etiquetaOrigen + ")</span></li>";
+    }).join("");
+  }
+
+  // ============================================================
+  // ANÁLISIS — CALENDARIO
+  // ============================================================
+  //
+  // Navegación ciclo a ciclo, no mes calendario: un ciclo real cruza dos
+  // meses (del corte de uno al corte del siguiente), así que un grid
+  // mes-a-mes partiría un ciclo en dos vistas. Cada vista del calendario
+  // es un ciclo completo, real o simulado.
+
+  const DIAS_DE_LA_SEMANA_ABREV = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+  // 0 = ciclo actual real; 1..CANTIDAD_DE_CICLOS_A_PROYECTAR = simulados.
+  let indiceCicloCalendario = 0;
+  let fechaSeleccionadaCalendario = null;
+
+  function obtenerCicloMostradoEnCalendario() {
+    if (indiceCicloCalendario === 0) {
+      return { ciclo: asegurarCicloActual(), esReal: true };
+    }
+    const simulados = generarCiclosSimulados(asegurarCicloActual(), CANTIDAD_DE_CICLOS_A_PROYECTAR);
+    return { ciclo: simulados[indiceCicloCalendario - 1], esReal: false };
+  }
+
+  function cambiarCicloCalendario(delta) {
+    indiceCicloCalendario = Math.min(Math.max(indiceCicloCalendario + delta, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
+    fechaSeleccionadaCalendario = null;
+    renderizarTodo();
+  }
+
+  function generarDiasDelCiclo(ciclo) {
+    const inicio = crearFechaLocal(ciclo.fechaInicio);
+    const fin = crearFechaLocal(ciclo.fechaFin);
+    const dias = [];
+    let cursor = inicio;
+    while (cursor <= fin) {
+      dias.push(formatearFechaISO(cursor));
+      cursor = sumarDias(cursor, 1);
+    }
+    return dias;
+  }
+
+  // Para un ciclo real, los items son los compromisos ya generados y
+  // persistidos ese día. Para un ciclo simulado, son candidatos puros
+  // (recurrentes + deudas, sin tarjetas) más los compromisos único que ya
+  // se hayan capturado a futuro con esa fecha — nunca compromisos
+  // "inventados" con id, porque todavía no existen de verdad.
+  function obtenerItemsDelDia(fechaISO, ciclo, esReal, datos) {
+    if (esReal) {
+      return datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.fechaProgramada === fechaISO; });
+    }
+    const candidatos = calcularCandidatosDelCiclo(ciclo, datos).filter(function (c) { return c.fechaProgramada === fechaISO; });
+    const unicosFuturos = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.origen === "unico" && c.fechaProgramada === fechaISO; });
+    return candidatos.concat(unicosFuturos);
+  }
+
+  function calcularEstadoDelDia(items, esReal) {
+    if (items.length === 0) {
+      return "";
+    }
+    if (!esReal) {
+      return "tiene-proyectado";
+    }
+    const algunoUrgente = items.some(function (i) { return !i.pagado && calcularDiasHastaFecha(i.fechaProgramada) <= DIAS_PARA_PENDIENTE_URGENTE; });
+    if (algunoUrgente) {
+      return "tiene-pendiente-urgente";
+    }
+    const algunoPendiente = items.some(function (i) { return !i.pagado; });
+    if (algunoPendiente) {
+      return "tiene-pendiente";
+    }
+    return "tiene-pagado";
+  }
+
+  // El panel de detalle reusa, sin modificarla, confirmarPagoDeCompromiso:
+  // arma el mismo marcado (".monto-real-pendiente", ".fuente-pendiente",
+  // botón) que ya usa Pendientes en Captura, así que esa función encuentra
+  // lo que busca sin saber que ahora la llamó el calendario. Solo aplica
+  // para el ciclo actual real — un ciclo simulado no tiene compromisos con
+  // id que confirmar, es de solo lectura.
+  function renderizarHTMLPanelDetalleDia(fechaISO, ciclo, esReal, datos) {
+    const items = obtenerItemsDelDia(fechaISO, ciclo, esReal, datos);
+
+    if (items.length === 0) {
+      return "<div class=\"panel-detalle-dia\"><p class=\"pista\">" + fechaISO + ": sin compromisos.</p></div>";
+    }
+
+    const filasHTML = items.map(function (item) {
+      const etiquetaPago = item.pagoNde ? " (pago " + item.pagoNde + ")" : "";
+
+      if (!esReal) {
+        return "<div class=\"item-dia\"><strong>" + escaparHTML(item.nombre) + "</strong>" + etiquetaPago +
+          " <span class=\"detalle\">(" + formatearMoneda(item.montoEstimado) + " estimado, proyectado)</span></div>";
+      }
+
+      const etiquetaEstado = item.pagado ? "Pagado" : "Pendiente";
+      const confirmacionHTML = item.pagado ? "" :
+        "<div class=\"confirmacion-pendiente\">" +
+          "<label>Monto real<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + item.montoEstimado + "\"></label>" +
+          "<label>Fuente<select class=\"fuente-pendiente\">" +
+            "<option value=\"debito\">Débito</option>" +
+            "<option value=\"credito\">Crédito</option>" +
+          "</select></label>" +
+          "<button type=\"button\" class=\"boton-marcar-pagado\" data-compromiso-id=\"" + item.id + "\">Marcar como pagado</button>" +
+        "</div>";
+
+      return "<div class=\"item-dia\"><strong>" + escaparHTML(item.nombre) + "</strong>" + etiquetaPago +
+        " <span class=\"detalle\">(" + formatearMoneda(item.montoEstimado) + " est., " + etiquetaEstado + ")</span></div>" +
+        confirmacionHTML;
+    }).join("");
+
+    return "<div class=\"panel-detalle-dia\"><h3>" + fechaISO + "</h3>" + filasHTML + "</div>";
+  }
+
+  // Resumen del balance encadenado para el ciclo simulado que se está
+  // viendo — es la respuesta directa a "¿este ciclo futuro se ve bien?".
+  // No usa el semáforo de tres colores del ciclo real (esa fórmula compara
+  // contra un ingreso ya capturado, que un ciclo proyectado no tiene):
+  // aquí solo importa si el balance encadenado alcanza o no.
+  function renderizarHTMLResumenProyectado(resultado) {
+    const colorBalance = resultado.balanceDelCiclo >= 0 ? "verde" : "rojo";
+    return "<div class=\"panel-detalle-dia\">" +
+      "<div class=\"monto-grande\">" + formatearMoneda(resultado.balanceDelCiclo) + "</div>" +
+      "<div class=\"semaforo semaforo-" + colorBalance + "\">" + (resultado.balanceDelCiclo >= 0 ? "Alcanza" : "No alcanza") + "</div>" +
+      "<p class=\"detalle\">Remanente que trae del ciclo anterior: " + formatearMoneda(resultado.remanenteInicial) + "</p>" +
+      "<p class=\"detalle\">Ingreso considerado (real ya capturado, o esperado si aún no hay): " + formatearMoneda(resultado.montoIngresoEsperado) + "</p>" +
+      "<p class=\"detalle\">Compromisos proyectados: " + formatearMoneda(resultado.totalCompromisos) + "</p>" +
+      "<p class=\"detalle\">Gasto variable estimado: " + formatearMoneda(resultado.gastoVariableProyectado) + "</p>" +
+      "<p class=\"pista\">Estimado con el presupuesto semanal y el ingreso esperado configurados hoy — se recalcula cada vez que los cambies.</p>" +
+    "</div>";
+  }
+
+  function renderizarCalendario() {
+    const datos = leerDatos();
+    const contenedor = document.getElementById("contenedorCalendario");
+    const mostrado = obtenerCicloMostradoEnCalendario();
+    const ciclo = mostrado.ciclo;
+    const esReal = mostrado.esReal;
+    const resumenProyectadoHTML = esReal ? "" : renderizarHTMLResumenProyectado(calcularProyeccionMultiCiclo()[indiceCicloCalendario - 1]);
+
+    const primerDiaSemana = crearFechaLocal(ciclo.fechaInicio).getDay();
+    const celdasVacias = new Array(primerDiaSemana).fill("<div class=\"dia-calendario dia-vacio\"></div>").join("");
+
+    // El color de fondo por día solo aplica al ciclo actual real — un ciclo
+    // simulado no tiene semáforo de tres colores (ver "Proyección
+    // multi-ciclo" en SPEC.md), así que trayectoriaPorFecha queda vacío y
+    // ningún día simulado recibe clase de semáforo.
+    const trayectoriaPorFecha = {};
+    if (esReal) {
+      calcularTrayectoriaDelSemaforo(ciclo, datos).forEach(function (dia) {
+        trayectoriaPorFecha[dia.fechaISO] = dia.color;
+      });
+    }
+
+    const celdasDias = generarDiasDelCiclo(ciclo).map(function (fechaISO) {
+      const items = obtenerItemsDelDia(fechaISO, ciclo, esReal, datos);
+      const estado = calcularEstadoDelDia(items, esReal);
+      const seleccionada = fechaISO === fechaSeleccionadaCalendario ? " dia-seleccionado" : "";
+      const colorDelDia = trayectoriaPorFecha[fechaISO];
+      const claseSemaforo = colorDelDia && colorDelDia !== "gris" ? " dia-semaforo-" + colorDelDia : "";
+      const diaDelMes = Number(fechaISO.split("-")[2]);
+      const marcador = items.length > 0 ? "<div class=\"detalle\">" + items.length + "</div>" : "";
+      return "<div class=\"dia-calendario" + claseSemaforo + " " + estado + seleccionada + "\" data-fecha=\"" + fechaISO + "\">" +
+        "<div>" + diaDelMes + "</div>" + marcador + "</div>";
+    }).join("");
+
+    const etiquetaCiclo = esReal ? "Ciclo actual" : "Proyectado (estimado)";
+
+    contenedor.innerHTML =
+      "<div class=\"calendario-cabecera\">" +
+        "<button type=\"button\" id=\"botonCicloAnterior\"" + (indiceCicloCalendario === 0 ? " disabled" : "") + ">&larr; Anterior</button>" +
+        "<div><strong>" + etiquetaCiclo + "</strong> <span class=\"detalle\">" + ciclo.fechaInicio + " a " + ciclo.fechaFin + "</span></div>" +
+        "<button type=\"button\" id=\"botonCicloSiguiente\"" + (indiceCicloCalendario === CANTIDAD_DE_CICLOS_A_PROYECTAR ? " disabled" : "") + ">Siguiente &rarr;</button>" +
+      "</div>" +
+      resumenProyectadoHTML +
+      "<div class=\"calendario-grid\">" +
+        DIAS_DE_LA_SEMANA_ABREV.map(function (d) { return "<div class=\"detalle\">" + d + "</div>"; }).join("") +
+        celdasVacias + celdasDias +
+      "</div>" +
+      (fechaSeleccionadaCalendario ? renderizarHTMLPanelDetalleDia(fechaSeleccionadaCalendario, ciclo, esReal, datos) : "");
+
+    document.getElementById("botonCicloAnterior").addEventListener("click", function () { cambiarCicloCalendario(-1); });
+    document.getElementById("botonCicloSiguiente").addEventListener("click", function () { cambiarCicloCalendario(1); });
+
+    contenedor.querySelectorAll(".dia-calendario[data-fecha]").forEach(function (celda) {
+      celda.addEventListener("click", function () {
+        const fecha = celda.getAttribute("data-fecha");
+        fechaSeleccionadaCalendario = fechaSeleccionadaCalendario === fecha ? null : fecha;
+        renderizarCalendario();
+      });
+    });
+
+    contenedor.querySelectorAll(".boton-marcar-pagado").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        confirmarPagoDeCompromiso(boton.getAttribute("data-compromiso-id"), boton.closest(".confirmacion-pendiente"));
+      });
+    });
+  }
+
+  // ============================================================
+  // ANÁLISIS — DEUDA
+  // ============================================================
+  //
+  // Aplica calcularEstadoDeDeuda a cada deuda activa. Solo texto por ahora
+  // — la barra de avance visual queda para una pasada de diseño aparte.
+  function renderizarEstadoDeDeudaAnalisis() {
+    const datos = leerDatos();
+    const contenedor = document.getElementById("contenedorDeuda");
+    const deudasActivas = datos.deudas.filter(function (deuda) { return deuda.activa; });
+
+    if (deudasActivas.length === 0) {
+      contenedor.innerHTML = "<p class=\"pista\">No hay deudas activas.</p>";
+      return;
+    }
+
+    contenedor.innerHTML = deudasActivas.map(function (deuda) {
+      const estado = calcularEstadoDeDeuda(deuda);
+      const pagosRestantes = deuda.pagosTotales - deuda.pagosRealizados;
+
+      return "<div class=\"estado-deuda-item\">" +
+        "<div><strong>" + escaparHTML(deuda.nombre) + "</strong> — " + pagosRestantes + " de " + deuda.pagosTotales + " pagos restantes</div>" +
+        "<p class=\"detalle\">Saldo restante: " + formatearMoneda(estado.saldoRestante) + " (" + (estado.porcentajePagado * 100).toFixed(1) + "% pagado)</p>" +
+        "<p class=\"detalle\">Costo del crédito: " + formatearMoneda(estado.costoDelCredito) + " (" + (estado.porcentajeSobrante * 100).toFixed(1) + "% sobre lo solicitado)</p>" +
+        "<p class=\"pista\">Se liquida aprox. el " + formatearFechaISO(estado.fechaLiquidacion) + "</p>" +
+      "</div>";
+    }).join("");
+  }
+
+  // ============================================================
+  // CAPTURA — PENDIENTES
+  // ============================================================
+  //
+  // Un compromiso pendiente es un aviso de que hay que pagar algo. Un toque
+  // sobre la fila abre un formulario corto (monto real, fuente, botón
+  // "marcar como pagado"); al confirmar se crea el gasto que cierra ese
+  // compromiso y no se vuelve a mostrar como pendiente.
+
+  // Cuántos días faltan para una fecha. Negativo significa que ya pasó.
+  function calcularDiasHastaFecha(fechaTexto) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fecha = crearFechaLocal(fechaTexto);
+    const milisegundosPorDia = 1000 * 60 * 60 * 24;
+    return Math.round((fecha - hoy) / milisegundosPorDia);
+  }
+
+  // Compartida entre Pendientes (Captura) y Próximos pagos (Análisis) para
+  // no mantener la misma regla de filtro/orden en dos lugares.
+  function obtenerPendientesDelCiclo(datos, cicloId) {
+    return datos.compromisos
+      .filter(function (c) { return c.cicloId === cicloId && !c.pagado; })
+      .sort(function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : 1; });
+  }
+
+  function renderizarPendientes() {
+    const datos = leerDatos();
+    const cicloActual = asegurarCicloActual();
+    const lista = document.getElementById("listaPendientes");
+
+    const pendientes = obtenerPendientesDelCiclo(datos, cicloActual.id);
+
+    if (pendientes.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">No hay pendientes en este ciclo.</li>";
+      return;
+    }
+
+    lista.innerHTML = pendientes.map(function (compromiso) {
+      const esUrgente = calcularDiasHastaFecha(compromiso.fechaProgramada) <= DIAS_PARA_PENDIENTE_URGENTE;
+      const etiquetaPago = compromiso.pagoNde ? " (pago " + compromiso.pagoNde + ")" : "";
+
+      return "<li class=\"" + (esUrgente ? "pendiente-urgente" : "") + "\" data-compromiso-id=\"" + compromiso.id + "\">" +
+        "<div class=\"fila-pendiente\">" + compromiso.fechaProgramada + " — " + escaparHTML(compromiso.nombre) + etiquetaPago +
+        " <span class=\"detalle\">(" + formatearMoneda(compromiso.montoEstimado) + " est.)</span></div>" +
+        "<div class=\"confirmacion-pendiente\" id=\"confirmacion_" + compromiso.id + "\" style=\"display: none;\">" +
+          "<label>Monto real<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + compromiso.montoEstimado + "\"></label>" +
+          "<label>Fuente<select class=\"fuente-pendiente\">" +
+            "<option value=\"debito\">Débito</option>" +
+            "<option value=\"credito\">Crédito</option>" +
+          "</select></label>" +
+          "<button type=\"button\" class=\"boton-marcar-pagado\">Marcar como pagado</button>" +
+        "</div>" +
+      "</li>";
+    }).join("");
+
+    lista.querySelectorAll("li[data-compromiso-id]").forEach(function (filaLi) {
+      const compromisoId = filaLi.getAttribute("data-compromiso-id");
+
+      filaLi.querySelector(".fila-pendiente").addEventListener("click", function () {
+        const bloqueConfirmacion = document.getElementById("confirmacion_" + compromisoId);
+        bloqueConfirmacion.style.display = bloqueConfirmacion.style.display === "none" ? "block" : "none";
+      });
+
+      filaLi.querySelector(".boton-marcar-pagado").addEventListener("click", function () {
+        confirmarPagoDeCompromiso(compromisoId, filaLi);
+      });
+    });
+  }
+
+  // Crea el gasto que cierra un compromiso y lo marca como pagado. Si el
+  // compromiso viene de un recurrente, el gasto hereda su categoría y
+  // subcategoría (para que cuente en el avance semanal si aplica). Si viene
+  // de una deuda o una tarjeta, no hay categoría de presupuesto semanal
+  // involucrada — son gasto fijo, no variable — así que se deja sin
+  // categoría y se usa el nombre del compromiso como descripción.
+  function confirmarPagoDeCompromiso(compromisoId, filaLi) {
+    const datos = leerDatos();
+    const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoId; });
+    const montoReal = Number(filaLi.querySelector(".monto-real-pendiente").value);
+    const fuente = filaLi.querySelector(".fuente-pendiente").value;
+
+    if (!montoReal || montoReal <= 0) {
+      return;
+    }
+
+    // Alerta obligatoria de SPEC.md: si el pago de una tarjeta es menor al
+    // calculado (compras a crédito del periodo de corte), avisar que el
+    // banco va a generar intereses sobre la diferencia. Solo informa, no
+    // bloquea el pago — el usuario puede decidir pagar menos a propósito.
+    if (compromiso.origen === "tarjeta" && montoReal < compromiso.montoEstimado) {
+      mostrarMensaje("Pagaste menos de lo calculado (" + formatearMoneda(compromiso.montoEstimado) + ") — el banco va a generar intereses sobre la diferencia.");
+    }
+
+    let categoriaId = null;
+    let subcategoria = null;
+    let destinatario = null;
+
+    if (compromiso.origen === "recurrente") {
+      const recurrente = datos.recurrentes.find(function (r) { return r.id === compromiso.origenId; });
+      if (recurrente) {
+        categoriaId = recurrente.categoriaId;
+        subcategoria = recurrente.subcategoria;
+        destinatario = recurrente.destinatario;
+      }
+    } else if (compromiso.origen === "unico") {
+      // Un compromiso único ya trae su propia categoría y destinatario
+      // (ambos opcionales), no los hereda de ninguna regla — no existe una
+      // regla detrás.
+      categoriaId = compromiso.categoriaId;
+      subcategoria = compromiso.subcategoria;
+      destinatario = compromiso.destinatario;
+    }
+
+    const ahora = new Date();
+    const cicloActual = asegurarCicloActual();
+
+    datos.gastos.push({
+      id: generarId("gas"),
+      cicloId: compromiso.cicloId,
+      semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloActual.fechaInicio),
+      fecha: formatearFechaISO(ahora),
+      hora: String(ahora.getHours()).padStart(2, "0") + ":" + String(ahora.getMinutes()).padStart(2, "0"),
+      monto: montoReal,
+      categoriaId: categoriaId,
+      subcategoria: subcategoria,
+      destinatario: destinatario,
+      fuente: fuente,
+      tarjetaId: compromiso.origen === "tarjeta" ? compromiso.origenId : null,
+      compromisoId: compromiso.id,
+      descripcion: categoriaId ? "" : compromiso.nombre
+    });
+
+    compromiso.montoReal = montoReal;
+    compromiso.pagado = true;
+
+    // Cada pago confirmado de una deuda hace avanzar el contador de pagos
+    // realizados. Sin esto, la generación de compromisos seguiría calculando
+    // para siempre la misma fecha de "siguiente pago" (deduplicada contra el
+    // compromiso ya existente) y la deuda dejaría de generar compromisos
+    // nuevos en cualquier ciclo futuro.
+    if (compromiso.origen === "deuda") {
+      const deuda = datos.deudas.find(function (d) { return d.id === compromiso.origenId; });
+      if (deuda) {
+        deuda.pagosRealizados = deuda.pagosRealizados + 1;
+      }
+    }
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  // ============================================================
+  // CAPTURA — GASTO NUEVO
+  // ============================================================
+  //
+  // Flujo de botones grandes (categoría, subcategoría, fuente y, si hace
+  // falta, tarjeta) para no depender del teclado alfabético. La selección se
+  // guarda en estas variables mientras el usuario arma el gasto, y se
+  // reinician al guardar.
+
+  let categoriaSeleccionadaGasto = null;
+  let subcategoriaSeleccionadaGasto = null;
+  let fuenteSeleccionadaGasto = null;
+  let tarjetaSeleccionadaGasto = null;
+
+  // El día del gasto siempre es hoy: en la parte de "semana" se calcula
+  // igual que en SPEC.md, contando de 7 en 7 días desde el inicio del ciclo.
+  function calcularSemanaDeLaFecha(fechaTexto, cicloInicioTexto) {
+    const fecha = crearFechaLocal(fechaTexto);
+    const inicio = crearFechaLocal(cicloInicioTexto);
+    const milisegundosPorDia = 1000 * 60 * 60 * 24;
+    const diasTranscurridos = Math.round((fecha - inicio) / milisegundosPorDia);
+    return Math.floor(diasTranscurridos / 7) + 1;
+  }
+
+  function renderizarBotonesCategoriaGasto() {
+    const datos = leerDatos();
+    const contenedor = document.getElementById("botonesCategoriaGasto");
+
+    contenedor.innerHTML = datos.config.categorias.map(function (categoria) {
+      return "<button type=\"button\" class=\"boton-grande\" data-categoria-id=\"" + categoria.id + "\">" + escaparHTML(categoria.nombre) + "</button>";
+    }).join("");
+
+    contenedor.querySelectorAll("button").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        seleccionarCategoriaGasto(this.getAttribute("data-categoria-id"));
+      });
+    });
+  }
+
+  function seleccionarCategoriaGasto(categoriaId) {
+    categoriaSeleccionadaGasto = categoriaId;
+    subcategoriaSeleccionadaGasto = null;
+
+    document.querySelectorAll("#botonesCategoriaGasto button").forEach(function (boton) {
+      boton.classList.toggle("seleccionado", boton.getAttribute("data-categoria-id") === categoriaId);
+    });
+
+    const datos = leerDatos();
+    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaId; });
+    const contenedorSubcategoria = document.getElementById("botonesSubcategoriaGasto");
+
+    contenedorSubcategoria.innerHTML = categoria.subcategorias.map(function (sub) {
+      return "<button type=\"button\" class=\"boton-grande\" data-subcategoria=\"" + escaparHTML(sub) + "\">" + escaparHTML(sub) + "</button>";
+    }).join("");
+
+    contenedorSubcategoria.querySelectorAll("button").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        seleccionarSubcategoriaGasto(this.getAttribute("data-subcategoria"));
+      });
+    });
+
+    document.getElementById("pasoSubcategoriaGasto").style.display = "block";
+    document.getElementById("pasoDetalleGasto").style.display = "none";
+  }
+
+  function seleccionarSubcategoriaGasto(subcategoria) {
+    subcategoriaSeleccionadaGasto = subcategoria;
+
+    document.querySelectorAll("#botonesSubcategoriaGasto button").forEach(function (boton) {
+      boton.classList.toggle("seleccionado", boton.getAttribute("data-subcategoria") === subcategoria);
+    });
+
+    document.getElementById("pasoDetalleGasto").style.display = "block";
+  }
+
+  // Si solo hay una tarjeta configurada, se asigna sola (no le cuesta un
+  // toque al usuario). Si hay varias, hay que elegir cuál.
+  function seleccionarFuenteGasto(fuente) {
+    fuenteSeleccionadaGasto = fuente;
+    tarjetaSeleccionadaGasto = null;
+
+    document.querySelectorAll("#botonesFuenteGasto button").forEach(function (boton) {
+      boton.classList.toggle("seleccionado", boton.getAttribute("data-fuente") === fuente);
+    });
+
+    const datos = leerDatos();
+    const contenedorTarjeta = document.getElementById("pasoTarjetaGasto");
+
+    if (fuente !== "credito" || datos.config.tarjetas.length === 0) {
+      contenedorTarjeta.style.display = "none";
+      return;
+    }
+
+    if (datos.config.tarjetas.length === 1) {
+      tarjetaSeleccionadaGasto = datos.config.tarjetas[0].id;
+      contenedorTarjeta.style.display = "none";
+      return;
+    }
+
+    contenedorTarjeta.style.display = "block";
+    const contenedorBotones = document.getElementById("botonesTarjetaGasto");
+    contenedorBotones.innerHTML = datos.config.tarjetas.map(function (tarjeta) {
+      return "<button type=\"button\" class=\"boton-grande\" data-tarjeta-id=\"" + tarjeta.id + "\">" + escaparHTML(tarjeta.nombre) + "</button>";
+    }).join("");
+
+    contenedorBotones.querySelectorAll("button").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        tarjetaSeleccionadaGasto = boton.getAttribute("data-tarjeta-id");
+        contenedorBotones.querySelectorAll("button").forEach(function (b) {
+          b.classList.toggle("seleccionado", b === boton);
+        });
+      });
+    });
+  }
+
+  // Revisa si ya existe, en los últimos MINUTOS_PARA_ALERTA_DUPLICADO
+  // minutos, un gasto de la misma categoría con el mismo monto exacto — para
+  // avisar antes de registrar por accidente el mismo gasto dos veces.
+  function existeGastoSimilarReciente(categoriaId, monto) {
+    const datos = leerDatos();
+    const ahora = new Date();
+
+    return datos.gastos.some(function (gasto) {
+      if (gasto.categoriaId !== categoriaId || Number(gasto.monto) !== Number(monto)) {
+        return false;
+      }
+
+      const partesHora = gasto.hora.split(":");
+      const momentoDelGasto = crearFechaLocal(gasto.fecha);
+      momentoDelGasto.setHours(Number(partesHora[0]), Number(partesHora[1]), 0, 0);
+
+      const minutosTranscurridos = (ahora - momentoDelGasto) / (1000 * 60);
+      return minutosTranscurridos >= 0 && minutosTranscurridos <= MINUTOS_PARA_ALERTA_DUPLICADO;
+    });
+  }
+
+  function manejarGuardarGastoNuevo() {
+    const monto = Number(document.getElementById("montoGastoNuevo").value);
+
+    if (!categoriaSeleccionadaGasto || !subcategoriaSeleccionadaGasto || !fuenteSeleccionadaGasto || !monto || monto <= 0) {
+      return;
+    }
+
+    if (fuenteSeleccionadaGasto === "credito" && !tarjetaSeleccionadaGasto) {
+      alert("Elige a qué tarjeta se carga este gasto.");
+      return;
+    }
+
+    if (existeGastoSimilarReciente(categoriaSeleccionadaGasto, monto)) {
+      const continuar = confirm("Ya registraste un gasto igual en esta categoría hace menos de 30 minutos. ¿Registrar de todas formas?");
+      if (!continuar) {
+        return;
+      }
+    }
+
+    const ahora = new Date();
+    const cicloActual = asegurarCicloActual();
+    const datos = leerDatos();
+
+    datos.gastos.push({
+      id: generarId("gas"),
+      cicloId: cicloActual.id,
+      semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloActual.fechaInicio),
+      fecha: formatearFechaISO(ahora),
+      hora: String(ahora.getHours()).padStart(2, "0") + ":" + String(ahora.getMinutes()).padStart(2, "0"),
+      monto: monto,
+      categoriaId: categoriaSeleccionadaGasto,
+      subcategoria: subcategoriaSeleccionadaGasto,
+      destinatario: null,
+      fuente: fuenteSeleccionadaGasto,
+      tarjetaId: tarjetaSeleccionadaGasto,
+      compromisoId: null,
+      descripcion: document.getElementById("descripcionGastoNuevo").value.trim()
+    });
+
+    guardarDatos(datos);
+    reiniciarFormularioDeGastoNuevo();
+    renderizarTodo();
+  }
+
+  function reiniciarFormularioDeGastoNuevo() {
+    categoriaSeleccionadaGasto = null;
+    subcategoriaSeleccionadaGasto = null;
+    fuenteSeleccionadaGasto = null;
+    tarjetaSeleccionadaGasto = null;
+
+    document.getElementById("montoGastoNuevo").value = "";
+    document.getElementById("descripcionGastoNuevo").value = "";
+    document.getElementById("pasoSubcategoriaGasto").style.display = "none";
+    document.getElementById("pasoDetalleGasto").style.display = "none";
+    document.getElementById("pasoTarjetaGasto").style.display = "none";
+
+    document.querySelectorAll("#botonesCategoriaGasto button, #botonesFuenteGasto button").forEach(function (boton) {
+      boton.classList.remove("seleccionado");
+    });
+  }
+
+  // ============================================================
+  // CAPTURA — HOY Y AVANCE SEMANAL
+  // ============================================================
+  //
+  // Responde "¿ya lo registré?" con algo que se mira, no con algo que hay
+  // que recordar: todo lo capturado hoy queda visible en la misma pantalla.
+
+  function renderizarGastosDeHoy() {
+    const datos = leerDatos();
+    const hoyTexto = formatearFechaISO(new Date());
+    const lista = document.getElementById("listaGastosDeHoy");
+
+    const gastosDeHoy = datos.gastos
+      .filter(function (g) { return g.fecha === hoyTexto; })
+      .sort(function (a, b) { return a.hora < b.hora ? 1 : -1; });
+
+    if (gastosDeHoy.length === 0) {
+      lista.innerHTML = "<li class=\"vacio\">Todavía no hay gastos registrados hoy.</li>";
+      return;
+    }
+
+    lista.innerHTML = gastosDeHoy.map(function (gasto) {
+      const categoria = datos.config.categorias.find(function (c) { return c.id === gasto.categoriaId; });
+      const etiqueta = categoria
+        ? escaparHTML(categoria.nombre) + " — " + escaparHTML(gasto.subcategoria)
+        : escaparHTML(gasto.descripcion || "Pago de compromiso");
+
+      const etiquetaDestinatario = gasto.destinatario ? ", " + escaparHTML(gasto.destinatario) : "";
+
+      return "<li>" + gasto.hora + " — " + etiqueta +
+        " <span class=\"detalle\">(" + formatearMoneda(gasto.monto) + ", " + gasto.fuente + etiquetaDestinatario + ")</span></li>";
+    }).join("");
+  }
+
+  // Texto de alerta bajo cada barra: el color ya viene de la proyección
+  // de cierre de semana (calcularProyeccionDeCierreSemanal), no solo de lo
+  // gastado hasta hoy — así avisa antes de que la categoría se pase, no
+  // solo después. Sin presupuesto asignado no hay nada contra qué medir
+  // margen, así que no se muestra ninguna alerta (mismo criterio "gris"
+  // del semáforo del ciclo, pero sin repetir su etiqueta porque aquí no es
+  // que falte un ingreso, es que falta un presupuesto).
+  function construirTextoAlertaSemanal(color, margen) {
+    if (color === "gris") {
+      return "";
+    }
+    if (color === "rojo") {
+      return "<p class=\"detalle\">" + ETIQUETA_SEMAFORO.rojo + "</p>";
+    }
+    if (color === "amarillo") {
+      return "<p class=\"detalle\">" + ETIQUETA_SEMAFORO.amarillo + " — margen antes de rojo: " + formatearMoneda(margen.antesDeRojo) + "</p>";
+    }
+    return "<p class=\"detalle\">" + ETIQUETA_SEMAFORO.verde + " — margen antes de amarillo: " + formatearMoneda(margen.antesDeAmarillo) + "</p>";
+  }
+
+  function renderizarAvanceSemanal() {
+    const datos = leerDatos();
+    const cicloActual = asegurarCicloActual();
+    const semanaActual = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), cicloActual.fechaInicio);
+    const categoriasVariables = datos.config.categorias.filter(function (c) { return c.esVariableSemanal; });
+    const contenedor = document.getElementById("contenedorAvanceSemanal");
+
+    if (categoriasVariables.length === 0) {
+      contenedor.innerHTML = "<p class=\"pista\">No hay categorías con presupuesto semanal.</p>";
+      return;
+    }
+
+    contenedor.innerHTML = categoriasVariables.map(function (categoria) {
+      const presupuesto = cicloActual.presupuestoSemanal[categoria.id] || 0;
+      const proyeccion = calcularProyeccionDeCierreSemanal(categoria, cicloActual, datos, semanaActual);
+      const color = calcularColorDelSemaforo(proyeccion.proyeccionCierreSemanal, presupuesto);
+      const margen = presupuesto > 0 ? calcularMargenAntesDeUmbrales(proyeccion.proyeccionCierreSemanal, presupuesto) : null;
+
+      // La barra muestra el hecho (cuánto llevas gastado de verdad); el
+      // color rojo de "excedido" viene de la proyección, así que puede
+      // encenderse antes de que la barra llegue al 100% — es la alerta
+      // temprana, no un reflejo de lo ya gastado.
+      const porcentajeGastado = presupuesto > 0 ? Math.min(proyeccion.gastadoEnLaSemana / presupuesto, 1) * 100 : 0;
+      const excedido = color === "rojo";
+
+      return "<div class=\"avance-semanal-item\">" +
+        "<div>" + escaparHTML(categoria.nombre) + " — " + formatearMoneda(proyeccion.gastadoEnLaSemana) + " de " + formatearMoneda(presupuesto) + "</div>" +
+        "<div class=\"barra-fondo\"><div class=\"barra-relleno" + (excedido ? " excedido" : "") + "\" style=\"width: " + porcentajeGastado + "%;\"></div></div>" +
+        construirTextoAlertaSemanal(color, margen) +
+      "</div>";
+    }).join("");
+  }
+
+  // ============================================================
+  // PANTALLA DE DEPURACIÓN (heredada de la Etapa 1)
+  // ============================================================
+
+  function mostrarDatosEnPantalla() {
+    const datos = leerDatos();
+    document.getElementById("areaDatos").value = JSON.stringify(datos, null, 2);
+  }
+
+  function mostrarMensaje(texto) {
+    document.getElementById("mensajeEstado").textContent = texto;
+  }
+
+  function guardarDesdeElCuadroDeTexto() {
+    const textoEscrito = document.getElementById("areaDatos").value;
+    try {
+      const datos = JSON.parse(textoEscrito);
+      guardarDatos(datos);
+      renderizarTodo();
+      mostrarMensaje("Guardado.");
+    } catch (error) {
+      mostrarMensaje("El texto no es JSON válido. No se guardó nada.");
+    }
+  }
+
+  // ============================================================
+  // INICIALIZACIÓN
+  // ============================================================
+
+  // Qué pestaña de la pantalla ancha está activa. Se guarda en una
+  // variable de módulo (no en los datos) porque es un detalle de la
+  // pantalla en este momento, no algo que deba sobrevivir a un respaldo o
+  // sincronizarse entre dispositivos — mismo criterio que
+  // categoriaSeleccionadaGasto para el flujo de Gasto nuevo.
+  let pestanaAnchaActiva = "analisis";
+
+  function mostrarPestanaAncha(nombre) {
+    pestanaAnchaActiva = nombre;
+    document.getElementById("vistaAnalisis").style.display = nombre === "analisis" ? "block" : "none";
+    document.getElementById("vistaConfiguracion").style.display = nombre === "configuracion" ? "block" : "none";
+    document.querySelectorAll("[data-pestana]").forEach(function (boton) {
+      boton.classList.toggle("seleccionado", boton.getAttribute("data-pestana") === nombre);
+    });
+  }
+
+  function renderizarTodo() {
+    renderizarAvisoRespaldo();
+    actualizarMontosDeCompromisosDeTarjeta(leerDatos());
+    renderizarCategorias();
+    actualizarSelectsDelFormularioRecurrente();
+    renderizarTarjetas();
+    renderizarDeudas();
+    renderizarRecurrentes();
+    actualizarSelectsDelFormularioCompromisoUnico();
+    renderizarCompromisosUnicos();
+    renderizarIngresos();
+    renderizarIngresoRecurrenteEsperado();
+    renderizarPresupuestoSemanal();
+    renderizarCompromisos();
+    renderizarBotonesCategoriaGasto();
+    renderizarPendientes();
+    renderizarGastosDeHoy();
+    renderizarAvanceSemanal();
+    renderizarBalanceDelCiclo();
+    renderizarTrayectoriaSemaforo();
+    renderizarProximosPagosAnalisis();
+    renderizarMovimientosDelCiclo();
+    renderizarCalendario();
+    renderizarEstadoDeDeudaAnalisis();
+    mostrarPestanaAncha(pestanaAnchaActiva);
+    mostrarDatosEnPantalla();
+  }
+
+  document.querySelectorAll("[data-pestana]").forEach(function (boton) {
+    boton.addEventListener("click", function () { mostrarPestanaAncha(boton.getAttribute("data-pestana")); });
+  });
+
+  document.getElementById("formCategoria").addEventListener("submit", manejarEnvioCategoria);
+  document.getElementById("formTarjeta").addEventListener("submit", manejarEnvioTarjeta);
+  document.getElementById("formDeuda").addEventListener("submit", manejarEnvioDeuda);
+  document.getElementById("montoPorPagoDeuda").addEventListener("input", calcularCostoDelCreditoEnVivo);
+  document.getElementById("pagosTotalesDeuda").addEventListener("input", calcularCostoDelCreditoEnVivo);
+  document.getElementById("montoSolicitadoDeuda").addEventListener("input", calcularCostoDelCreditoEnVivo);
+  document.getElementById("formRecurrente").addEventListener("submit", manejarEnvioRecurrente);
+  document.getElementById("frecuenciaRecurrente").addEventListener("change", manejarCambioFrecuenciaRecurrente);
+  document.getElementById("categoriaIdRecurrente").addEventListener("change", function () {
+    poblarSelectDeSubcategorias(document.getElementById("subcategoriaRecurrente"), this.value);
+  });
+  document.getElementById("formCompromisoUnico").addEventListener("submit", manejarEnvioCompromisoUnico);
+  document.getElementById("categoriaIdCompromisoUnico").addEventListener("change", actualizarSubcategoriaCompromisoUnico);
+  document.getElementById("formIngreso").addEventListener("submit", manejarEnvioIngreso);
+  document.getElementById("botonGuardar").addEventListener("click", guardarDesdeElCuadroDeTexto);
+  document.getElementById("botonExportar").addEventListener("click", exportarJSON);
+  document.getElementById("botonImportar").addEventListener("click", function () {
+    document.getElementById("inputArchivo").click();
+  });
+  document.getElementById("inputArchivo").addEventListener("change", importarJSON);
+
+  document.querySelectorAll("#botonesFuenteGasto button").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      seleccionarFuenteGasto(this.getAttribute("data-fuente"));
+    });
+  });
+  document.getElementById("botonGuardarGastoNuevo").addEventListener("click", manejarGuardarGastoNuevo);
+
+  function inicializar() {
+    const cicloActual = asegurarCicloActual();
+    generarCompromisosDelCiclo(cicloActual);
+    establecerFechaDeHoyEnFormularioIngreso();
+    renderizarTodo();
+  }
+
+  inicializar();
+
+</script>
+</body>
+</html>
