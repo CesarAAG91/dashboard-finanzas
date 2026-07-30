@@ -1157,11 +1157,107 @@
     flex: 0 0 auto;
     border-top: 1px solid var(--borde-a);
     background-color: var(--superficie-a);
-    padding: 9px 22px 11px;
+    padding: 0 22px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* El asa es la barra de encabezado completa. */
+  #asaCajon {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    padding: 11px 0 3px;
+    cursor: pointer;
+    text-align: left;
   }
+  #vistaAncha .titulo-cajon {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .pista-cajon {
+    font-size: 12px;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .leyenda-cajon {
+    margin-left: auto;
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .item-leyenda {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #vistaAncha .leyenda-cajon .punto-estado {
+    width: 6px;
+    height: 6px;
+    margin: 0;
+  }
+  #vistaAncha .chevron-cajon {
+    font-size: 13px;
+    color: var(--texto-3a);
+    line-height: 1;
+  }
+  #asaCajon:hover .chevron-cajon,
+  #asaCajon:hover .pista-cajon { color: var(--texto-2a); }
+  /* Abierto, el chevron apunta al revés: la acción ahora es minimizar. */
+  #cajonCalendario.abierto .chevron-cajon { transform: rotate(180deg); display: inline-block; }
+
+  /* ---- Cerrado: los próximos siete días ---- */
+  #vistaAncha .proximos-dias {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+  #vistaAncha .celda-proxima {
+    border: 1px solid var(--borde-sutil-a);
+    background-color: var(--fondo-a);
+    border-radius: 8px;
+    padding: 7px 9px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  #vistaAncha .celda-proxima:hover { border-color: var(--borde-a); }
+  /* Hoy se distingue por el trazo, no por color: el color es estado. */
+  #vistaAncha .celda-proxima.es-hoy { border-color: var(--texto-2a); }
+  #vistaAncha .celda-proxima .dia-semana {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .celda-proxima .numero-grande {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--texto-a);
+  }
+  #vistaAncha .celda-proxima .puntos-del-dia { min-height: 6px; }
+  #vistaAncha .celda-proxima .monto-del-dia {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .celda-proxima.sin-nada .numero-grande,
+  #vistaAncha .celda-proxima.sin-nada .monto-del-dia { color: var(--texto-3a); }
   #cajonCalendario.abierto {
     /* Al abrirse deja de ser una fila y pasa a ser una columna. Ocupa todo lo
        que queda bajo el encabezado (flex: 1) en vez de una altura fija en vh:
@@ -1179,26 +1275,6 @@
      dejarlo pelear por la altura sobrante: si se queda, su acomodo se
      recalcula contra cuarenta pixeles y asoma roto por encima del cajón. */
   #primeraPantalla.con-cajon-abierto .zona-muro { display: none; }
-
-  #asaCajon {
-    flex: 0 0 auto;
-    align-self: center;
-    border: 0;
-    background: transparent;
-    /* Área de toque generosa alrededor de una barra pequeña. */
-    padding: 6px 16px;
-    cursor: pointer;
-    line-height: 0;
-  }
-  #vistaAncha .barra-asa {
-    display: block;
-    width: 34px;
-    height: 3px;
-    border-radius: 2px;
-    background-color: var(--borde-a);
-  }
-  #asaCajon:hover .barra-asa { background-color: var(--texto-3a); }
-  #cajonCalendario.abierto .barra-asa { width: 44px; }
 
   /* Dos zonas: el mes a la izquierda, el día elegido a la derecha. */
   #cuerpoCajon {
@@ -1342,51 +1418,69 @@
     color: var(--texto-3a);
     padding: 6px 0;
   }
-  #vistaAncha .proximos-dias {
+
+  /* Confirmar un pago desde el día abierto. */
+  #vistaAncha .confirmacion-en-cajon {
     display: flex;
-    gap: 18px;
-    overflow: hidden;
+    align-items: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 6px 0 9px 1.1em;
   }
-  #vistaAncha .dia-proximo {
+  #vistaAncha .confirmacion-en-cajon label {
     display: flex;
     flex-direction: column;
-    gap: 1px;
-    min-width: 0;
-  }
-  #vistaAncha .dia-proximo .fecha-proxima {
+    gap: 3px;
     font-size: 10px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--texto-3a);
   }
-  #vistaAncha .dia-proximo .contenido-proximo {
-    font-size: 12px;
-    color: var(--texto-2a);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  #vistaAncha .confirmacion-en-cajon input,
+  #vistaAncha .confirmacion-en-cajon select {
+    background-color: var(--superficie-alta-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 6px;
+    color: var(--texto-a);
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    padding: 4px 6px;
+    text-transform: none;
+    letter-spacing: 0;
   }
-
+  #vistaAncha .confirmacion-en-cajon input { width: 6.5em; text-align: right; }
+  #vistaAncha .confirmacion-en-cajon select { font-family: inherit; }
+  #vistaAncha .boton-marcar-pagado {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-alta-a);
+    color: var(--texto-a);
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #vistaAncha .boton-marcar-pagado:hover { border-color: var(--texto-3a); }
   /* ---------- Análisis, debajo ---------- */
   #zonaAnalisis {
     padding: 26px 22px;
     max-width: 1100px;
   }
 
-  /* ---------- Acción flotante ---------- */
+  /* ---------- Acción ---------- */
+  /* En el flujo, en su propia fila: así no hay número mágico que mantener
+     sincronizado con la altura del cajón, que cambia según su contenido. */
   #accionesFlotantes {
-    position: fixed;
-    right: 22px;
-    bottom: 74px;
-    z-index: 40;
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 22px 12px;
   }
-  /* Con el calendario desplegado, el botón flotaría justo encima del panel del
-     día. Se retira mientras dure: para dar de alta algo en una fecha concreta
-     el lugar natural es el propio día, no un botón que lo tapa (pendiente,
-     va con los modales de registro). */
-  /* #accionesFlotantes es hermano posterior de #primeraPantalla, así que el
-     combinador ~ alcanza. */
-  #primeraPantalla.con-cajon-abierto ~ #accionesFlotantes {
+  /* Con el calendario desplegado no hay dónde ponerlo sin tapar el panel del
+     día. Para dar de alta algo en una fecha concreta el lugar natural es el
+     propio día (pendiente, va con los modales de registro). */
+  #primeraPantalla.con-cajon-abierto #accionesFlotantes {
     display: none;
   }
   /* Inversión neutra: el único elemento de la app con fondo claro sólido, que
@@ -1590,17 +1684,39 @@
         <div class="muro" id="muroPagos"></div>
       </div>
 
+      <!-- ACCIÓN ---------------------------------------------------- -->
+      <!-- Un solo control: agregar y ajustar llevan al mismo lugar, así que
+           dos botones separados solo hacían dudar cuál tocar. Vive en su
+           propia fila entre el muro y el cajón, no flotando encima: flotando
+           tapaba la última celda del calendario y la leyenda. Destaca por
+           diferente, no por grande — es el único elemento de la app con fondo
+           claro sólido, y lleva su nombre escrito. -->
+      <div id="accionesFlotantes">
+        <button type="button" id="botonAgregarYAjustar">
+          <span class="signo-mas" aria-hidden="true">+</span>
+          <span>Agregar o ajustar</span>
+        </button>
+      </div>
+
       <!-- Cajón de calendario, anclado al fondo.
            Cerrado: la tira de próximos días. Al tocarla se despliega hacia
            arriba tapando el muro, con el mes completo a la izquierda y el día
            elegido a la derecha. Volver a tocar el asa lo minimiza. -->
       <div id="cajonCalendario">
-        <button type="button" id="asaCajon" aria-expanded="false" aria-controls="cuerpoCajon"
-                title="Abrir el calendario">
-          <span class="barra-asa" aria-hidden="true"></span>
+        <!-- El asa es toda la barra de encabezado, no una manija chica: es lo
+             que se quiere tocar y así no hay que apuntarle. -->
+        <button type="button" id="asaCajon" aria-expanded="false" aria-controls="cuerpoCajon">
+          <span class="titulo-cajon">Calendario</span>
+          <span class="pista-cajon" id="pistaCajon">Próximos 7 días · toca para ver el mes completo</span>
+          <span class="leyenda-cajon">
+            <span class="item-leyenda"><span class="punto-estado pagado"></span>Pagado</span>
+            <span class="item-leyenda"><span class="punto-estado pendiente"></span>Pendiente</span>
+            <span class="item-leyenda"><span class="punto-estado vencido"></span>Vencido</span>
+          </span>
+          <span class="chevron-cajon" aria-hidden="true">⌃</span>
         </button>
 
-        <!-- Cerrado -->
+        <!-- Cerrado: los próximos siete días, uno por celda -->
         <div class="proximos-dias" id="proximosDiasCajon"></div>
 
         <!-- Desplegado -->
@@ -1640,27 +1756,10 @@
         <ul class="lista-items" id="listaMovimientosCiclo"></ul>
       </section>
 
-      <section id="seccionCalendario">
-        <h2>Calendario</h2>
-        <div id="contenedorCalendario"></div>
-      </section>
-
       <section id="seccionDeuda">
         <h2>Deuda</h2>
         <div id="contenedorDeuda"></div>
       </section>
-    </div>
-
-    <!-- ACCIÓN FLOTANTE ------------------------------------------- -->
-    <!-- Un solo control: agregar y ajustar llevan al mismo lugar, así que
-         dos botones separados solo hacían dudar cuál tocar. Destaca por
-         diferente, no por grande: es el único elemento de la app con fondo
-         claro sólido, y lleva su nombre escrito para que se vea de qué es. -->
-    <div id="accionesFlotantes">
-      <button type="button" id="botonAgregarYAjustar">
-        <span class="signo-mas" aria-hidden="true">+</span>
-        <span>Agregar o ajustar</span>
-      </button>
     </div>
 
     <!-- MODAL DE AJUSTES ------------------------------------------ -->
@@ -4821,33 +4920,13 @@
   }
 
   // ============================================================
-  // ANÁLISIS — CALENDARIO
+  // DÍAS DE UN CICLO
   // ============================================================
   //
-  // Navegación ciclo a ciclo, no mes calendario: un ciclo real cruza dos
-  // meses (del corte de uno al corte del siguiente), así que un grid
-  // mes-a-mes partiría un ciclo en dos vistas. Cada vista del calendario
-  // es un ciclo completo, real o simulado.
-
-  const DIAS_DE_LA_SEMANA_ABREV = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
-  // 0 = ciclo actual real; 1..CANTIDAD_DE_CICLOS_A_PROYECTAR = simulados.
-  let indiceCicloCalendario = 0;
-  let fechaSeleccionadaCalendario = null;
-
-  function obtenerCicloMostradoEnCalendario() {
-    if (indiceCicloCalendario === 0) {
-      return { ciclo: asegurarCicloActual(), esReal: true };
-    }
-    const simulados = generarCiclosSimulados(asegurarCicloActual(), CANTIDAD_DE_CICLOS_A_PROYECTAR);
-    return { ciclo: simulados[indiceCicloCalendario - 1], esReal: false };
-  }
-
-  function cambiarCicloCalendario(delta) {
-    indiceCicloCalendario = Math.min(Math.max(indiceCicloCalendario + delta, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
-    fechaSeleccionadaCalendario = null;
-    renderizarTodo();
-  }
+  // Lo que sobrevive del calendario que vivía en Análisis. Ese calendario se
+  // eliminó: quedaba al fondo de la página, después de Movimientos del ciclo,
+  // y el cajón de la primera pantalla hace su trabajo — desplegable, con el
+  // mes completo y con los pagos marcables desde el propio día.
 
   function generarDiasDelCiclo(ciclo) {
     const inicio = crearFechaLocal(ciclo.fechaInicio);
@@ -4859,78 +4938,6 @@
       cursor = sumarDias(cursor, 1);
     }
     return dias;
-  }
-
-  // Para un ciclo real, los items son los compromisos ya generados y
-  // persistidos ese día. Para un ciclo simulado, son candidatos puros
-  // (recurrentes + deudas, sin tarjetas) más los compromisos único que ya
-  // se hayan capturado a futuro con esa fecha — nunca compromisos
-  // "inventados" con id, porque todavía no existen de verdad.
-  function obtenerItemsDelDia(fechaISO, ciclo, esReal, datos) {
-    if (esReal) {
-      return datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.fechaProgramada === fechaISO; });
-    }
-    const candidatos = calcularCandidatosDelCiclo(ciclo, datos).filter(function (c) { return c.fechaProgramada === fechaISO; });
-    const unicosFuturos = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.origen === "unico" && c.fechaProgramada === fechaISO; });
-    return candidatos.concat(unicosFuturos);
-  }
-
-  function calcularEstadoDelDia(items, esReal) {
-    if (items.length === 0) {
-      return "";
-    }
-    if (!esReal) {
-      return "tiene-proyectado";
-    }
-    const algunoUrgente = items.some(function (i) { return !i.pagado && calcularDiasHastaFecha(i.fechaProgramada) <= DIAS_PARA_PENDIENTE_URGENTE; });
-    if (algunoUrgente) {
-      return "tiene-pendiente-urgente";
-    }
-    const algunoPendiente = items.some(function (i) { return !i.pagado; });
-    if (algunoPendiente) {
-      return "tiene-pendiente";
-    }
-    return "tiene-pagado";
-  }
-
-  // El panel de detalle reusa, sin modificarla, confirmarPagoDeCompromiso:
-  // arma el mismo marcado (".monto-real-pendiente", ".fuente-pendiente",
-  // botón) que ya usa Pendientes en Captura, así que esa función encuentra
-  // lo que busca sin saber que ahora la llamó el calendario. Solo aplica
-  // para el ciclo actual real — un ciclo simulado no tiene compromisos con
-  // id que confirmar, es de solo lectura.
-  function renderizarHTMLPanelDetalleDia(fechaISO, ciclo, esReal, datos) {
-    const items = obtenerItemsDelDia(fechaISO, ciclo, esReal, datos);
-
-    if (items.length === 0) {
-      return "<div class=\"panel-detalle-dia\"><p class=\"pista\">" + fechaISO + ": sin compromisos.</p></div>";
-    }
-
-    const filasHTML = items.map(function (item) {
-      const etiquetaPago = item.pagoNde ? " (pago " + item.pagoNde + ")" : "";
-
-      if (!esReal) {
-        return "<div class=\"item-dia\"><strong>" + escaparHTML(item.nombre) + "</strong>" + etiquetaPago +
-          " <span class=\"detalle\">(" + formatearMoneda(item.montoEstimado) + " estimado, proyectado)</span></div>";
-      }
-
-      const etiquetaEstado = item.pagado ? "Pagado" : "Pendiente";
-      const confirmacionHTML = item.pagado ? "" :
-        "<div class=\"confirmacion-pendiente\">" +
-          "<label>Monto real<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + item.montoEstimado + "\"></label>" +
-          "<label>Fuente<select class=\"fuente-pendiente\">" +
-            "<option value=\"debito\">Débito</option>" +
-            "<option value=\"credito\">Crédito</option>" +
-          "</select></label>" +
-          "<button type=\"button\" class=\"boton-marcar-pagado\" data-compromiso-id=\"" + item.id + "\">Marcar como pagado</button>" +
-        "</div>";
-
-      return "<div class=\"item-dia\"><strong>" + escaparHTML(item.nombre) + "</strong>" + etiquetaPago +
-        " <span class=\"detalle\">(" + formatearMoneda(item.montoEstimado) + " est., " + etiquetaEstado + ")</span></div>" +
-        confirmacionHTML;
-    }).join("");
-
-    return "<div class=\"panel-detalle-dia\"><h3>" + fechaISO + "</h3>" + filasHTML + "</div>";
   }
 
   // Resumen del balance encadenado para el ciclo simulado que se está
@@ -4949,73 +4956,6 @@
       "<p class=\"detalle\">Gasto variable estimado: " + formatearMoneda(resultado.gastoVariableProyectado) + "</p>" +
       "<p class=\"pista\">Estimado con el presupuesto semanal y las reglas de ingreso configuradas hoy — se recalcula cada vez que los cambies.</p>" +
     "</div>";
-  }
-
-  function renderizarCalendario() {
-    const datos = leerDatos();
-    const contenedor = document.getElementById("contenedorCalendario");
-    const mostrado = obtenerCicloMostradoEnCalendario();
-    const ciclo = mostrado.ciclo;
-    const esReal = mostrado.esReal;
-    const resumenProyectadoHTML = esReal ? "" : renderizarHTMLResumenProyectado(calcularProyeccionMultiCiclo()[indiceCicloCalendario - 1]);
-
-    const primerDiaSemana = crearFechaLocal(ciclo.fechaInicio).getDay();
-    const celdasVacias = new Array(primerDiaSemana).fill("<div class=\"dia-calendario dia-vacio\"></div>").join("");
-
-    // El color de fondo por día solo aplica al ciclo actual real — un ciclo
-    // simulado no tiene semáforo de tres colores (ver "Proyección
-    // multi-ciclo" en SPEC.md), así que trayectoriaPorFecha queda vacío y
-    // ningún día simulado recibe clase de semáforo.
-    const trayectoriaPorFecha = {};
-    if (esReal) {
-      calcularTrayectoriaDelSemaforo(ciclo, datos).forEach(function (dia) {
-        trayectoriaPorFecha[dia.fechaISO] = dia.color;
-      });
-    }
-
-    const celdasDias = generarDiasDelCiclo(ciclo).map(function (fechaISO) {
-      const items = obtenerItemsDelDia(fechaISO, ciclo, esReal, datos);
-      const estado = calcularEstadoDelDia(items, esReal);
-      const seleccionada = fechaISO === fechaSeleccionadaCalendario ? " dia-seleccionado" : "";
-      const colorDelDia = trayectoriaPorFecha[fechaISO];
-      const claseSemaforo = colorDelDia && colorDelDia !== "gris" ? " dia-semaforo-" + colorDelDia : "";
-      const diaDelMes = Number(fechaISO.split("-")[2]);
-      const marcador = items.length > 0 ? "<div class=\"detalle\">" + items.length + "</div>" : "";
-      return "<div class=\"dia-calendario" + claseSemaforo + " " + estado + seleccionada + "\" data-fecha=\"" + fechaISO + "\">" +
-        "<div>" + diaDelMes + "</div>" + marcador + "</div>";
-    }).join("");
-
-    const etiquetaCiclo = esReal ? "Ciclo actual" : "Proyectado (estimado)";
-
-    contenedor.innerHTML =
-      "<div class=\"calendario-cabecera\">" +
-        "<button type=\"button\" id=\"botonCicloAnterior\"" + (indiceCicloCalendario === 0 ? " disabled" : "") + ">&larr; Anterior</button>" +
-        "<div><strong>" + etiquetaCiclo + "</strong> <span class=\"detalle\">" + ciclo.fechaInicio + " a " + ciclo.fechaFin + "</span></div>" +
-        "<button type=\"button\" id=\"botonCicloSiguiente\"" + (indiceCicloCalendario === CANTIDAD_DE_CICLOS_A_PROYECTAR ? " disabled" : "") + ">Siguiente &rarr;</button>" +
-      "</div>" +
-      resumenProyectadoHTML +
-      "<div class=\"calendario-grid\">" +
-        DIAS_DE_LA_SEMANA_ABREV.map(function (d) { return "<div class=\"detalle\">" + d + "</div>"; }).join("") +
-        celdasVacias + celdasDias +
-      "</div>" +
-      (fechaSeleccionadaCalendario ? renderizarHTMLPanelDetalleDia(fechaSeleccionadaCalendario, ciclo, esReal, datos) : "");
-
-    document.getElementById("botonCicloAnterior").addEventListener("click", function () { cambiarCicloCalendario(-1); });
-    document.getElementById("botonCicloSiguiente").addEventListener("click", function () { cambiarCicloCalendario(1); });
-
-    contenedor.querySelectorAll(".dia-calendario[data-fecha]").forEach(function (celda) {
-      celda.addEventListener("click", function () {
-        const fecha = celda.getAttribute("data-fecha");
-        fechaSeleccionadaCalendario = fechaSeleccionadaCalendario === fecha ? null : fecha;
-        renderizarCalendario();
-      });
-    });
-
-    contenedor.querySelectorAll(".boton-marcar-pagado").forEach(function (boton) {
-      boton.addEventListener("click", function () {
-        confirmarPagoDeCompromiso(boton.getAttribute("data-compromiso-id"), boton.closest(".confirmacion-pendiente"));
-      });
-    });
   }
 
   // ============================================================
@@ -6465,7 +6405,12 @@
     return recuadros;
   }
 
-  function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos) {
+  // conAccionDePago solo lo usa el panel del día del calendario: agrega bajo
+  // cada pago pendiente los campos para confirmarlo. El marcado es el que
+  // confirmarPagoDeCompromiso ya espera (".monto-real-pendiente",
+  // ".fuente-pendiente", el botón), el mismo que usa Pendientes en Captura,
+  // así que esa función funciona sin saber quién la llamó.
+  function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
     if (recuadro.tipo === "presupuesto") {
       return "<div class=\"recuadro\">" +
         "<div class=\"encabezado-recuadro\">" +
@@ -6498,12 +6443,34 @@
         return titulo + grupo.pagos.map(function (pago) {
           const estado = calcularEstadoDePago(pago);
           const monto = Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
-          return "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") + "\">" +
+          const etiquetaPago = pago.pagoNde ? " <span class=\"dia-fila-muro\">(pago " + pago.pagoNde + ")</span>" : "";
+
+          const fila = "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") + "\">" +
             "<span class=\"punto-estado " + estado + "\"></span>" +
-            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + "</span>" +
+            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + "</span>" +
             "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
             "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>" +
           "</div>";
+
+          if (!conAccionDePago || pago.pagado) {
+            return fila;
+          }
+
+          return fila +
+            "<div class=\"confirmacion-en-cajon\">" +
+              "<label>Monto real" +
+                "<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + pago.montoEstimado + "\">" +
+              "</label>" +
+              "<label>Fuente" +
+                "<select class=\"fuente-pendiente\">" +
+                  "<option value=\"debito\">Débito</option>" +
+                  "<option value=\"credito\">Crédito</option>" +
+                "</select>" +
+              "</label>" +
+              "<button type=\"button\" class=\"boton-marcar-pagado\" data-compromiso-id=\"" + pago.id + "\">" +
+                "Marcar pagado" +
+              "</button>" +
+            "</div>";
         }).join("");
       }).join("") +
     "</div>";
@@ -6829,7 +6796,8 @@
     document.getElementById("primeraPantalla").classList.add("con-cajon-abierto");
     document.getElementById("cuerpoCajon").hidden = false;
     asa.setAttribute("aria-expanded", "true");
-    asa.setAttribute("title", "Minimizar el calendario");
+    document.getElementById("pistaCajon").textContent =
+      "Toca un día para ver y marcar sus pagos · toca aquí para minimizar";
 
     renderizarMesDelCajon();
     renderizarDiaElegidoDelCajon();
@@ -6843,7 +6811,8 @@
     document.getElementById("primeraPantalla").classList.remove("con-cajon-abierto");
     document.getElementById("cuerpoCajon").hidden = true;
     asa.setAttribute("aria-expanded", "false");
-    asa.setAttribute("title", "Abrir el calendario");
+    document.getElementById("pistaCajon").textContent =
+      "Próximos 7 días · toca para ver el mes completo";
 
     // El muro vuelve a la pantalla con toda la altura disponible, así que su
     // acomodo se rehace desde cero para ese espacio.
@@ -6982,8 +6951,19 @@
         tipo: "pagos",
         nombre: nombre,
         grupos: [{ titulo: null, pagos: porCategoria[nombre] }]
-      }, false);
+      }, false, true);
     }).join("");
+
+    // Marcar pagado desde aquí: es la razón de que el calendario sea
+    // desplegable y no solo consultable.
+    contenedor.querySelectorAll(".boton-marcar-pagado").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        confirmarPagoDeCompromiso(
+          boton.getAttribute("data-compromiso-id"),
+          boton.closest(".confirmacion-en-cajon")
+        );
+      });
+    });
   }
 
   function renderizarCajonDeCalendario() {
@@ -6998,32 +6978,46 @@
       renderizarDiaElegidoDelCajon();
     }
 
-    // Se agrupan por fecha para que un día con tres pagos sea una sola
-    // columna del cajón, no tres.
-    const pendientesPorFecha = {};
-    obtenerPendientesDelCiclo(datos, ciclo.id).forEach(function (compromiso) {
-      if (!pendientesPorFecha[compromiso.fechaProgramada]) {
-        pendientesPorFecha[compromiso.fechaProgramada] = [];
-      }
-      pendientesPorFecha[compromiso.fechaProgramada].push(compromiso.nombre);
-    });
+    // Siete días consecutivos desde hoy, uno por celda — no "los siete
+    // próximos días que tienen algo". Los días vacíos también se muestran:
+    // saber que el jueves no cae nada es información, y además mantiene la
+    // tira estable en vez de reacomodarse cada vez que se paga algo.
+    const hoy = truncarAMedianoche(new Date());
 
-    const fechas = Object.keys(pendientesPorFecha).sort().slice(0, DIAS_A_MOSTRAR_EN_EL_CAJON);
+    contenedor.innerHTML = "";
+    for (let desplazamiento = 0; desplazamiento < DIAS_A_MOSTRAR_EN_EL_CAJON; desplazamiento++) {
+      const fecha = sumarDias(hoy, desplazamiento);
+      const fechaISO = formatearFechaISO(fecha);
+      const compromisos = obtenerCompromisosDeLaFecha(fechaISO, datos);
 
-    if (fechas.length === 0) {
-      contenedor.innerHTML = "<div class=\"dia-proximo\"><span class=\"contenido-proximo\">" +
-        "No queda nada pendiente en este ciclo.</span></div>";
-      return;
+      const total = compromisos.reduce(function (suma, compromiso) {
+        return suma + Number(compromiso.pagado ? compromiso.montoReal : compromiso.montoEstimado);
+      }, 0);
+
+      const puntos = compromisos.map(function (compromiso) {
+        return "<span class=\"punto-estado " + calcularEstadoDePago(compromiso) + "\"></span>";
+      }).join("");
+
+      const clases = ["celda-proxima"];
+      if (desplazamiento === 0) { clases.push("es-hoy"); }
+      if (compromisos.length === 0) { clases.push("sin-nada"); }
+
+      contenedor.insertAdjacentHTML("beforeend",
+        "<button type=\"button\" class=\"" + clases.join(" ") + "\" data-fecha=\"" + fechaISO + "\">" +
+          "<span class=\"dia-semana\">" + DIAS_SEMANA_ABREVIADOS[fecha.getDay()] + "</span>" +
+          "<span class=\"numero-grande\">" + fecha.getDate() + "</span>" +
+          "<span class=\"puntos-del-dia\">" + puntos + "</span>" +
+          "<span class=\"monto-del-dia\">" + (compromisos.length > 0 ? formatearMoneda(total) : "—") + "</span>" +
+        "</button>");
     }
 
-    contenedor.innerHTML = fechas.map(function (fecha) {
-      const fechaLocal = crearFechaLocal(fecha);
-      const etiqueta = DIAS_SEMANA_ABREVIADOS[fechaLocal.getDay()] + " " + fechaLocal.getDate();
-      return "<div class=\"dia-proximo\">" +
-        "<span class=\"fecha-proxima\">" + etiqueta + "</span>" +
-        "<span class=\"contenido-proximo\">" + escaparHTML(pendientesPorFecha[fecha].join(", ")) + "</span>" +
-      "</div>";
-    }).join("");
+    // Tocar un día de la tira abre el cajón ya puesto en ese día.
+    contenedor.querySelectorAll("[data-fecha]").forEach(function (celda) {
+      celda.addEventListener("click", function () {
+        diaElegidoDelCajon = celda.getAttribute("data-fecha");
+        abrirCajonDeCalendario();
+      });
+    });
   }
 
   // ============================================================
@@ -7075,7 +7069,6 @@
     renderizarTrayectoriaSemaforo();
     renderizarProximosPagosAnalisis();
     renderizarMovimientosDelCiclo();
-    renderizarCalendario();
     renderizarEstadoDeDeudaAnalisis();
     renderizarEncabezadoDelCiclo();
     // El muro va después del encabezado y del cajón: su acomodo mide la
@@ -7095,13 +7088,6 @@
   });
   document.getElementById("mesSiguienteCajon").addEventListener("click", function () {
     cambiarMesDelCajon(1);
-  });
-  // La tira de próximos días también abre el cajón: es la superficie grande y
-  // es lo que uno intenta tocar cuando quiere ver más de un día.
-  document.getElementById("proximosDiasCajon").addEventListener("click", function () {
-    if (!cajonEstaAbierto()) {
-      alternarCajonDeCalendario();
-    }
   });
 
   // Clic en el fondo oscuro cierra; clic dentro del panel, no.
