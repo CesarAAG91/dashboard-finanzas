@@ -43,32 +43,6 @@
     padding: 16px;
     max-width: 640px;
   }
-  /* La pestaña de Simulación es la única vista pensada para ocupar el
-     ancho completo de una laptop (paneles lado a lado) — el resto del
-     archivo (Captura, Análisis, Configuración) se queda en la columna de
-     640px de siempre, sin tocar. La clase la pone/quita mostrarPestanaAncha
-     solo al entrar/salir de "simulacion". */
-  body.modo-simulacion-ancho {
-    max-width: none;
-  }
-  /* El título "Ciclo" y su párrafo explicativo son documentación de cómo
-     funciona la app en general — útiles la primera vez, no en cada entrada
-     a trabajar en la simulación. Solo se ocultan aquí, nunca en
-     Análisis/Configuración. */
-  body.modo-simulacion-ancho > h1,
-  body.modo-simulacion-ancho > p.descripcion {
-    display: none;
-  }
-  /* Los botones de pestaña (Análisis/Configuración/Simulación) reusan
-     .boton-grande — la misma clase que los botones táctiles grandes de
-     Captura (categoría/fuente/tarjeta), que sí necesitan ese padding para
-     tocarse con el dedo. Escalado solo para esta instancia, vía el
-     selector #vistaAncha > .botones-grandes, que es la única que vive
-     fuera de Captura. */
-  #vistaAncha > .botones-grandes .boton-grande {
-    padding: 8px;
-    font-size: 14px;
-  }
   h1 {
     font-size: 20px;
     margin-bottom: 4px;
@@ -194,24 +168,14 @@
   }
 
   /*
-    Captura (angosta, celular) y Análisis/Configuración (ancha, laptop)
-    nunca se muestran las dos a la vez. Dentro de la pantalla ancha,
-    Análisis y Configuración son pestañas — mostrarPestanaAncha() decide
-    cuál de las dos se ve, con Análisis por default.
+    Captura (angosta, celular) y la vista ancha (laptop) nunca se muestran
+    las dos a la vez: las separa el ancho de pantalla, no un control. La
+    vista ancha es una sola página continua — ya no hay pestañas.
   */
   #vistaCaptura {
     display: block;
   }
   #vistaAncha {
-    display: none;
-  }
-  #vistaAnalisis {
-    display: block;
-  }
-  #vistaConfiguracion {
-    display: none;
-  }
-  #vistaSimulacion {
     display: none;
   }
   @media (min-width: 641px) {
@@ -220,6 +184,23 @@
     }
     #vistaAncha {
       display: block;
+    }
+    /* La vista ancha es una sola página que ocupa la pantalla completa, así
+       que en laptop el body suelta la columna de 640px y su padding: cada
+       zona de la página pone el propio. */
+    body {
+      max-width: none;
+      padding: 0;
+    }
+    /* El título y su párrafo explican cómo funciona la app en general —
+       útiles la primera vez, no cada vez que se entra a trabajar. En la
+       pantalla angosta se siguen viendo. */
+    body > h1,
+    body > p.descripcion {
+      display: none;
+    }
+    body > details {
+      margin: 0 22px 22px;
     }
   }
 
@@ -918,6 +899,960 @@
   .balance-positivo-simulacion {
     color: #5eead4;
   }
+
+  /* ============================================================ */
+  /* VISTA ANCHA — una sola página                                 */
+  /* ============================================================ */
+  /*
+     Sistema de diseño aprobado el 29 jul 2026: neutros cálidos, el color
+     solo significa estado, el dato pesa más que su envoltorio, y la cifra
+     protagonista en peso 300 (no negritas).
+
+     Todo va anclado a #vistaAncha para no tocar la vista de Captura, que
+     tiene su propia paleta ya aprobada.
+  */
+  #vistaAncha {
+    --fondo-a: #18161c;
+    --superficie-a: #221f27;
+    --superficie-alta-a: #2c2833;
+    --borde-a: #35313c;
+    --borde-sutil-a: #29262f;
+    --texto-a: #f6f3ef;
+    --texto-2a: #948e9c;
+    --texto-3a: #6f6a78;
+
+    --mono-a: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+    /* La única variable que reescala el muro: el interior de los recuadros
+       se mide en em, así que cambiar este número los reescala completos.
+       La fija acomodarMuroDePagos. */
+    --escala: 1;
+
+    background-color: var(--fondo-a);
+    color: var(--texto-a);
+  }
+
+  /* ---------- Primera pantalla: ocupa el viewport completo ---------- */
+  /* Requisito duro del usuario: todos los pagos del ciclo visibles de un
+     golpe, sin scroll. La altura la reparten encabezado, muro y cajón; el
+     muro es el único que cede espacio. */
+  #primeraPantalla {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #encabezadoCiclo {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 28px;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+
+  #vistaAncha .etiqueta-ancha {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+  }
+
+  #vistaAncha .veredicto-ciclo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* Un número manda. El peso 300 es lo que más separa el resultado de un
+     panel administrativo. */
+  #vistaAncha .cifra-protagonista {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 40px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  #vistaAncha .identidad-ciclo {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 13px;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .identidad-ciclo .cifra-a { color: var(--texto-a); }
+
+  #vistaAncha .navegacion-ciclos {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .navegacion-ciclos button {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 6px;
+    width: 24px;
+    height: 22px;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #vistaAncha .navegacion-ciclos button:hover:not(:disabled) { color: var(--texto-a); }
+  #vistaAncha .navegacion-ciclos button:disabled { opacity: 0.35; cursor: default; }
+
+  #bandaTrayectoria[hidden] { display: none; }
+
+  #vistaAncha .resumen-ciclo {
+    margin-left: auto;
+    display: flex;
+    gap: 24px;
+    align-items: baseline;
+  }
+  #vistaAncha .dato-secundario {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: right;
+  }
+  #vistaAncha .dato-secundario .valor-a {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    color: var(--texto-a);
+  }
+
+  /* ---------- Barra de simulación ---------- */
+  /* Solo aparece cuando hay algo sin guardar. Usa el ámbar del semáforo, que
+     ya significa "atención, pendiente" en toda la app. */
+  #barraSimulacion {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 10px 22px 0;
+    padding: 8px 12px;
+    border: 1px solid rgba(253, 224, 71, 0.35);
+    border-radius: 8px;
+    background-color: rgba(253, 224, 71, 0.07);
+  }
+  #barraSimulacion[hidden] { display: none; }
+  #vistaAncha .aviso-simulacion {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: #fde047;
+  }
+  #vistaAncha .nota-simulacion {
+    flex: 0 1 auto;
+    font-size: 12px;
+    color: var(--texto-3a);
+  }
+  #barraSimulacion button {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    padding: 6px 13px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #barraSimulacion button:hover { color: var(--texto-a); }
+  /* Guardar es la acción que toca datos reales: se distingue con la misma
+     inversión neutra del botón de agregar, no con un color nuevo. */
+  #botonGuardarSimulacion {
+    background-color: var(--texto-a) !important;
+    border-color: var(--texto-a) !important;
+    color: var(--fondo-a) !important;
+    font-weight: 500;
+  }
+
+  /* ---------- Trayectoria ---------- */
+  /* Lo real y lo proyectado no se disfrazan uno de otro: trazo sólido y color
+     pleno para lo que ya pasó, el mismo color al 55% y punteado para lo que
+     todavía no. Sin leyenda — la diferencia se lee sola. */
+  #bandaTrayectoria {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) 1fr;
+    align-items: center;
+    gap: 22px;
+    padding: 12px 22px 0;
+  }
+  #vistaAncha .texto-trayectoria {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 13px;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .texto-trayectoria strong { color: var(--texto-a); }
+  #vistaAncha .grafica-trayectoria-banda { line-height: 0; }
+  #vistaAncha .grafica-trayectoria-banda svg { width: 100%; height: 54px; display: block; }
+  #vistaAncha .linea-real {
+    fill: none;
+    stroke: var(--texto-a);
+    stroke-width: 1.5;
+  }
+  #vistaAncha .linea-proyectada {
+    fill: none;
+    stroke: var(--texto-a);
+    stroke-opacity: 0.55;
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+  }
+  #vistaAncha .marca-hoy {
+    stroke: var(--borde-a);
+    stroke-width: 1;
+  }
+  #vistaAncha .linea-cero {
+    stroke: #f87171;
+    stroke-opacity: 0.35;
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+  }
+  #vistaAncha .punto-quiebre {
+    fill: #f87171;
+  }
+  #vistaAncha .punto-hoy {
+    fill: var(--texto-a);
+  }
+
+  /* ---------- Muro de pagos ---------- */
+  /* Columnas explícitas repartidas por JavaScript, no CSS multi-column:
+     dejando el reparto al navegador, la altura no se puede medir de forma
+     confiable justo después de cambiar columnas y escala en el mismo cuadro
+     (Chromium devuelve el layout anterior), y todo el acomodo depende de
+     esas mediciones. Ver acomodarMuroDePagos. */
+  #vistaAncha .zona-muro {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 14px 22px;
+  }
+  #vistaAncha .zona-muro.con-scroll { overflow-y: auto; }
+  #vistaAncha .zona-muro:not(.con-scroll) { overflow: hidden; }
+
+  #vistaAncha .muro {
+    display: flex;
+    align-items: flex-start;
+    gap: calc(10px * var(--escala));
+  }
+  #vistaAncha .columna-muro {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: calc(10px * var(--escala));
+  }
+
+  #vistaAncha .recuadro {
+    background-color: var(--superficie-a);
+    border: 1px solid var(--borde-sutil-a);
+    border-radius: 8px;
+    padding: calc(0.6em * var(--escala)) calc(0.75em * var(--escala));
+    font-size: calc(1em * var(--escala));
+  }
+
+  #vistaAncha .encabezado-recuadro {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5em;
+    padding-bottom: 0.45em;
+    margin-bottom: 0.35em;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+  #vistaAncha .nombre-categoria-muro {
+    font-size: 0.82em;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #vistaAncha .total-categoria-muro {
+    flex: 0 0 auto;
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.82em;
+  }
+  #vistaAncha .titulo-subcategoria-muro {
+    font-size: 0.65em;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+    padding: 0.3em 0 0.1em;
+  }
+
+  /* Densidad honesta: el aire va entre recuadros, no dentro de cada fila. */
+  #vistaAncha .fila-muro {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45em;
+    padding: 0.14em 0;
+    font-size: 0.78em;
+    line-height: 1.35;
+  }
+  #vistaAncha .punto-estado {
+    flex: 0 0 auto;
+    width: 0.45em;
+    height: 0.45em;
+    border-radius: 50%;
+    margin-bottom: 0.08em;
+  }
+  /* Los tres estados se derivan de pagado + fechaProgramada; no hace falta
+     ningún campo nuevo en el modelo. Son el único color de la pantalla. */
+  #vistaAncha .punto-estado.pagado { background-color: #5eead4; }
+  #vistaAncha .punto-estado.pendiente { background-color: #fde047; }
+  #vistaAncha .punto-estado.vencido { background-color: #f87171; }
+
+  #vistaAncha .nombre-fila-muro {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .fila-muro.es-pagado .nombre-fila-muro { color: var(--texto-3a); }
+
+  #vistaAncha .dia-fila-muro {
+    flex: 0 0 auto;
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9em;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .monto-fila-muro {
+    flex: 0 0 auto;
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    color: var(--texto-a);
+  }
+  /* El monto de un pago pendiente es editable, pero se ve como el texto que
+     reemplaza hasta que se enfoca: si trajera borde y fondo, cada fila del
+     muro parecería un formulario y la pantalla dejaría de leerse de un golpe.
+     Mismo ancho y misma tipografía, así que editarlo no reacomoda nada. */
+  #vistaAncha .monto-editable-muro {
+    flex: 0 0 auto;
+    width: 5.4em;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 5px;
+    padding: 0 2px;
+    color: var(--texto-a);
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 1em;
+    text-align: right;
+  }
+  #vistaAncha .monto-editable-muro:hover {
+    border-color: var(--borde-a);
+  }
+  #vistaAncha .monto-editable-muro:focus {
+    border-color: var(--texto-2a);
+    background-color: var(--superficie-alta-a);
+    outline: none;
+  }
+  /* Las flechitas del campo numérico roban ancho y ensucian la fila. */
+  #vistaAncha .monto-editable-muro::-webkit-outer-spin-button,
+  #vistaAncha .monto-editable-muro::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* El presupuesto semanal de las categorías variables se edita en el muro. */
+  #vistaAncha .fila-presupuesto-muro {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45em;
+    padding: 0.2em 0;
+    font-size: 0.78em;
+  }
+  #vistaAncha .fila-presupuesto-muro label {
+    flex: 1 1 auto;
+    color: var(--texto-2a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #vistaAncha .fila-presupuesto-muro input {
+    flex: 0 0 auto;
+    width: 5.2em;
+    background-color: var(--superficie-alta-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 5px;
+    color: var(--texto-a);
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 1em;
+    padding: 0.15em 0.35em;
+    text-align: right;
+  }
+  #vistaAncha .unidad-tope {
+    flex: 0 0 auto;
+    font-size: 0.85em;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .nota-recuadro-muro {
+    font-size: 0.7em;
+    color: var(--texto-3a);
+    padding-top: 0.3em;
+  }
+
+  /* Resumen del ciclo: cierra el muro con a dónde llega todo esto. */
+  #vistaAncha .fila-resumen-muro {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6em;
+    padding: 0.16em 0;
+    font-size: 0.78em;
+  }
+  #vistaAncha .etiqueta-resumen { color: var(--texto-2a); }
+  #vistaAncha .fila-balance {
+    margin-top: 0.35em;
+    padding-top: 0.4em;
+    border-top: 1px solid var(--borde-sutil-a);
+    font-weight: 600;
+  }
+  #vistaAncha .fila-balance .etiqueta-resumen { color: var(--texto-a); }
+  /* Único caso en que el color no marca el estado de un pago sino el del
+     ciclo entero: alcanza o no alcanza. Reusa los mismos dos colores. */
+  #vistaAncha .fila-balance.balance-alcanza .monto-fila-muro { color: #5eead4; }
+  #vistaAncha .fila-balance.balance-no-alcanza .monto-fila-muro { color: #f87171; }
+
+  /* ---------- Cajón de calendario ---------- */
+  /* Cerrado es una tira; abierto crece hacia arriba tapando el muro. No se
+     usa una ventana flotante a propósito: el cajón nunca deja de estar
+     anclado al fondo, así que el asa se queda donde el dedo ya la buscó. */
+  #cajonCalendario {
+    flex: 0 0 auto;
+    border-top: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    padding: 0 22px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* El asa es la barra de encabezado completa. */
+  #asaCajon {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    padding: 11px 0 3px;
+    cursor: pointer;
+    text-align: left;
+  }
+  #vistaAncha .titulo-cajon {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .pista-cajon {
+    font-size: 12px;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .leyenda-cajon {
+    margin-left: auto;
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .item-leyenda {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #vistaAncha .leyenda-cajon .punto-estado {
+    width: 6px;
+    height: 6px;
+    margin: 0;
+  }
+  #vistaAncha .chevron-cajon {
+    font-size: 13px;
+    color: var(--texto-3a);
+    line-height: 1;
+  }
+  #asaCajon:hover .chevron-cajon,
+  #asaCajon:hover .pista-cajon { color: var(--texto-2a); }
+  /* Abierto, el chevron apunta al revés: la acción ahora es minimizar. */
+  #cajonCalendario.abierto .chevron-cajon { transform: rotate(180deg); display: inline-block; }
+
+  /* ---- Cerrado: los próximos siete días ---- */
+  #vistaAncha .proximos-dias {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+  #vistaAncha .celda-proxima {
+    border: 1px solid var(--borde-sutil-a);
+    background-color: var(--fondo-a);
+    border-radius: 8px;
+    padding: 7px 9px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  #vistaAncha .celda-proxima:hover { border-color: var(--borde-a); }
+  /* Hoy se distingue por el trazo, no por color: el color es estado. */
+  #vistaAncha .celda-proxima.es-hoy { border-color: var(--texto-2a); }
+  #vistaAncha .celda-proxima .dia-semana {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .celda-proxima .numero-grande {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--texto-a);
+  }
+  #vistaAncha .celda-proxima .puntos-del-dia { min-height: 6px; }
+  #vistaAncha .celda-proxima .monto-del-dia {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .celda-proxima.sin-nada .numero-grande,
+  #vistaAncha .celda-proxima.sin-nada .monto-del-dia { color: var(--texto-3a); }
+  #cajonCalendario.abierto {
+    /* Al abrirse deja de ser una fila y pasa a ser una columna. Ocupa todo lo
+       que queda bajo el encabezado (flex: 1) en vez de una altura fija en vh:
+       una altura fija dejaba una banda muerta contra el borde inferior. */
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-bottom: 16px;
+  }
+  #cajonCalendario.abierto .proximos-dias { display: none; }
+
+  /* Con el cajón desplegado el muro queda tapado, así que se retira en vez de
+     dejarlo pelear por la altura sobrante: si se queda, su acomodo se
+     recalcula contra cuarenta pixeles y asoma roto por encima del cajón. */
+  #primeraPantalla.con-cajon-abierto .zona-muro { display: none; }
+
+  /* Dos zonas: el mes a la izquierda, el día elegido a la derecha. */
+  #cuerpoCajon {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(300px, 1fr) minmax(0, 1.15fr);
+    gap: 22px;
+  }
+  #cuerpoCajon[hidden] { display: none; }
+
+  #ladoMes {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #encabezadoMesCajon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--texto-2a);
+  }
+  #nombreMesCajon {
+    flex: 1 1 auto;
+    color: var(--texto-a);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  #encabezadoMesCajon button {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-alta-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    width: 28px;
+    height: 26px;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #encabezadoMesCajon button:hover { color: var(--texto-a); }
+
+  #rejillaMesCajon {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 4px;
+  }
+  #vistaAncha .encabezado-dia-semana {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--texto-3a);
+    text-align: center;
+    padding-bottom: 2px;
+  }
+  #vistaAncha .celda-dia {
+    border: 1px solid var(--borde-sutil-a);
+    background-color: var(--fondo-a);
+    border-radius: 7px;
+    padding: 4px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #vistaAncha .celda-dia.fuera-del-mes { visibility: hidden; }
+  #vistaAncha .celda-dia:hover { border-color: var(--borde-a); }
+  #vistaAncha .celda-dia.elegida {
+    border-color: var(--texto-2a);
+    background-color: var(--superficie-alta-a);
+  }
+  /* Hoy se marca con el número en pleno, sin color: el color es estado. */
+  #vistaAncha .celda-dia.es-hoy .numero-dia {
+    color: var(--texto-a);
+    font-weight: 600;
+  }
+  #vistaAncha .numero-dia {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .puntos-del-dia {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  #vistaAncha .puntos-del-dia .punto-estado {
+    width: 5px;
+    height: 5px;
+    margin: 0;
+  }
+  #vistaAncha .celda-dia.fuera-del-ciclo { opacity: 0.45; }
+
+  /* Panel del día elegido: las mismas filas del muro. */
+  #ladoDia {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-left: 1px solid var(--borde-sutil-a);
+    padding-left: 22px;
+  }
+  #encabezadoDiaCajon {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  #vistaAncha .fecha-dia-elegido {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  #vistaAncha .total-dia-elegido {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    color: var(--texto-2a);
+  }
+  #contenidoDiaCajon {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  /* Dentro del cajón las filas no se reescalan con el muro: aquí hay espacio
+     y el detalle se lee de cerca. */
+  #contenidoDiaCajon .recuadro {
+    font-size: 1em;
+    margin-bottom: 8px;
+  }
+  #vistaAncha .dia-sin-nada {
+    font-size: 13px;
+    color: var(--texto-3a);
+    padding: 6px 0;
+  }
+
+  /* Confirmar un pago desde el día abierto. */
+  #vistaAncha .confirmacion-en-cajon {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 6px 0 9px 1.1em;
+  }
+  #vistaAncha .confirmacion-en-cajon label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .confirmacion-en-cajon input,
+  #vistaAncha .confirmacion-en-cajon select {
+    background-color: var(--superficie-alta-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 6px;
+    color: var(--texto-a);
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    padding: 4px 6px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  #vistaAncha .confirmacion-en-cajon input { width: 6.5em; text-align: right; }
+  #vistaAncha .confirmacion-en-cajon select { font-family: inherit; }
+  #vistaAncha .boton-marcar-pagado {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-alta-a);
+    color: var(--texto-a);
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #vistaAncha .boton-marcar-pagado:hover { border-color: var(--texto-3a); }
+  /* ---------- Análisis, debajo ---------- */
+  #zonaAnalisis {
+    padding: 26px 22px;
+    max-width: 1100px;
+  }
+
+  /* ---------- Acción ---------- */
+  /* En el flujo, en su propia fila: así no hay número mágico que mantener
+     sincronizado con la altura del cajón, que cambia según su contenido. */
+  #accionesFlotantes {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 22px 12px;
+  }
+  /* Con el calendario desplegado no hay dónde ponerlo sin tapar el panel del
+     día. Para dar de alta algo en una fecha concreta el lugar natural es el
+     propio día (pendiente, va con los modales de registro). */
+  #primeraPantalla.con-cajon-abierto #accionesFlotantes {
+    display: none;
+  }
+  /* Inversión neutra: el único elemento de la app con fondo claro sólido, que
+     es lo que lo hace resaltar sin necesidad de color ni de tamaño. Radio 10,
+     como todo el sistema — no un pill, para que no se lea como una insignia. */
+  #botonAgregarYAjustar {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 16px 11px 13px;
+    background-color: var(--texto-a);
+    color: var(--fondo-a);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+  }
+  #botonAgregarYAjustar .signo-mas {
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1;
+    /* El signo carga el peso visual, así que se le da su propio espacio
+       separado del texto por una línea, no por aire. */
+    padding-right: 9px;
+    border-right: 1px solid rgba(24, 22, 28, 0.22);
+  }
+  #botonAgregarYAjustar:hover { background-color: #ffffff; }
+  #botonAgregarYAjustar:active { transform: translateY(1px); }
+
+  /* ---------- Marca de crédito y botón de opciones ---------- */
+  #vistaAncha .marca-credito {
+    font-family: var(--mono-a);
+    font-size: 0.85em;
+    color: var(--texto-3a);
+    border: 1px solid var(--borde-a);
+    border-radius: 4px;
+    padding: 0 0.3em;
+  }
+  /* Un pago diferido ya no sale de este ciclo: se atenúa, como los pagados. */
+  #vistaAncha .fila-muro.es-credito .nombre-fila-muro,
+  #vistaAncha .fila-muro.es-credito .monto-editable-muro { color: var(--texto-3a); }
+
+  #vistaAncha .boton-opciones-pago {
+    flex: 0 0 auto;
+    border: 0;
+    background: transparent;
+    color: var(--texto-3a);
+    font-family: inherit;
+    font-size: 1em;
+    line-height: 1;
+    padding: 0 0.15em;
+    cursor: pointer;
+    /* Discreto hasta que se busca: el muro es para leer, no para operar. */
+    opacity: 0;
+  }
+  #vistaAncha .fila-muro:hover .boton-opciones-pago,
+  #vistaAncha .boton-opciones-pago:focus-visible { opacity: 1; }
+  #vistaAncha .fila-muro.es-credito .boton-opciones-pago { opacity: 1; }
+  #vistaAncha .boton-opciones-pago:hover { color: var(--texto-a); }
+
+  /* ---------- Ventana de opciones de pago ---------- */
+  #capaOpcionesPago {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(12, 10, 15, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    z-index: 60;
+  }
+  #capaOpcionesPago[hidden] { display: none; }
+  #panelOpcionesPago {
+    background-color: var(--fondo-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 10px;
+    width: min(520px, 100%);
+  }
+  #encabezadoOpcionesPago {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+  #encabezadoOpcionesPago h2 { margin: 0; font-size: 15px; }
+  #botonCerrarOpcionesPago {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #cuerpoOpcionesPago { padding: 14px 16px 18px; }
+  #cuerpoOpcionesPago .pista { margin-top: 0; }
+  /* La fila de controles viene del motor de simulación; aquí solo se le da
+     aire y se la hace envolver en pantallas angostas. */
+  #cuerpoOpcionesPago .fila-compromiso-simulado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  #cuerpoOpcionesPago input,
+  #cuerpoOpcionesPago select {
+    background-color: var(--superficie-alta-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 6px;
+    color: var(--texto-a);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 5px 7px;
+  }
+  #cuerpoOpcionesPago input {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    width: 7em;
+    text-align: right;
+  }
+  #cuerpoOpcionesPago .nombre-compromiso-simulado { display: none; }
+  #cuerpoOpcionesPago .controles-credito-simulado {
+    display: none;
+    gap: 8px;
+  }
+  #cuerpoOpcionesPago .marca-modificado {
+    font-size: 11px;
+    color: var(--texto-3a);
+  }
+
+  /* ---------- Modal de Ajustes ---------- */
+  /* Ventana flotante de tamaño contenido, nunca a pantalla completa. */
+  #capaModal {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(12, 10, 15, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    z-index: 50;
+  }
+  #capaModal[hidden] { display: none; }
+
+  #panelAjustes {
+    background-color: var(--fondo-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 10px;
+    width: min(760px, 100%);
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #encabezadoAjustes {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+  #encabezadoAjustes h2 { margin: 0; font-size: 15px; }
+  #botonCerrarAjustes {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #contenidoAjustes {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 18px 18px;
+  }
+
+  #vistaAncha button:focus-visible,
+  #vistaAncha input:focus-visible,
+  #vistaAncha select:focus-visible {
+    outline: 2px solid var(--texto-2a);
+    outline-offset: 1px;
+  }
 </style>
 </head>
 <body>
@@ -1002,21 +1937,110 @@
   </div>
 
   <!-- ============================================================ -->
-  <!-- ANÁLISIS Y CONFIGURACIÓN (pantalla ancha)                      -->
+  <!-- VISTA ANCHA (laptop): una sola página                          -->
   <!-- ============================================================ -->
+  <!--
+       Sustituye las tres pestañas (Análisis / Configuración /
+       Simulación) por una página continua. Arriba, ocupando el
+       viewport completo, el muro con todos los pagos del ciclo; al
+       hacer scroll, Análisis. Configuración deja de ser una pestaña:
+       sus formularios viven en el modal de Ajustes, y crear algo
+       nuevo entra por el botón "+".
+  -->
   <div id="vistaAncha">
 
-    <div class="botones-grandes">
-      <button type="button" class="boton-grande seleccionado" data-pestana="analisis">Análisis</button>
-      <button type="button" class="boton-grande" data-pestana="configuracion">Configuración</button>
-      <button type="button" class="boton-grande" data-pestana="simulacion">Simulación</button>
+    <!-- PRIMERA PANTALLA: veredicto, muro de pagos y cajón ---------- -->
+    <div id="primeraPantalla">
+
+      <header id="encabezadoCiclo">
+        <div class="veredicto-ciclo">
+          <span class="etiqueta-ancha" id="etiquetaCifraPrincipal">Disponible del ciclo</span>
+          <span class="cifra-protagonista" id="cifraDisponibleAncha">$0</span>
+        </div>
+        <div class="identidad-ciclo" id="identidadCiclo"></div>
+        <!-- Navegación por el horizonte: el mismo muro sirve para ver un ciclo
+             futuro, que es donde caen las mensualidades de lo que se difiere. -->
+        <div class="navegacion-ciclos">
+          <button type="button" id="cicloAnterior" title="Ciclo anterior">‹</button>
+          <span id="posicionEnHorizonte"></span>
+          <button type="button" id="cicloSiguiente" title="Ciclo siguiente">›</button>
+        </div>
+        <div class="resumen-ciclo" id="resumenCiclo"></div>
+      </header>
+
+      <!-- Aviso de que se está simulando, con guardar y reiniciar. -->
+      <div id="barraSimulacion"></div>
+
+      <!-- Trayectoria: cómo se vacía el ciclo día por día, y en qué fecha se
+           acaba el dinero si el ritmo no cambia. -->
+      <div id="bandaTrayectoria">
+        <div class="texto-trayectoria">
+          <span class="etiqueta-ancha">Trayectoria</span>
+          <span id="veredictoTrayectoria"></span>
+        </div>
+        <div class="grafica-trayectoria-banda" id="graficaTrayectoria"></div>
+      </div>
+
+      <div class="zona-muro" id="zonaMuro">
+        <div class="muro" id="muroPagos"></div>
+      </div>
+
+      <!-- ACCIÓN ---------------------------------------------------- -->
+      <!-- Un solo control: agregar y ajustar llevan al mismo lugar, así que
+           dos botones separados solo hacían dudar cuál tocar. Vive en su
+           propia fila entre el muro y el cajón, no flotando encima: flotando
+           tapaba la última celda del calendario y la leyenda. Destaca por
+           diferente, no por grande — es el único elemento de la app con fondo
+           claro sólido, y lleva su nombre escrito. -->
+      <div id="accionesFlotantes">
+        <button type="button" id="botonAgregarYAjustar">
+          <span class="signo-mas" aria-hidden="true">+</span>
+          <span>Agregar o ajustar</span>
+        </button>
+      </div>
+
+      <!-- Cajón de calendario, anclado al fondo.
+           Cerrado: la tira de próximos días. Al tocarla se despliega hacia
+           arriba tapando el muro, con el mes completo a la izquierda y el día
+           elegido a la derecha. Volver a tocar el asa lo minimiza. -->
+      <div id="cajonCalendario">
+        <!-- El asa es toda la barra de encabezado, no una manija chica: es lo
+             que se quiere tocar y así no hay que apuntarle. -->
+        <button type="button" id="asaCajon" aria-expanded="false" aria-controls="cuerpoCajon">
+          <span class="titulo-cajon">Calendario</span>
+          <span class="pista-cajon" id="pistaCajon">Próximos 7 días · toca para ver el mes completo</span>
+          <span class="leyenda-cajon">
+            <span class="item-leyenda"><span class="punto-estado pagado"></span>Pagado</span>
+            <span class="item-leyenda"><span class="punto-estado pendiente"></span>Pendiente</span>
+            <span class="item-leyenda"><span class="punto-estado vencido"></span>Vencido</span>
+          </span>
+          <span class="chevron-cajon" aria-hidden="true">⌃</span>
+        </button>
+
+        <!-- Cerrado: los próximos siete días, uno por celda -->
+        <div class="proximos-dias" id="proximosDiasCajon"></div>
+
+        <!-- Desplegado -->
+        <div id="cuerpoCajon" hidden>
+          <div id="ladoMes">
+            <div id="encabezadoMesCajon">
+              <button type="button" id="mesAnteriorCajon" title="Mes anterior">‹</button>
+              <span id="nombreMesCajon"></span>
+              <button type="button" id="mesSiguienteCajon" title="Mes siguiente">›</button>
+            </div>
+            <div id="rejillaMesCajon"></div>
+          </div>
+          <div id="ladoDia">
+            <div id="encabezadoDiaCajon"></div>
+            <div id="contenidoDiaCajon"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- ============================================================ -->
-    <!-- ANÁLISIS                                                       -->
-    <!-- ============================================================ -->
-    <div id="vistaAnalisis">
-
+    <!-- ANÁLISIS: debajo, al hacer scroll ------------------------- -->
+    <div id="zonaAnalisis">
       <section id="seccionBalanceCiclo">
         <h2>Balance del ciclo</h2>
         <div id="contenedorBalanceCiclo"></div>
@@ -1033,38 +2057,30 @@
         <ul class="lista-items" id="listaMovimientosCiclo"></ul>
       </section>
 
-      <section id="seccionCalendario">
-        <h2>Calendario</h2>
-        <div id="contenedorCalendario"></div>
-      </section>
-
       <section id="seccionDeuda">
         <h2>Deuda</h2>
         <div id="contenedorDeuda"></div>
       </section>
-
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SIMULACIÓN (pura, nunca escribe en localStorage)               -->
-    <!-- ============================================================ -->
-    <div id="vistaSimulacion">
-      <div class="banner-simulacion">
-        <span>⚠ Simulación — nada de esto se guarda. Al recargar la página vuelve al estado real.</span>
-        <button type="button" id="botonReiniciarSimulacion">Reiniciar simulación</button>
-      </div>
-      <div class="franja-balance-simulacion" id="franjaBalanceSimulacion"></div>
-      <div class="cuerpo-simulacion">
-        <div class="panel-simulacion" id="panelCategoriasSimulacion"></div>
-        <div class="panel-simulacion" id="panelDeudasTarjetasSimulacion"></div>
-      </div>
+    <!-- OPCIONES DE PAGO ------------------------------------------ -->
+    <!-- Ventana flotante para decidir cómo se paga algo: débito, o crédito a
+         meses con una tarjeta, y a qué ciclo mandarlo. -->
+    <div id="capaOpcionesPago" hidden>
+      <div id="panelOpcionesPago" role="dialog" aria-modal="true"></div>
     </div>
 
-  <!-- ============================================================ -->
-  <!-- CONFIGURACIÓN                                                  -->
-  <!-- ============================================================ -->
-  <div id="vistaConfiguracion">
-
+    <!-- MODAL DE AJUSTES ------------------------------------------ -->
+    <!-- Todo lo que antes era la pestaña Configuración. Se conserva
+         íntegro: son formularios ya probados, solo cambia dónde
+         viven y cómo se llega a ellos. -->
+    <div id="capaModal" hidden>
+      <div id="panelAjustes" role="dialog" aria-modal="true" aria-labelledby="tituloAjustes">
+        <header id="encabezadoAjustes">
+          <h2 id="tituloAjustes">Agregar o ajustar</h2>
+          <button type="button" id="botonCerrarAjustes" title="Cerrar">Cerrar</button>
+        </header>
+        <div id="contenidoAjustes">
   <!-- ============================================================ -->
   <!-- CATEGORÍAS                                                     -->
   <!-- ============================================================ -->
@@ -1330,8 +2346,9 @@
     <p class="pista">Se generan solos a partir de recurrentes, deudas y tarjetas.</p>
     <ul class="lista-items" id="listaCompromisos"></ul>
   </section>
-
-  </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 
@@ -1373,6 +2390,11 @@
   // programada. Incluye los que ya vencieron (días negativos): un compromiso
   // vencido debe seguir viéndose urgente, no dejar de estarlo.
   const DIAS_PARA_PENDIENTE_URGENTE = 3;
+
+  // Cuántos días del ciclo tienen que haber pasado para que el ritmo de gasto
+  // variable se tome en serio al proyectar. Una semana: menos que eso, un solo
+  // súper grande distorsiona la proyección de todo el mes.
+  const DIAS_MINIMOS_PARA_RITMO_REAL = 7;
 
   // Cuántos pendientes se muestran siempre completos, en orden de fecha
   // real (sin importar categoría), antes de colapsar el resto bajo
@@ -1557,11 +2579,24 @@
     localStorage.setItem(CLAVE_ALMACENAMIENTO, JSON.stringify(datos));
   }
 
+  // Cuántos ids se han creado desde que se abrió la app. Existe porque la
+  // hora sola no alcanza: al generar los compromisos de un ciclo se crean
+  // veinte o más registros dentro del mismo milisegundo, así que todos
+  // comparten el Date.now() y lo único que los separaba era un número al azar
+  // de mil valores. Con veinte registros eso choca una de cada cinco veces
+  // (problema del cumpleaños), y se observó de verdad: dos compromisos del
+  // mismo ciclo con el mismo id. Un id repetido es grave — editar o borrar
+  // uno alcanza al otro, y cualquier conteo por id los cuenta como uno.
+  let idsCreadosEnEstaSesion = 0;
+
   // Crea un identificador único para un registro nuevo (categoría, deuda,
-  // compromiso, etc.), combinando la hora exacta con un número al azar para
-  // que dos registros nunca terminen con el mismo id.
+  // compromiso, etc.). El contador garantiza que no se repita dentro de esta
+  // carga; la hora separa entre cargas distintas; el número al azar cubre el
+  // caso de dos respaldos creados en el mismo instante en otro dispositivo.
   function generarId(prefijo) {
-    return prefijo + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    idsCreadosEnEstaSesion++;
+    return prefijo + "_" + Date.now() + "_" + idsCreadosEnEstaSesion +
+      "_" + Math.floor(Math.random() * 1000);
   }
 
   // Convierte texto escrito por el usuario en HTML seguro para mostrar en
@@ -1993,23 +3028,51 @@
 
   // Un evento "mensual" ocurre una vez al mes en un día fijo. Como el ciclo
   // cruza dos meses de calendario, se prueba ese día tanto en el mes en que
-  // empieza el ciclo como en el mes en que termina, y se usa el que sí caiga
-  // dentro del rango del ciclo.
-  function calcularFechaEnCicloParaDiaBase(ciclo, diaBase) {
+  // empieza el ciclo como en el mes en que termina, y se devuelven TODOS los
+  // que caigan dentro del rango.
+  //
+  // Devuelve una lista y no una sola fecha porque los ciclos no miden lo mismo
+  // (van de 28 a 33 días), así que en uno largo el mismo día del mes cae dos
+  // veces: el ciclo 28 ago – 28 sep contiene dos días 28. Antes se devolvía la
+  // primera y la segunda se descartaba en silencio; como el ciclo siguiente
+  // arranca el 29, ese cobro no caía en ningún ciclo y desaparecía del sistema.
+  // Medido con un barrido de 36 ciclos: los días base 26, 27, 28 y 29 perdían
+  // entre 1 y 13 cobros cada uno en tres años.
+  function calcularFechasEnCicloParaDiaBase(ciclo, diaBase) {
     const inicio = crearFechaLocal(ciclo.fechaInicio);
     const fin = crearFechaLocal(ciclo.fechaFin);
 
-    const candidatoMesInicio = new Date(inicio.getFullYear(), inicio.getMonth(), diaAjustadoAlMes(inicio.getFullYear(), inicio.getMonth(), diaBase));
-    if (candidatoMesInicio >= inicio && candidatoMesInicio <= fin) {
-      return candidatoMesInicio;
-    }
+    const mesesAProbar = [
+      { anio: inicio.getFullYear(), mes: inicio.getMonth() },
+      { anio: fin.getFullYear(), mes: fin.getMonth() }
+    ];
 
-    const candidatoMesFin = new Date(fin.getFullYear(), fin.getMonth(), diaAjustadoAlMes(fin.getFullYear(), fin.getMonth(), diaBase));
-    if (candidatoMesFin >= inicio && candidatoMesFin <= fin) {
-      return candidatoMesFin;
-    }
+    const fechas = [];
+    mesesAProbar.forEach(function (referencia) {
+      const candidato = new Date(
+        referencia.anio,
+        referencia.mes,
+        diaAjustadoAlMes(referencia.anio, referencia.mes, diaBase)
+      );
+      if (candidato < inicio || candidato > fin) {
+        return;
+      }
+      // Si el ciclo no cruzara mes, los dos candidatos serían el mismo día.
+      const yaEsta = fechas.some(function (fecha) {
+        return formatearFechaISO(fecha) === formatearFechaISO(candidato);
+      });
+      if (!yaEsta) {
+        fechas.push(candidato);
+      }
+    });
 
-    return null;
+    return fechas;
+  }
+
+  // Compatibilidad para quien solo puede tener una: devuelve la primera.
+  function calcularPrimeraFechaEnCicloParaDiaBase(ciclo, diaBase) {
+    const fechas = calcularFechasEnCicloParaDiaBase(ciclo, diaBase);
+    return fechas.length > 0 ? fechas[0] : null;
   }
 
   // Un recurrente "quincenal" ocurre dos veces al mes: en diaBase, y quince
@@ -2085,10 +3148,13 @@
 
     recurrentesActivos.forEach(function (recurrente) {
       if (recurrente.frecuencia === "mensual") {
-        const fecha = calcularFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
-        if (fecha && fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
-          candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
-        }
+        // Todas las veces que su día cae en este ciclo, no solo la primera: en
+        // un ciclo largo son dos cobros reales del mismo servicio.
+        calcularFechasEnCicloParaDiaBase(ciclo, recurrente.diaBase).forEach(function (fecha) {
+          if (fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
+            candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
+          }
+        });
       } else if (recurrente.frecuencia === "quincenal") {
         calcularFechasQuincenalesEnCiclo(ciclo, recurrente.diaBase).forEach(function (fecha) {
           if (fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
@@ -2097,7 +3163,10 @@
         });
       } else if (recurrente.frecuencia === "bimestral") {
         if (recurrente.cicloDeInicio && estaEnFaseBimestral(ciclo, recurrente.cicloDeInicio)) {
-          const fecha = calcularFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
+          // Aquí sí una sola, a diferencia del mensual: un bimestral cae cada
+          // dos meses, y las dos fechas que un ciclo largo puede contener son
+          // de meses consecutivos — cobrarlas las dos sería cobrar de más.
+          const fecha = calcularPrimeraFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
           if (fecha && fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
             candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
           }
@@ -2272,11 +3341,13 @@
 
   function generarCompromisosDesdeTarjetas(ciclo, datos) {
     datos.config.tarjetas.forEach(function (tarjeta) {
-      const fecha = calcularFechaEnCicloParaDiaBase(ciclo, tarjeta.diaPago);
-      if (fecha) {
+      // Igual que los recurrentes mensuales: si el día de pago cae dos veces en
+      // un ciclo largo, son dos pagos de tarjeta reales, cada uno con el monto
+      // de su propio periodo de corte.
+      calcularFechasEnCicloParaDiaBase(ciclo, tarjeta.diaPago).forEach(function (fecha) {
         const montoCalculado = calcularPagoTarjeta(tarjeta, fecha, datos);
         agregarCompromisoSiNoExiste(datos, ciclo, "tarjeta", tarjeta.id, tarjeta.nombre, fecha, montoCalculado, null);
-      }
+      });
     });
   }
 
@@ -2550,22 +3621,65 @@
       .reduce(function (suma, ocurrencia) { return suma + ocurrencia.monto; }, 0);
   }
 
+  // Un compromiso diferido a crédito dentro de una simulación deja de salir de
+  // este ciclo: se vuelve mensualidades de la tarjeta, que se cuentan aparte.
+  // Sobre datos reales esto nunca aplica — estadoCredito solo existe en una
+  // simulación — así que Captura y Análisis se comportan igual que siempre.
   function calcularCompromisosPendientesDelCiclo(ciclo, datos) {
     return datos.compromisos
-      .filter(function (c) { return c.cicloId === ciclo.id && !c.pagado; })
+      .filter(function (c) { return c.cicloId === ciclo.id && !c.pagado && !c.estadoCredito; })
       .reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
   }
 
-  // El dinero comprometido no está disponible aunque siga en la cuenta, y
-  // los gastos a crédito no salen de la cuenta hasta que se paga la
-  // tarjeta (eso ya está contemplado como compromiso) — por eso solo se
-  // resta el gasto a débito.
-  function calcularDisponibleReal(ciclo, datos) {
+  // Lo que queda del presupuesto semanal para los días que faltan del ciclo.
+  //
+  // Se cuentan los días restantes y no el ciclo completo a propósito: el
+  // presupuesto de los días ya transcurridos se materializó (o no) en gastos
+  // reales, que se restan aparte. Descontar el ciclo entero contaría dos veces
+  // lo que ya se gastó.
+  function calcularPresupuestoVariablePendiente(ciclo, datos) {
+    const rango = calcularRangoDeDiasDelCiclo(ciclo);
+    const presupuesto = obtenerPresupuestoSemanalVigente(ciclo, datos);
+
+    return datos.config.categorias
+      .filter(function (categoria) { return categoria.esVariableSemanal; })
+      .reduce(function (suma, categoria) {
+        const tasaDiaria = (Number(presupuesto[categoria.id]) || 0) / 7;
+        return suma + (tasaDiaria * rango.diasRestantes);
+      }, 0);
+  }
+
+  // Cuánto se puede gastar libremente en lo que queda del ciclo.
+  //
+  // El dinero comprometido no está disponible aunque siga en la cuenta, y los
+  // gastos a crédito no salen de la cuenta hasta que se paga la tarjeta (eso ya
+  // está contemplado como compromiso) — por eso solo se resta el gasto a débito.
+  //
+  // También se resta el presupuesto variable que todavía no se gasta. Decisión
+  // del usuario (30 jul 2026): la comida y la gasolina son gasto variable, pero
+  // ese mínimo semanal está tan comprometido como un recibo. Sin descontarlo,
+  // la cifra grande de la pantalla prometía $9,839 disponibles cuando $10,771
+  // ya estaban destinados a comer y a cargar gasolina.
+  // mensualidadesDeTarjetaDelCiclo es opcional y solo lo pasa la primera
+  // pantalla: lo que las tarjetas cobran en este ciclo por lo diferido en la
+  // simulación. Es dinero que sí sale de la cuenta, así que resta igual que un
+  // compromiso.
+  //
+  // Este es el único número: "Libre para gastar" y el balance al cerrar del
+  // resumen salen los dos de aquí. Antes se calculaban por separado y diferían
+  // en un día de presupuesto variable, porque uno contaba los días que faltan y
+  // el otro el ciclo completo. Lo que sobra al cerrar ES lo que se puede gastar
+  // de más: no son dos preguntas, es una.
+  function calcularDisponibleReal(ciclo, datos, mensualidadesDeTarjetaDelCiclo) {
     const gastosDebitoDelCiclo = datos.gastos
       .filter(function (g) { return g.cicloId === ciclo.id && g.fuente === "debito"; })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
-    return calcularIngresosDelCiclo(ciclo, datos) - gastosDebitoDelCiclo - calcularCompromisosPendientesDelCiclo(ciclo, datos);
+    return calcularIngresosDelCiclo(ciclo, datos)
+      - gastosDebitoDelCiclo
+      - calcularCompromisosPendientesDelCiclo(ciclo, datos)
+      - calcularGastoVariablePorVenir(ciclo, datos)
+      - Number(mensualidadesDeTarjetaDelCiclo || 0);
   }
 
   // Todos los compromisos del ciclo cuentan siempre, se hayan pagado o no
@@ -2584,14 +3698,47 @@
   // cual. Lo desconocido (gasto variable del resto del ciclo) se proyecta
   // al ritmo diario que ya se lleva. "Variable" es todo gasto sin
   // compromisoId — los fijos ya se cuentan aparte, en los compromisos.
-  function calcularProyeccionDeCierre(ciclo, datos) {
+  // Cuánto se va a gastar en variables de aquí al cierre del ciclo.
+  //
+  // Se toma el mayor entre el presupuesto de los días que faltan y lo que se
+  // gastaría siguiendo el ritmo real. Decisión del usuario (30 jul 2026):
+  //
+  // - Solo el ritmo real mentía al principio del ciclo: sin gastos
+  //   registrados el ritmo es cero, y la app concluía que no se gastaría nada
+  //   más en 28 días, prometiendo un cierre con $9,839 que no existía.
+  // - Solo el presupuesto perdería la señal de "vas más rápido de lo que
+  //   planeaste", que es justo para lo que sirve el semáforo.
+  //
+  // Con el mayor de los dos, nunca promete gastar menos de lo presupuestado y
+  // sigue avisando cuando el ritmo real se pasa.
+  function calcularGastoVariablePorVenir(ciclo, datos) {
     const rango = calcularRangoDeDiasDelCiclo(ciclo);
+    const segunPresupuesto = calcularPresupuestoVariablePendiente(ciclo, datos);
+
+    // Con muy pocos días transcurridos el ritmo no significa nada: un gasto de
+    // $500 el primer día se leería como "$500 diarios" y proyectaría $14,000
+    // donde el presupuesto son $10,400, haciendo saltar el número por un solo
+    // súper. Hasta completar una semana manda el presupuesto, que es lo que el
+    // usuario planeó.
+    if (rango.diasTranscurridos < DIAS_MINIMOS_PARA_RITMO_REAL) {
+      return segunPresupuesto;
+    }
+
     const gastoVariableAcumulado = datos.gastos
       .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
-    const ritmoDiario = gastoVariableAcumulado / rango.diasTranscurridos;
-    const proyeccionVariable = gastoVariableAcumulado + (ritmoDiario * rango.diasRestantes);
+    const alRitmoReal = (gastoVariableAcumulado / rango.diasTranscurridos) * rango.diasRestantes;
+
+    return Math.max(alRitmoReal, segunPresupuesto);
+  }
+
+  function calcularProyeccionDeCierre(ciclo, datos) {
+    const gastoVariableAcumulado = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    const proyeccionVariable = gastoVariableAcumulado + calcularGastoVariablePorVenir(ciclo, datos);
     return proyeccionVariable + calcularMontoComprometidoTotalDelCiclo(ciclo, datos);
   }
 
@@ -2666,7 +3813,11 @@
   // ya usa calcularProyeccionDeCierre. Por construcción, el último día del
   // ciclo da el mismo número que calcularProyeccionDeCierre: es el mismo
   // destino, visto como recorrido en vez de como punto final.
-  function calcularTrayectoriaDelSemaforo(ciclo, datos) {
+  // mensualidadesDeTarjetaDelCiclo es opcional y solo lo pasa la primera
+  // pantalla: es lo que las tarjetas cobran en este ciclo por lo que se difirió
+  // en la simulación. Análisis la llama sin ese argumento y se comporta igual
+  // que siempre.
+  function calcularTrayectoriaDelSemaforo(ciclo, datos, mensualidadesDeTarjetaDelCiclo) {
     const ingresosDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
     const hoyISO = formatearFechaISO(new Date());
     const rango = calcularRangoDeDiasDelCiclo(ciclo);
@@ -2675,7 +3826,14 @@
       .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; });
     const gastoVariableHastaHoy = gastosVariablesDelCiclo
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
-    const ritmoDiario = gastoVariableHastaHoy / rango.diasTranscurridos;
+
+    // El tramo futuro de la curva se reparte a un ritmo diario que nunca baja
+    // del presupuesto (ver calcularGastoVariablePorVenir): con el ritmo real a
+    // secas, un ciclo sin gastos registrados dibujaba una curva plana y
+    // anunciaba un cierre que ignoraba el presupuesto completo.
+    const ritmoDiario = rango.diasRestantes > 0
+      ? calcularGastoVariablePorVenir(ciclo, datos) / rango.diasRestantes
+      : 0;
 
     // Un compromiso ya pagado cuenta desde la fecha real en que se pagó (la
     // del gasto que lo liga vía compromisoId), no desde su fechaProgramada
@@ -2683,8 +3841,12 @@
     // vencido), el escalón de la curva tiene que aparecer ese día real, no
     // en la fecha nominal. Uno que sigue pendiente no tiene fecha real
     // todavía, así que usa fechaProgramada como mejor estimado.
+    // Un compromiso diferido a crédito en la simulación deja de salir de este
+    // ciclo: se convierte en mensualidades de la tarjeta, que se suman aparte
+    // (ver mensualidadesDeTarjetaDelCiclo). Sobre datos reales esto nunca
+    // aplica, porque estadoCredito solo existe dentro de una simulación.
     const compromisosDelCiclo = datos.compromisos
-      .filter(function (c) { return c.cicloId === ciclo.id; })
+      .filter(function (c) { return c.cicloId === ciclo.id && !c.estadoCredito; })
       .map(function (c) {
         const gastoDelPago = c.pagado ? datos.gastos.find(function (g) { return g.compromisoId === c.id; }) : null;
         return {
@@ -2692,6 +3854,17 @@
           fechaEfectiva: gastoDelPago ? gastoDelPago.fecha : c.fechaProgramada
         };
       });
+
+    // Las mensualidades de lo diferido cuentan desde el primer día del ciclo:
+    // son un cargo del periodo, no de una fecha concreta que la curva pueda
+    // escalonar. Sin ellas, diferir haría bajar la curva sin que ese dinero
+    // apareciera en ninguna parte.
+    if (mensualidadesDeTarjetaDelCiclo > 0) {
+      compromisosDelCiclo.push({
+        monto: mensualidadesDeTarjetaDelCiclo,
+        fechaEfectiva: ciclo.fechaInicio
+      });
+    }
 
     return generarDiasDelCiclo(ciclo).map(function (fechaISO, indice) {
       const numeroDeDia = indice + 1;
@@ -3952,8 +5125,11 @@
     contenedor.innerHTML =
       "<div class=\"monto-grande\">" + formatearMoneda(disponibleReal) + "</div>" +
       "<div class=\"semaforo semaforo-" + color + "\">" + ETIQUETA_SEMAFORO[color] + "</div>" +
+      "<p class=\"detalle\">Libre para gastar en lo que queda del ciclo</p>" +
       "<p class=\"detalle\">Ingresos del ciclo: " + formatearMoneda(ingresosDelCiclo) + "</p>" +
       "<p class=\"detalle\">Compromisos pendientes: " + formatearMoneda(compromisosPendientes) + "</p>" +
+      "<p class=\"detalle\">Presupuesto variable por gastar: " +
+        formatearMoneda(calcularPresupuestoVariablePendiente(ciclo, datos)) + "</p>" +
       "<p class=\"detalle\">Proyección de cierre: " + formatearMoneda(proyeccionCierre) + "</p>" +
       margenHTML +
       proximoCambioHTML +
@@ -4198,33 +5374,13 @@
   }
 
   // ============================================================
-  // ANÁLISIS — CALENDARIO
+  // DÍAS DE UN CICLO
   // ============================================================
   //
-  // Navegación ciclo a ciclo, no mes calendario: un ciclo real cruza dos
-  // meses (del corte de uno al corte del siguiente), así que un grid
-  // mes-a-mes partiría un ciclo en dos vistas. Cada vista del calendario
-  // es un ciclo completo, real o simulado.
-
-  const DIAS_DE_LA_SEMANA_ABREV = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
-  // 0 = ciclo actual real; 1..CANTIDAD_DE_CICLOS_A_PROYECTAR = simulados.
-  let indiceCicloCalendario = 0;
-  let fechaSeleccionadaCalendario = null;
-
-  function obtenerCicloMostradoEnCalendario() {
-    if (indiceCicloCalendario === 0) {
-      return { ciclo: asegurarCicloActual(), esReal: true };
-    }
-    const simulados = generarCiclosSimulados(asegurarCicloActual(), CANTIDAD_DE_CICLOS_A_PROYECTAR);
-    return { ciclo: simulados[indiceCicloCalendario - 1], esReal: false };
-  }
-
-  function cambiarCicloCalendario(delta) {
-    indiceCicloCalendario = Math.min(Math.max(indiceCicloCalendario + delta, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
-    fechaSeleccionadaCalendario = null;
-    renderizarTodo();
-  }
+  // Lo que sobrevive del calendario que vivía en Análisis. Ese calendario se
+  // eliminó: quedaba al fondo de la página, después de Movimientos del ciclo,
+  // y el cajón de la primera pantalla hace su trabajo — desplegable, con el
+  // mes completo y con los pagos marcables desde el propio día.
 
   function generarDiasDelCiclo(ciclo) {
     const inicio = crearFechaLocal(ciclo.fechaInicio);
@@ -4236,78 +5392,6 @@
       cursor = sumarDias(cursor, 1);
     }
     return dias;
-  }
-
-  // Para un ciclo real, los items son los compromisos ya generados y
-  // persistidos ese día. Para un ciclo simulado, son candidatos puros
-  // (recurrentes + deudas, sin tarjetas) más los compromisos único que ya
-  // se hayan capturado a futuro con esa fecha — nunca compromisos
-  // "inventados" con id, porque todavía no existen de verdad.
-  function obtenerItemsDelDia(fechaISO, ciclo, esReal, datos) {
-    if (esReal) {
-      return datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.fechaProgramada === fechaISO; });
-    }
-    const candidatos = calcularCandidatosDelCiclo(ciclo, datos).filter(function (c) { return c.fechaProgramada === fechaISO; });
-    const unicosFuturos = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.origen === "unico" && c.fechaProgramada === fechaISO; });
-    return candidatos.concat(unicosFuturos);
-  }
-
-  function calcularEstadoDelDia(items, esReal) {
-    if (items.length === 0) {
-      return "";
-    }
-    if (!esReal) {
-      return "tiene-proyectado";
-    }
-    const algunoUrgente = items.some(function (i) { return !i.pagado && calcularDiasHastaFecha(i.fechaProgramada) <= DIAS_PARA_PENDIENTE_URGENTE; });
-    if (algunoUrgente) {
-      return "tiene-pendiente-urgente";
-    }
-    const algunoPendiente = items.some(function (i) { return !i.pagado; });
-    if (algunoPendiente) {
-      return "tiene-pendiente";
-    }
-    return "tiene-pagado";
-  }
-
-  // El panel de detalle reusa, sin modificarla, confirmarPagoDeCompromiso:
-  // arma el mismo marcado (".monto-real-pendiente", ".fuente-pendiente",
-  // botón) que ya usa Pendientes en Captura, así que esa función encuentra
-  // lo que busca sin saber que ahora la llamó el calendario. Solo aplica
-  // para el ciclo actual real — un ciclo simulado no tiene compromisos con
-  // id que confirmar, es de solo lectura.
-  function renderizarHTMLPanelDetalleDia(fechaISO, ciclo, esReal, datos) {
-    const items = obtenerItemsDelDia(fechaISO, ciclo, esReal, datos);
-
-    if (items.length === 0) {
-      return "<div class=\"panel-detalle-dia\"><p class=\"pista\">" + fechaISO + ": sin compromisos.</p></div>";
-    }
-
-    const filasHTML = items.map(function (item) {
-      const etiquetaPago = item.pagoNde ? " (pago " + item.pagoNde + ")" : "";
-
-      if (!esReal) {
-        return "<div class=\"item-dia\"><strong>" + escaparHTML(item.nombre) + "</strong>" + etiquetaPago +
-          " <span class=\"detalle\">(" + formatearMoneda(item.montoEstimado) + " estimado, proyectado)</span></div>";
-      }
-
-      const etiquetaEstado = item.pagado ? "Pagado" : "Pendiente";
-      const confirmacionHTML = item.pagado ? "" :
-        "<div class=\"confirmacion-pendiente\">" +
-          "<label>Monto real<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + item.montoEstimado + "\"></label>" +
-          "<label>Fuente<select class=\"fuente-pendiente\">" +
-            "<option value=\"debito\">Débito</option>" +
-            "<option value=\"credito\">Crédito</option>" +
-          "</select></label>" +
-          "<button type=\"button\" class=\"boton-marcar-pagado\" data-compromiso-id=\"" + item.id + "\">Marcar como pagado</button>" +
-        "</div>";
-
-      return "<div class=\"item-dia\"><strong>" + escaparHTML(item.nombre) + "</strong>" + etiquetaPago +
-        " <span class=\"detalle\">(" + formatearMoneda(item.montoEstimado) + " est., " + etiquetaEstado + ")</span></div>" +
-        confirmacionHTML;
-    }).join("");
-
-    return "<div class=\"panel-detalle-dia\"><h3>" + fechaISO + "</h3>" + filasHTML + "</div>";
   }
 
   // Resumen del balance encadenado para el ciclo simulado que se está
@@ -4326,73 +5410,6 @@
       "<p class=\"detalle\">Gasto variable estimado: " + formatearMoneda(resultado.gastoVariableProyectado) + "</p>" +
       "<p class=\"pista\">Estimado con el presupuesto semanal y las reglas de ingreso configuradas hoy — se recalcula cada vez que los cambies.</p>" +
     "</div>";
-  }
-
-  function renderizarCalendario() {
-    const datos = leerDatos();
-    const contenedor = document.getElementById("contenedorCalendario");
-    const mostrado = obtenerCicloMostradoEnCalendario();
-    const ciclo = mostrado.ciclo;
-    const esReal = mostrado.esReal;
-    const resumenProyectadoHTML = esReal ? "" : renderizarHTMLResumenProyectado(calcularProyeccionMultiCiclo()[indiceCicloCalendario - 1]);
-
-    const primerDiaSemana = crearFechaLocal(ciclo.fechaInicio).getDay();
-    const celdasVacias = new Array(primerDiaSemana).fill("<div class=\"dia-calendario dia-vacio\"></div>").join("");
-
-    // El color de fondo por día solo aplica al ciclo actual real — un ciclo
-    // simulado no tiene semáforo de tres colores (ver "Proyección
-    // multi-ciclo" en SPEC.md), así que trayectoriaPorFecha queda vacío y
-    // ningún día simulado recibe clase de semáforo.
-    const trayectoriaPorFecha = {};
-    if (esReal) {
-      calcularTrayectoriaDelSemaforo(ciclo, datos).forEach(function (dia) {
-        trayectoriaPorFecha[dia.fechaISO] = dia.color;
-      });
-    }
-
-    const celdasDias = generarDiasDelCiclo(ciclo).map(function (fechaISO) {
-      const items = obtenerItemsDelDia(fechaISO, ciclo, esReal, datos);
-      const estado = calcularEstadoDelDia(items, esReal);
-      const seleccionada = fechaISO === fechaSeleccionadaCalendario ? " dia-seleccionado" : "";
-      const colorDelDia = trayectoriaPorFecha[fechaISO];
-      const claseSemaforo = colorDelDia && colorDelDia !== "gris" ? " dia-semaforo-" + colorDelDia : "";
-      const diaDelMes = Number(fechaISO.split("-")[2]);
-      const marcador = items.length > 0 ? "<div class=\"detalle\">" + items.length + "</div>" : "";
-      return "<div class=\"dia-calendario" + claseSemaforo + " " + estado + seleccionada + "\" data-fecha=\"" + fechaISO + "\">" +
-        "<div>" + diaDelMes + "</div>" + marcador + "</div>";
-    }).join("");
-
-    const etiquetaCiclo = esReal ? "Ciclo actual" : "Proyectado (estimado)";
-
-    contenedor.innerHTML =
-      "<div class=\"calendario-cabecera\">" +
-        "<button type=\"button\" id=\"botonCicloAnterior\"" + (indiceCicloCalendario === 0 ? " disabled" : "") + ">&larr; Anterior</button>" +
-        "<div><strong>" + etiquetaCiclo + "</strong> <span class=\"detalle\">" + ciclo.fechaInicio + " a " + ciclo.fechaFin + "</span></div>" +
-        "<button type=\"button\" id=\"botonCicloSiguiente\"" + (indiceCicloCalendario === CANTIDAD_DE_CICLOS_A_PROYECTAR ? " disabled" : "") + ">Siguiente &rarr;</button>" +
-      "</div>" +
-      resumenProyectadoHTML +
-      "<div class=\"calendario-grid\">" +
-        DIAS_DE_LA_SEMANA_ABREV.map(function (d) { return "<div class=\"detalle\">" + d + "</div>"; }).join("") +
-        celdasVacias + celdasDias +
-      "</div>" +
-      (fechaSeleccionadaCalendario ? renderizarHTMLPanelDetalleDia(fechaSeleccionadaCalendario, ciclo, esReal, datos) : "");
-
-    document.getElementById("botonCicloAnterior").addEventListener("click", function () { cambiarCicloCalendario(-1); });
-    document.getElementById("botonCicloSiguiente").addEventListener("click", function () { cambiarCicloCalendario(1); });
-
-    contenedor.querySelectorAll(".dia-calendario[data-fecha]").forEach(function (celda) {
-      celda.addEventListener("click", function () {
-        const fecha = celda.getAttribute("data-fecha");
-        fechaSeleccionadaCalendario = fechaSeleccionadaCalendario === fecha ? null : fecha;
-        renderizarCalendario();
-      });
-    });
-
-    contenedor.querySelectorAll(".boton-marcar-pagado").forEach(function (boton) {
-      boton.addEventListener("click", function () {
-        confirmarPagoDeCompromiso(boton.getAttribute("data-compromiso-id"), boton.closest(".confirmacion-pendiente"));
-      });
-    });
   }
 
   // ============================================================
@@ -4713,30 +5730,17 @@
     return { horizonte: horizonte, resultadosPorCiclo: resultadosPorCiclo, advertenciasFueraDeHorizonte: contribuciones.advertenciasFueraDeHorizonte };
   }
 
+  // Descarta la simulación y vuelve a partir de los datos reales.
   function reiniciarSimulacion() {
     datosSimulados = JSON.parse(JSON.stringify(leerDatos()));
     compromisosMaterializadosSimulacion = materializarCompromisosDelHorizonte(datosSimulados);
     indiceCicloEnfocadoSimulacion = 0;
-    renderizarSimulacion();
+    renderizarTodo();
   }
 
   function cambiarCicloEnfocadoSimulacion(delta) {
     indiceCicloEnfocadoSimulacion = Math.min(Math.max(indiceCicloEnfocadoSimulacion + delta, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
-    renderizarSimulacion();
-  }
-
-  function renderizarSimulacion() {
-    if (!datosSimulados) {
-      reiniciarSimulacion();
-      return;
-    }
-
-    const proyeccion = calcularProyeccionSimuladaCompleta(datosSimulados, compromisosMaterializadosSimulacion);
-    const resultadoEnfocado = proyeccion.resultadosPorCiclo[indiceCicloEnfocadoSimulacion];
-
-    renderizarFranjaBalanceSimulacion(resultadoEnfocado);
-    renderizarPanelCategoriasSimulacion(resultadoEnfocado, proyeccion);
-    renderizarPanelDeudasTarjetasSimulacion(resultadoEnfocado, proyeccion);
+    renderizarTodo();
   }
 
   function renderizarFranjaBalanceSimulacion(resultado) {
@@ -4910,7 +5914,7 @@
     contenedor.querySelectorAll(".fila-horizonte-simulacion").forEach(function (fila) {
       fila.addEventListener("click", function () {
         indiceCicloEnfocadoSimulacion = Number(fila.getAttribute("data-indice-ciclo"));
-        renderizarSimulacion();
+        renderizarTodo();
       });
     });
 
@@ -4930,7 +5934,7 @@
       selectCiclo.addEventListener("change", function (evento) {
         item.cicloId = evento.target.value;
         item.modificadoEnSimulacion = true;
-        renderizarSimulacion();
+        renderizarTodo();
       });
 
       fila.querySelector(".monto-simulado-editado").addEventListener("change", function (evento) {
@@ -4940,7 +5944,7 @@
         }
         item.montoEstimado = monto;
         item.modificadoEnSimulacion = true;
-        renderizarSimulacion();
+        renderizarTodo();
       });
 
       const selectFuente = fila.querySelector(".fuente-simulada-editada");
@@ -4981,14 +5985,14 @@
           item.estadoCredito = null;
         }
         item.modificadoEnSimulacion = true;
-        renderizarSimulacion();
+        renderizarTodo();
       });
 
       selectTarjeta.addEventListener("change", function (evento) {
         if (item.estadoCredito) {
           item.estadoCredito.tarjetaId = evento.target.value;
           item.modificadoEnSimulacion = true;
-          renderizarSimulacion();
+          renderizarTodo();
         }
       });
 
@@ -4996,7 +6000,7 @@
         if (item.estadoCredito) {
           item.estadoCredito.mesesDiferidos = Number(evento.target.value);
           item.modificadoEnSimulacion = true;
-          renderizarSimulacion();
+          renderizarTodo();
         }
       });
     });
@@ -5078,6 +6082,19 @@
 
   const DIAS_SEMANA_ABREVIADOS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
 
+  // Para las filas del muro, donde el año sobra porque todo lo que se ve
+  // pertenece al mismo ciclo.
+  const MESES_ABREVIADOS = ["ene", "feb", "mar", "abr", "may", "jun",
+                            "jul", "ago", "sep", "oct", "nov", "dic"];
+
+  // Para el encabezado del calendario y del día elegido, donde sí hay espacio
+  // para el nombre completo.
+  const NOMBRES_DE_MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+  const DIAS_SEMANA_COMPLETOS = ["Domingo", "Lunes", "Martes", "Miércoles",
+                                 "Jueves", "Viernes", "Sábado"];
+
   function renderizarResumenSuperior() {
     const datos = leerDatos();
     const ciclo = asegurarCicloActual();
@@ -5103,7 +6120,7 @@
       "</div>" +
       "<div class=\"resumen-disponible\">" +
         "<p class=\"resumen-numero mono\">" + formatearMoneda(disponible) + "</p>" +
-        "<p class=\"resumen-etiqueta\">Disponible</p>" +
+        "<p class=\"resumen-etiqueta\">Libre para gastar</p>" +
       "</div>";
   }
 
@@ -5642,22 +6659,1528 @@
   // INICIALIZACIÓN
   // ============================================================
 
-  // Qué pestaña de la pantalla ancha está activa. Se guarda en una
-  // variable de módulo (no en los datos) porque es un detalle de la
-  // pantalla en este momento, no algo que deba sobrevivir a un respaldo o
-  // sincronizarse entre dispositivos — mismo criterio que
-  // categoriaSeleccionadaGasto para el flujo de Gasto nuevo.
-  let pestanaAnchaActiva = "analisis";
+  // ============================================================
+  // VISTA ANCHA — MURO DE PAGOS DEL CICLO
+  // ============================================================
+  //
+  // Requisito duro del usuario: todos los pagos del ciclo visibles de un
+  // golpe, sin scroll, agrupados por categoría y subcategoría, cada uno en su
+  // recuadro con su total.
+  //
+  // Nada aquí fija cuántos pagos caben. Se mide el contenido real y se busca
+  // el acomodo que quepa completo con el texto más grande posible. Se pueden
+  // mover tres cosas, en este orden, que es el orden de lo que menos cuesta
+  // perder:
+  //
+  //   1. Cuántas columnas. No cuesta nada, solo reparte.
+  //   2. La escala del texto, dentro de un margen chico — el muro debe verse
+  //      casi igual de un mes a otro, no cambiar de tamaño cada ciclo.
+  //   3. Los títulos de subcategoría. Cuesta contexto pero no pierde ni un
+  //      dato: la fila ya dice "Totalplay", el título "Internet" es
+  //      envoltorio. Medido en un mes real, esos títulos pesaban más de la
+  //      mitad de lo que pesaban los datos del recuadro más cargado.
+  //
+  // Si ni el modo más compacto cabe, ese mes concreto se resuelve con scroll.
 
-  function mostrarPestanaAncha(nombre) {
-    pestanaAnchaActiva = nombre;
-    document.getElementById("vistaAnalisis").style.display = nombre === "analisis" ? "block" : "none";
-    document.getElementById("vistaConfiguracion").style.display = nombre === "configuracion" ? "block" : "none";
-    document.getElementById("vistaSimulacion").style.display = nombre === "simulacion" ? "block" : "none";
-    document.body.classList.toggle("modo-simulacion-ancho", nombre === "simulacion");
-    document.querySelectorAll("[data-pestana]").forEach(function (boton) {
-      boton.classList.toggle("seleccionado", boton.getAttribute("data-pestana") === nombre);
+  const ESCALA_MINIMA_MURO = 0.85;
+  const ESCALA_MAXIMA_MURO = 1.15;
+  const PASOS_DE_BISECCION_MURO = 7;
+  const COLUMNAS_A_PROBAR_MURO = [2, 3, 4, 5, 6];
+  const SEPARACION_BASE_MURO = 10;
+
+  // De menos a más pérdida. Se usa el primero que quepa.
+  const MODOS_DE_DENSIDAD_MURO = [
+    { id: "completo", titulos: true },
+    { id: "compacto", titulos: false }
+  ];
+
+  // El estado de un pago se deriva de pagado + fechaProgramada; no hace falta
+  // ningún campo nuevo en el modelo.
+  function calcularEstadoDePago(compromiso) {
+    if (compromiso.pagado) {
+      return "pagado";
+    }
+    const hoy = truncarAMedianoche(new Date());
+    return crearFechaLocal(compromiso.fechaProgramada) < hoy ? "vencido" : "pendiente";
+  }
+
+  // Etiqueta corta de fecha para las filas del muro ("14 ago"), donde el año
+  // sobra porque todo lo que se ve pertenece al mismo ciclo.
+  function formatearDiaYMes(fechaISO) {
+    const fecha = crearFechaLocal(fechaISO);
+    return fecha.getDate() + " " + MESES_ABREVIADOS[fecha.getMonth()];
+  }
+
+  // ¿Este título de subcategoría aporta algo?
+  //
+  // No aporta cuando agrupa un solo pago que ya se llama igual: "SUSCRIPCIONES
+  // → Amazon → • Amazon" dice tres veces lo mismo. Sí aporta cuando el nombre
+  // del pago no revela la subcategoría ("INTERNET → • Totalplay") o cuando
+  // agrupa varios pagos.
+  //
+  // El caso surgió al separar las suscripciones en su propia categoría, donde
+  // cada servicio quedó como su propia subcategoría.
+  function tituloAportaAlgo(subcategoria, pagos) {
+    if (pagos.length > 1) {
+      return true;
+    }
+    return pagos[0].nombre.trim().toLowerCase() !== String(subcategoria).trim().toLowerCase();
+  }
+
+  // La decisión de mostrar títulos es de todo el recuadro, no de cada grupo.
+  //
+  // Si se decidiera grupo por grupo, un grupo sin título colocado después de
+  // uno con título se leería como si perteneciera al anterior: en Servicios,
+  // "Agua" y "Luz" sin título quedaban visualmente colgados bajo "INTERNET",
+  // que es peor que la repetición que se quería evitar. Así que o los lleva
+  // todos, o ninguno.
+  function elRecuadroNecesitaTitulos(gruposCandidatos) {
+    return gruposCandidatos.some(function (grupo) {
+      return grupo.titulo !== null && tituloAportaAlgo(grupo.titulo, grupo.pagos);
     });
+  }
+
+  // Arma los recuadros del muro a partir de los compromisos del ciclo.
+  //
+  // Un recuadro por categoría de presupuesto, más uno de Deudas y otro de
+  // Tarjetas: esos dos no tienen categoría (su gasto no es de presupuesto,
+  // es saldo) pero sí son pagos del ciclo y el usuario los quiere ver.
+  // Las categorías variables no traen pagos con fecha: traen su tope semanal,
+  // editable desde aquí.
+  function construirRecuadrosDelMuro(ciclo, datos) {
+    // Los pagos vienen de la lista materializada de la simulación, no de
+    // datos.compromisos: es la única que incluye los ciclos proyectados y la
+    // que recuerda los diferimientos a crédito.
+    const compromisosDelCiclo = obtenerItemsSimuladosDelCicloEnfocado();
+    const presupuestoVigente = obtenerPresupuestoSemanalVigente(ciclo, datos);
+
+    // Se recorre config.categorias, no los compromisos, para que el orden de
+    // los recuadros sea el orden de las categorías del usuario.
+    const recuadros = [];
+
+    datos.config.categorias.forEach(function (categoria) {
+      if (categoria.esVariableSemanal) {
+        return; // van al final, con su tope semanal
+      }
+
+      // Los materializados ya traen categoriaId resuelta por el motor.
+      const suyos = compromisosDelCiclo.filter(function (compromiso) {
+        return compromiso.categoriaId === categoria.id;
+      });
+      if (suyos.length === 0) {
+        return;
+      }
+
+      // Agrupados por subcategoría, en el orden en que la categoría las
+      // declara; lo que no encaje en ninguna cae en un grupo sin título.
+      //
+      // Se reparte en UN solo recorrido, resolviendo la subcategoría de cada
+      // pago una única vez. Hacerlo en dos pases (uno por subcategoría y otro
+      // para los sobrantes) obliga a que las dos condiciones sean exactamente
+      // complementarias, y cualquier diferencia entre ellas duplica un pago o
+      // lo pierde en silencio — que es lo peor que puede pasar en una pantalla
+      // cuyo único trabajo es mostrarlos todos.
+      const pagosPorSubcategoria = {};
+      const sinSubcategoria = [];
+
+      suyos.forEach(function (compromiso) {
+        const subcategoria = compromiso.subcategoria;
+        const esConocida = subcategoria && (categoria.subcategorias || []).indexOf(subcategoria) !== -1;
+
+        if (!esConocida) {
+          sinSubcategoria.push(compromiso);
+          return;
+        }
+        if (!pagosPorSubcategoria[subcategoria]) {
+          pagosPorSubcategoria[subcategoria] = [];
+        }
+        pagosPorSubcategoria[subcategoria].push(compromiso);
+      });
+
+      const grupos = [];
+
+      (categoria.subcategorias || []).forEach(function (subcategoria) {
+        const pagos = pagosPorSubcategoria[subcategoria];
+        if (pagos && pagos.length > 0) {
+          grupos.push({ titulo: subcategoria, pagos: pagos });
+        }
+      });
+
+      if (sinSubcategoria.length > 0) {
+        grupos.push({ titulo: null, pagos: sinSubcategoria });
+      }
+
+      // Se decide una sola vez para todo el recuadro (ver
+      // elRecuadroNecesitaTitulos) y se aplica a todos sus grupos.
+      if (!elRecuadroNecesitaTitulos(grupos)) {
+        grupos.forEach(function (grupo) { grupo.titulo = null; });
+      }
+
+      recuadros.push({ tipo: "pagos", nombre: categoria.nombre, grupos: grupos });
+    });
+
+    // Deudas y tarjetas, cada una en su recuadro.
+    [
+      { nombre: "Deudas", origen: "deuda" },
+      { nombre: "Tarjetas", origen: "tarjeta" }
+    ].forEach(function (bloque) {
+      const pagos = compromisosDelCiclo.filter(function (c) { return c.origen === bloque.origen; });
+      if (pagos.length > 0) {
+        recuadros.push({
+          tipo: "pagos",
+          nombre: bloque.nombre,
+          grupos: [{ titulo: null, pagos: pagos }]
+        });
+      }
+    });
+
+    // Las categorías variables van juntas en un solo recuadro: no tienen
+    // pagos con fecha, tienen un tope semanal, y verlas una al lado de otra es
+    // lo que permite repartir entre ellas. Un recuadro por cada una las
+    // separaba sin motivo y llenaba el muro de cajas de una sola fila.
+    const categoriasVariables = datos.config.categorias.filter(function (categoria) {
+      return categoria.esVariableSemanal;
+    });
+
+    if (categoriasVariables.length > 0) {
+      recuadros.push({
+        tipo: "presupuesto",
+        nombre: "Presupuesto variable",
+        topes: categoriasVariables.map(function (categoria) {
+          return {
+            categoriaId: categoria.id,
+            nombre: categoria.nombre,
+            monto: Number(presupuestoVigente[categoria.id] || 0)
+          };
+        })
+      });
+    }
+
+    recuadros.push(construirResumenDelCiclo(ciclo, datos));
+
+    return recuadros;
+  }
+
+  // El recuadro que cierra el muro: a dónde llega el ciclo si todo sigue así.
+  //
+  // Usa las fórmulas que ya están en SPEC.md, no versiones simplificadas:
+  // "lo que falta del gasto variable" se proyecta al ritmo diario que se lleva
+  // de verdad (calcularProyeccionDeCierre), no con el presupuesto teórico. Si
+  // el ciclo aún no tiene gasto variable, ese ritmo es cero, así que en ese
+  // caso se cae al presupuesto configurado para no prometer un cierre
+  // demasiado optimista el día uno.
+  function construirResumenDelCiclo(ciclo, datos) {
+    // Del motor de simulación, no de las fórmulas reales: es el único que
+    // descuenta lo diferido a crédito de este ciclo y suma en su lugar las
+    // mensualidades que caen aquí. Con las fórmulas reales, diferir un pago no
+    // movía este recuadro ni un peso, que era justo lo que había que arreglar.
+    const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
+    const items = obtenerItemsSimuladosDelCicloEnfocado();
+    const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
+
+    // Lo ya pagado son hechos: solo cuentan los pagos de verdad marcados, y
+    // nunca uno diferido (si se difirió, no se pagó de esta cuenta).
+    const comprometidoPagado = items
+      .filter(function (item) { return item.pagado && !item.estadoCredito; })
+      .reduce(function (suma, item) { return suma + Number(item.montoReal); }, 0);
+
+    const faltaPagar = Math.max(resultado.totalComprometido - comprometidoPagado, 0);
+
+    // En el ciclo en curso, el balance y "Libre para gastar" son el mismo
+    // número y se calculan igual: lo que sobra al cerrar ES lo que se puede
+    // gastar de más. Antes diferían en un día de presupuesto variable, porque
+    // uno contaba los días que faltan y el otro el ciclo completo.
+    //
+    // En un ciclo futuro no hay días transcurridos ni gasto real que medir, así
+    // que ahí manda el presupuesto del ciclo entero, que es lo que calcula el
+    // motor de simulación.
+    const variableGastado = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    const variablePorVenir = esCicloActual
+      ? calcularGastoVariablePorVenir(ciclo, datos)
+      : resultado.gastoVariableProyectado;
+
+    // El mismo número y la misma función que la cifra grande de arriba, para
+    // que no puedan separarse nunca.
+    const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
+      .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+
+    const balance = esCicloActual
+      ? calcularDisponibleReal(ciclo, datos, mensualidadesDeTarjeta)
+      : resultado.balanceDelCiclo;
+
+    const filas = [
+      { etiqueta: "Ingreso del ciclo", monto: resultado.ingresoDelCiclo },
+      { etiqueta: "Ya pagado", monto: comprometidoPagado },
+      { etiqueta: "Falta pagar", monto: faltaPagar }
+    ];
+
+    // El gasto variable ya hecho solo se muestra si existe, y aparte de lo que
+    // falta por gastar: son dos cosas distintas y sumarlas en una sola fila
+    // impedía ver de dónde sale el balance.
+    if (esCicloActual && variableGastado > 0) {
+      filas.push({ etiqueta: "Variable ya gastado", monto: variableGastado });
+    }
+    filas.push({
+      etiqueta: esCicloActual ? "Variable por gastar" : "Variable previsto",
+      monto: variablePorVenir
+    });
+
+    return {
+      tipo: "resumen",
+      nombre: "Resumen del ciclo",
+      balance: balance,
+      filas: filas
+    };
+  }
+
+  // conAccionDePago solo lo usa el panel del día del calendario: agrega bajo
+  // cada pago pendiente los campos para confirmarlo. El marcado es el que
+  // confirmarPagoDeCompromiso ya espera (".monto-real-pendiente",
+  // ".fuente-pendiente", el botón), el mismo que usa Pendientes en Captura,
+  // así que esa función funciona sin saber quién la llamó.
+  function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
+    if (recuadro.tipo === "presupuesto") {
+      const totalSemanal = recuadro.topes.reduce(function (suma, tope) { return suma + tope.monto; }, 0);
+      return "<div class=\"recuadro\">" +
+        "<div class=\"encabezado-recuadro\">" +
+          "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
+          "<span class=\"total-categoria-muro\">" + formatearMoneda(totalSemanal) + "</span>" +
+        "</div>" +
+        recuadro.topes.map(function (tope) {
+          return "<div class=\"fila-presupuesto-muro\">" +
+            "<label for=\"topeMuro_" + tope.categoriaId + "\">" + escaparHTML(tope.nombre) + "</label>" +
+            "<input type=\"number\" min=\"0\" step=\"50\" id=\"topeMuro_" + tope.categoriaId + "\"" +
+              " data-categoria-tope=\"" + tope.categoriaId + "\" value=\"" + tope.monto + "\">" +
+            "<span class=\"unidad-tope\">/sem</span>" +
+          "</div>";
+        }).join("") +
+      "</div>";
+    }
+
+    if (recuadro.tipo === "resumen") {
+      const claseBalance = recuadro.balance >= 0 ? " balance-alcanza" : " balance-no-alcanza";
+      return "<div class=\"recuadro\">" +
+        "<div class=\"encabezado-recuadro\">" +
+          "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
+        "</div>" +
+        recuadro.filas.map(function (fila) {
+          return "<div class=\"fila-resumen-muro\">" +
+            "<span class=\"etiqueta-resumen\">" + fila.etiqueta + "</span>" +
+            "<span class=\"monto-fila-muro\">" + formatearMoneda(fila.monto) + "</span>" +
+          "</div>";
+        }).join("") +
+        "<div class=\"fila-resumen-muro fila-balance" + claseBalance + "\">" +
+          "<span class=\"etiqueta-resumen\">Balance al cerrar</span>" +
+          "<span class=\"monto-fila-muro\">" + formatearMoneda(recuadro.balance) + "</span>" +
+        "</div>" +
+      "</div>";
+    }
+
+    const total = recuadro.grupos.reduce(function (suma, grupo) {
+      return suma + grupo.pagos.reduce(function (s, pago) {
+        return s + Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
+      }, 0);
+    }, 0);
+
+    return "<div class=\"recuadro\">" +
+      "<div class=\"encabezado-recuadro\">" +
+        "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
+        "<span class=\"total-categoria-muro\">" + formatearMoneda(total) + "</span>" +
+      "</div>" +
+      recuadro.grupos.map(function (grupo) {
+        const titulo = (grupo.titulo && mostrarTitulos)
+          ? "<div class=\"titulo-subcategoria-muro\">" + escaparHTML(grupo.titulo) + "</div>"
+          : "";
+        return titulo + grupo.pagos.map(function (pago) {
+          const estado = calcularEstadoDePago(pago);
+          const monto = Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
+          const etiquetaPago = pago.pagoNde ? " <span class=\"dia-fila-muro\">(pago " + pago.pagoNde + ")</span>" : "";
+
+          // Un pago diferido a crédito deja de salir de este ciclo: se convierte
+          // en mensualidades que alimentan el pago de la tarjeta. Se marca en la
+          // fila y su monto ya no suma al total de la categoría.
+          const etiquetaCredito = pago.estadoCredito
+            ? " <span class=\"marca-credito\">" + pago.estadoCredito.mesesDiferidos + " MSI</span>"
+            : "";
+
+          // Un pago pendiente lleva su monto como campo editable; uno ya
+          // pagado, como texto: su monto real ya ocurrió y no es negociable.
+          // El campo se ve igual que el texto hasta que se enfoca, así que
+          // editarlo no cambia la altura de la fila ni obliga a reacomodar el
+          // muro entero.
+          const montoHTML = pago.pagado
+            ? "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>"
+            : "<input type=\"number\" min=\"0\" step=\"1\" class=\"monto-editable-muro\"" +
+              " data-monto-de=\"" + pago.idSimulado + "\" value=\"" + monto + "\"" +
+              " aria-label=\"Monto de " + escaparHTML(pago.nombre) + "\">";
+
+          // Botón para abrir las opciones de pago (débito o crédito a meses, y
+          // a qué ciclo mandarlo). No van desplegadas en la fila: llenarían el
+          // muro de selects y dejaría de leerse de un golpe.
+          const botonOpciones = pago.pagado
+            ? ""
+            : "<button type=\"button\" class=\"boton-opciones-pago\" data-opciones-de=\"" + pago.idSimulado + "\"" +
+              " title=\"Cómo pagarlo\" aria-label=\"Opciones de pago de " + escaparHTML(pago.nombre) + "\">···</button>";
+
+          const fila = "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") +
+              (pago.estadoCredito ? " es-credito" : "") + "\">" +
+            "<span class=\"punto-estado " + estado + "\"></span>" +
+            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + etiquetaCredito + "</span>" +
+            "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
+            montoHTML +
+            botonOpciones +
+          "</div>";
+
+          if (!conAccionDePago || pago.pagado) {
+            return fila;
+          }
+
+          return fila +
+            "<div class=\"confirmacion-en-cajon\">" +
+              "<label>Mover a" +
+                "<input type=\"date\" class=\"fecha-a-posponer\" data-fecha-de=\"" + pago.id + "\"" +
+                  " value=\"" + pago.fechaProgramada + "\">" +
+              "</label>" +
+              "<label>Monto real" +
+                "<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + pago.montoEstimado + "\">" +
+              "</label>" +
+              "<label>Fuente" +
+                "<select class=\"fuente-pendiente\">" +
+                  "<option value=\"debito\">Débito</option>" +
+                  "<option value=\"credito\">Crédito</option>" +
+                "</select>" +
+              "</label>" +
+              "<button type=\"button\" class=\"boton-marcar-pagado\" data-compromiso-id=\"" + pago.id + "\">" +
+                "Marcar pagado" +
+              "</button>" +
+            "</div>";
+        }).join("");
+      }).join("") +
+    "</div>";
+  }
+
+  // Reparte los recuadros en N columnas conservando el orden de las
+  // categorías (el orden es decisión del usuario, no del algoritmo) y
+  // mandando cada uno a la columna que va más corta. Es lo que produce el
+  // efecto de mampostería sin dejar huecos.
+  function repartirRecuadrosEnColumnas(alturas, numeroDeColumnas, separacion) {
+    const columnas = [];
+    for (let i = 0; i < numeroDeColumnas; i++) {
+      columnas.push({ indices: [], alto: 0 });
+    }
+
+    alturas.forEach(function (alto, indice) {
+      let masCorta = columnas[0];
+      columnas.forEach(function (columna) {
+        if (columna.alto < masCorta.alto) {
+          masCorta = columna;
+        }
+      });
+      masCorta.indices.push(indice);
+      masCorta.alto += alto + (masCorta.indices.length > 1 ? separacion : 0);
+    });
+
+    return columnas;
+  }
+
+  function alturaDelReparto(columnas) {
+    return columnas.reduce(function (maximo, columna) {
+      return Math.max(maximo, columna.alto);
+    }, 0);
+  }
+
+  // Cuánto mide cada recuadro con un ancho y una escala dados. Se dibujan
+  // todos en una columna oculta del ancho que les tocaría y se leen las
+  // alturas de un tirón: un solo reflujo por combinación.
+  //
+  // El medidor se cuelga dentro de #vistaAncha, no de <body>, porque las
+  // reglas del muro y sus variables de color están ancladas ahí.
+  function medirRecuadrosDelMuro(recuadros, numeroDeColumnas, escala, mostrarTitulos) {
+    const zona = document.getElementById("zonaMuro");
+    const estilos = getComputedStyle(zona);
+    const separacion = SEPARACION_BASE_MURO * escala;
+    const anchoUtil = zona.clientWidth - parseFloat(estilos.paddingLeft) - parseFloat(estilos.paddingRight);
+    const anchoDeColumna = (anchoUtil - separacion * (numeroDeColumnas - 1)) / numeroDeColumnas;
+
+    const medidor = document.createElement("div");
+    medidor.className = "columna-muro";
+    medidor.style.position = "absolute";
+    medidor.style.visibility = "hidden";
+    medidor.style.pointerEvents = "none";
+    medidor.style.left = "-10000px";
+    medidor.style.top = "0";
+    medidor.style.width = anchoDeColumna + "px";
+    medidor.style.setProperty("--escala", String(escala));
+    medidor.innerHTML = recuadros.map(function (recuadro) {
+      return htmlDeRecuadroDelMuro(recuadro, mostrarTitulos);
+    }).join("");
+
+    document.getElementById("vistaAncha").appendChild(medidor);
+    const alturas = Array.prototype.map.call(medidor.children, function (hijo) {
+      return hijo.getBoundingClientRect().height;
+    });
+    medidor.parentNode.removeChild(medidor);
+
+    return { alturas: alturas, separacion: separacion };
+  }
+
+  // La escala más grande, dentro del margen permitido, con la que el
+  // contenido cabe en N columnas. Devuelve null si no cabe ni con la mínima.
+  function buscarMejorEscalaDelMuro(recuadros, numeroDeColumnas, mostrarTitulos, disponible) {
+    function probar(escala) {
+      const medicion = medirRecuadrosDelMuro(recuadros, numeroDeColumnas, escala, mostrarTitulos);
+      const reparto = repartirRecuadrosEnColumnas(medicion.alturas, numeroDeColumnas, medicion.separacion);
+      const alto = alturaDelReparto(reparto);
+      return { cabe: alto <= disponible, reparto: reparto, alto: alto };
+    }
+
+    const conMaxima = probar(ESCALA_MAXIMA_MURO);
+    if (conMaxima.cabe) {
+      return { escala: ESCALA_MAXIMA_MURO, reparto: conMaxima.reparto, alto: conMaxima.alto };
+    }
+
+    const conMinima = probar(ESCALA_MINIMA_MURO);
+    if (!conMinima.cabe) {
+      return null;
+    }
+
+    // Cabe en la mínima pero no en la máxima: el punto está en medio. La
+    // altura no baja de forma lineal con la escala (el texto se reacomoda),
+    // así que se busca por bisección en vez de despejarlo de una fórmula.
+    let cabe = ESCALA_MINIMA_MURO;
+    let noCabe = ESCALA_MAXIMA_MURO;
+    let mejorReparto = conMinima.reparto;
+    let mejorAlto = conMinima.alto;
+
+    for (let paso = 0; paso < PASOS_DE_BISECCION_MURO; paso++) {
+      const medio = (cabe + noCabe) / 2;
+      const intento = probar(medio);
+      if (intento.cabe) {
+        cabe = medio;
+        mejorReparto = intento.reparto;
+        mejorAlto = intento.alto;
+      } else {
+        noCabe = medio;
+      }
+    }
+
+    return { escala: cabe, reparto: mejorReparto, alto: mejorAlto };
+  }
+
+  function pintarMuro(recuadros, columnas, mostrarTitulos) {
+    document.getElementById("muroPagos").innerHTML = columnas.map(function (columna) {
+      return "<div class=\"columna-muro\">" +
+        columna.indices.map(function (indice) {
+          return htmlDeRecuadroDelMuro(recuadros[indice], mostrarTitulos);
+        }).join("") +
+      "</div>";
+    }).join("");
+
+    // Los cambios se aplican al salir del campo, no en cada tecla: por tecla
+    // se dispararía un redibujado completo con el cursor dentro del input.
+    document.querySelectorAll("#muroPagos [data-categoria-tope]").forEach(function (campo) {
+      campo.addEventListener("change", function () {
+        cambiarTopeSemanalSimulado(campo.getAttribute("data-categoria-tope"), campo.value);
+      });
+    });
+
+    document.querySelectorAll("#muroPagos [data-monto-de]").forEach(function (campo) {
+      campo.addEventListener("change", function () {
+        cambiarMontoSimulado(campo.getAttribute("data-monto-de"), campo.value);
+      });
+    });
+
+    document.querySelectorAll("#muroPagos [data-opciones-de]").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        abrirOpcionesDePago(boton.getAttribute("data-opciones-de"));
+      });
+    });
+  }
+
+  // ============================================================
+  // OPCIONES DE PAGO — débito, crédito a meses, y a qué ciclo
+  // ============================================================
+  //
+  // Ventana flotante de tamaño contenido, la misma idea que Ajustes. Aquí es
+  // donde se decide pagar algo con tarjeta de crédito y a cuántos meses: el
+  // motor reparte entonces las mensualidades en los ciclos que les toca según
+  // la fecha real de corte de esa tarjeta, y el pago deja de salir de este
+  // ciclo para convertirse en pago de tarjeta.
+  //
+  // Los controles son los de construirFilaCompromisoSimulado, sin cambios: ya
+  // están probados, incluidos los dos avisos (no se puede diferir el pago de
+  // una tarjeta a otra tarjeta, y no se puede diferir si ninguna tarjeta tiene
+  // marcado que permite meses sin intereses).
+
+  function abrirOpcionesDePago(idSimulado) {
+    const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
+    if (!item) { return; }
+
+    const horizonte = obtenerHorizonteDeCiclosSimulacion();
+    const horizonteOpcionesHTML = horizonte.map(function (c) {
+      return "<option value=\"" + c.id + "\">" + c.id + "</option>";
+    }).join("");
+    const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) {
+      return t.permiteDiferirAMeses;
+    });
+
+    const panel = document.getElementById("panelOpcionesPago");
+    panel.innerHTML =
+      "<header id=\"encabezadoOpcionesPago\">" +
+        "<h2>" + escaparHTML(item.nombre) + "</h2>" +
+        "<button type=\"button\" id=\"botonCerrarOpcionesPago\">Cerrar</button>" +
+      "</header>" +
+      "<div id=\"cuerpoOpcionesPago\">" +
+        "<p class=\"pista\">Cambia el monto, mándalo a otro ciclo, o difiérelo a " +
+          "meses con una tarjeta. Nada de esto se guarda hasta que lo confirmes " +
+          "en la barra de arriba.</p>" +
+        construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) +
+      "</div>";
+
+    document.getElementById("capaOpcionesPago").hidden = false;
+    document.getElementById("botonCerrarOpcionesPago").addEventListener("click", cerrarOpcionesDePago);
+
+    // Los mismos manejadores del motor: cada cambio marca el item y redibuja
+    // toda la pantalla, así que el balance y la trayectoria responden en vivo.
+    conectarEventosDeFilaCompromisoSimulado(panel);
+
+    // Al redibujar, la ventana se queda abierta sobre el mismo pago para poder
+    // probar varias combinaciones sin volver a buscarlo.
+    idDePagoConOpcionesAbiertas = idSimulado;
+  }
+
+  let idDePagoConOpcionesAbiertas = null;
+
+  function cerrarOpcionesDePago() {
+    document.getElementById("capaOpcionesPago").hidden = true;
+    document.getElementById("panelOpcionesPago").innerHTML = "";
+    idDePagoConOpcionesAbiertas = null;
+  }
+
+  function opcionesDePagoEstanAbiertas() {
+    return document.getElementById("capaOpcionesPago").hidden === false;
+  }
+
+  // El tope semanal se edita dentro de la simulación, como los montos: mover
+  // el presupuesto variable es justo una de las cosas con las que se juega
+  // para ver si el ciclo cierra, y no debe escribirse hasta guardar.
+  function cambiarTopeSemanalSimulado(categoriaId, valor) {
+    const trabajo = asegurarSimulacionAbierta();
+    const ciclo = asegurarCicloActual();
+    const cicloDeTrabajo = trabajo.ciclos.find(function (c) { return c.id === ciclo.id; });
+
+    if (!cicloDeTrabajo) {
+      return;
+    }
+    if (!cicloDeTrabajo.presupuestoSemanal) {
+      cicloDeTrabajo.presupuestoSemanal = {};
+    }
+    cicloDeTrabajo.presupuestoSemanal[categoriaId] = Number(valor) || 0;
+
+    renderizarTodo();
+  }
+
+  function alturaDisponibleDelMuro() {
+    const zona = document.getElementById("zonaMuro");
+    const estilos = getComputedStyle(zona);
+    return zona.clientHeight - parseFloat(estilos.paddingTop) - parseFloat(estilos.paddingBottom);
+  }
+
+  function acomodarMuroDePagos(recuadros) {
+    const zona = document.getElementById("zonaMuro");
+    const vista = document.getElementById("vistaAncha");
+
+    // Se mide siempre en el mismo estado: si la clase de scroll quedara
+    // puesta del acomodo anterior, la barra angostaría la zona y las
+    // mediciones no serían comparables entre sí.
+    zona.classList.remove("con-scroll");
+    const disponible = alturaDisponibleDelMuro();
+
+    for (let indiceModo = 0; indiceModo < MODOS_DE_DENSIDAD_MURO.length; indiceModo++) {
+      const modo = MODOS_DE_DENSIDAD_MURO[indiceModo];
+      let mejor = null;
+
+      COLUMNAS_A_PROBAR_MURO.forEach(function (numeroDeColumnas) {
+        const resultado = buscarMejorEscalaDelMuro(recuadros, numeroDeColumnas, modo.titulos, disponible);
+        if (resultado === null) {
+          return;
+        }
+        if (mejor === null) {
+          mejor = { columnas: numeroDeColumnas, escala: resultado.escala, reparto: resultado.reparto, alto: resultado.alto };
+          return;
+        }
+        // Primero manda la legibilidad: gana la escala más grande. Entre dos
+        // igual de legibles gana la que deja menos pantalla sin usar; sin ese
+        // desempate el muro se apila arriba y deja hueco abajo.
+        const esMasLegible = resultado.escala > mejor.escala + 0.001;
+        const esIgualDeLegible = Math.abs(resultado.escala - mejor.escala) <= 0.001;
+        if (esMasLegible || (esIgualDeLegible && resultado.alto > mejor.alto)) {
+          mejor = { columnas: numeroDeColumnas, escala: resultado.escala, reparto: resultado.reparto, alto: resultado.alto };
+        }
+      });
+
+      if (mejor !== null) {
+        vista.style.setProperty("--escala", String(mejor.escala));
+        pintarMuro(recuadros, mejor.reparto, modo.titulos);
+        return { columnas: mejor.columnas, escala: mejor.escala, modo: modo.id, conScroll: false };
+      }
+    }
+
+    // Ni el modo más compacto cabe: este mes se resuelve con scroll, en el
+    // reparto que menos desborde.
+    const modoFinal = MODOS_DE_DENSIDAD_MURO[MODOS_DE_DENSIDAD_MURO.length - 1];
+    let menosDesborde = null;
+
+    COLUMNAS_A_PROBAR_MURO.forEach(function (numeroDeColumnas) {
+      const medicion = medirRecuadrosDelMuro(recuadros, numeroDeColumnas, ESCALA_MINIMA_MURO, modoFinal.titulos);
+      const reparto = repartirRecuadrosEnColumnas(medicion.alturas, numeroDeColumnas, medicion.separacion);
+      const alto = alturaDelReparto(reparto);
+      if (menosDesborde === null || alto < menosDesborde.alto) {
+        menosDesborde = { columnas: numeroDeColumnas, reparto: reparto, alto: alto };
+      }
+    });
+
+    vista.style.setProperty("--escala", String(ESCALA_MINIMA_MURO));
+    pintarMuro(recuadros, menosDesborde.reparto, modoFinal.titulos);
+    zona.classList.add("con-scroll");
+    return { columnas: menosDesborde.columnas, escala: ESCALA_MINIMA_MURO, modo: modoFinal.id, conScroll: true };
+  }
+
+  function renderizarMuroDePagos() {
+    const zona = document.getElementById("zonaMuro");
+
+    // Acomodar el muro exige medir la altura que tiene libre. Si no está en
+    // pantalla —porque el cajón lo tapa, o porque es un celular y la vista
+    // ancha está oculta— esa altura es cero y el acomodo elegiría cualquier
+    // cosa. Se deja para cuando vuelva a verse: quien lo muestre lo pide.
+    if (zona.offsetParent === null || zona.clientHeight === 0) {
+      return null;
+    }
+
+    const datos = obtenerDatosVisibles();
+    const ciclo = asegurarCicloActual();
+    const recuadros = construirRecuadrosDelMuro(ciclo, datos);
+
+    if (recuadros.length === 0) {
+      document.getElementById("muroPagos").innerHTML =
+        "<p class=\"pista\">Todavía no hay pagos ni presupuestos en este ciclo. " +
+        "Captura categorías, recurrentes o deudas desde Ajustes.</p>";
+      return null;
+    }
+
+    return acomodarMuroDePagos(recuadros);
+  }
+
+  // El acomodo depende del tamaño de la ventana, así que se recalcula al
+  // cambiarla. Con espera, para no correr la búsqueda completa en cada uno de
+  // los cuadros intermedios de un arrastre.
+  let temporizadorDeReacomodoDelMuro = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(temporizadorDeReacomodoDelMuro);
+    temporizadorDeReacomodoDelMuro = setTimeout(function () {
+      if (document.getElementById("vistaAncha").offsetParent !== null) {
+        renderizarMuroDePagos();
+      }
+    }, 120);
+  });
+
+  // ============================================================
+  // VISTA ANCHA — ENCABEZADO DEL CICLO
+  // ============================================================
+  //
+  // Un solo número manda: el disponible real, el mismo que ya muestra
+  // Captura y el titular de Balance del ciclo. Al lado, la identidad del
+  // ciclo — el usuario pidió explícitamente que quede claro cuáles son los
+  // ciclos, porque no son meses de calendario.
+
+  function renderizarEncabezadoDelCiclo() {
+    const ciclo = obtenerCicloEnfocado();
+    const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
+    const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
+    const items = obtenerItemsSimuladosDelCicloEnfocado();
+    const pagados = items.filter(function (item) { return item.pagado; }).length;
+
+    // En el ciclo actual la cifra que manda es el disponible de hoy. En un
+    // ciclo futuro no existe "disponible": lo que se puede saber es con cuánto
+    // cerraría, así que esa pasa a ser la cifra principal.
+    document.getElementById("etiquetaCifraPrincipal").textContent =
+      esCicloActual ? "Libre para gastar" : "Balance proyectado";
+    const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
+      .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+
+    document.getElementById("cifraDisponibleAncha").textContent = formatearMoneda(
+      esCicloActual
+        ? calcularDisponibleReal(ciclo, obtenerDatosVisibles(), mensualidadesDeTarjeta)
+        : resultado.balanceDelCiclo
+    );
+
+    document.getElementById("identidadCiclo").innerHTML =
+      "<span class=\"etiqueta-ancha\">Ciclo " + ciclo.id +
+        (esCicloActual ? "" : " · proyectado") + "</span>" +
+      "<span>del <span class=\"cifra-a\">" + ciclo.fechaInicio + "</span>" +
+      " al <span class=\"cifra-a\">" + ciclo.fechaFin + "</span>" +
+      " · <span class=\"cifra-a\">" + calcularDiasTotalesDelCiclo(ciclo) + "</span> días</span>";
+
+    document.getElementById("posicionEnHorizonte").textContent =
+      esCicloActual ? "actual" : "+" + indiceCicloEnfocadoSimulacion;
+    document.getElementById("cicloAnterior").disabled = indiceCicloEnfocadoSimulacion === 0;
+    document.getElementById("cicloSiguiente").disabled =
+      indiceCicloEnfocadoSimulacion === CANTIDAD_DE_CICLOS_A_PROYECTAR;
+
+    document.getElementById("resumenCiclo").innerHTML =
+      "<div class=\"dato-secundario\">" +
+        "<span class=\"etiqueta-ancha\">Ingresos</span>" +
+        "<span class=\"valor-a\">" + formatearMoneda(resultado.ingresoDelCiclo) + "</span>" +
+      "</div>" +
+      "<div class=\"dato-secundario\">" +
+        "<span class=\"etiqueta-ancha\">Comprometido</span>" +
+        "<span class=\"valor-a\">" + formatearMoneda(resultado.totalComprometido) + "</span>" +
+      "</div>" +
+      "<div class=\"dato-secundario\">" +
+        "<span class=\"etiqueta-ancha\">Pagado</span>" +
+        "<span class=\"valor-a\">" + pagados + " / " + items.length + "</span>" +
+      "</div>";
+  }
+
+  // ============================================================
+  // VISTA ANCHA — SIMULACIÓN DE LA PRIMERA PANTALLA
+  // ============================================================
+  //
+  // La primera pantalla no es solo de consulta: se juega con los números para
+  // armar la estrategia del ciclo. Decisión del usuario: "hago la simulación,
+  // si me gusta la guardo, si no que se devuelva a lo original" — sin
+  // historial de escenarios.
+  //
+  // Mientras se está simulando existe una copia de trabajo. Todo lo que dibuja
+  // la primera pantalla lee de ella, así que los totales, la trayectoria y el
+  // balance al cerrar responden en vivo a cada cambio. Los datos reales no se
+  // tocan hasta que se guarda.
+  //
+  // Guardar aplica los cambios uno por uno sobre los datos reales, en vez de
+  // escribir la copia completa encima: si algo más cambió en los datos
+  // mientras se simulaba, sobreescribir el objeto entero lo perdería.
+
+  // La simulación NO tiene una copia propia: usa datosSimulados y
+  // compromisosMaterializadosSimulacion, el motor que ya existía para la
+  // pestaña de Simulación. Eso es a propósito y no debe deshacerse: ese motor
+  // es el que sabe repartir un diferimiento a crédito en mensualidades por la
+  // fecha real de corte de la tarjeta, contar el saldo ocupado de la línea, y
+  // recordar ediciones sobre compromisos de ciclos proyectados que no existen
+  // en datos.compromisos.
+  //
+  // Hubo un momento en que la primera pantalla llevaba su propia copia de
+  // trabajo, más simple, que solo entendía monto y fecha. El resultado fue dos
+  // simulaciones distintas en el mismo archivo y el diferimiento a crédito
+  // desconectado de la pantalla. Una sola.
+
+  // De aquí leen todos los render de la primera pantalla.
+  function obtenerDatosVisibles() {
+    return datosSimulados || leerDatos();
+  }
+
+  function haySimulacionEnCurso() {
+    return datosSimulados !== null;
+  }
+
+  // Arranca la simulación desde los datos reales si no estaba abierta. Se
+  // llama al dibujar la primera pantalla, así que siempre hay simulación viva:
+  // no hay un "modo consulta" y un "modo simulación", hay una pantalla donde se
+  // prueba y una barra que aparece cuando algo se movió.
+  function asegurarSimulacionAbierta() {
+    if (datosSimulados === null) {
+      datosSimulados = JSON.parse(JSON.stringify(leerDatos()));
+      compromisosMaterializadosSimulacion = materializarCompromisosDelHorizonte(datosSimulados);
+      indiceCicloEnfocadoSimulacion = 0;
+    }
+    return datosSimulados;
+  }
+
+  // Vuelve a partir de los datos reales cuando estos cambiaron por fuera de la
+  // simulación: capturar un ingreso, dar de alta un recurrente, editar una
+  // categoría desde Ajustes.
+  //
+  // Sin esto, la copia se creaba una sola vez y nunca se refrescaba: los datos
+  // reales cambiaban, Análisis lo mostraba porque lee de ellos directo, y la
+  // primera pantalla seguía dibujando la copia vieja. Un ingreso recién
+  // capturado no aparecía y la trayectoria seguía diciendo que no había ninguno.
+  //
+  // Solo se rehace si no hay nada sin guardar: con cambios en curso, rehacer los
+  // borraría. En ese caso se respeta la simulación, y al guardarla o reiniciarla
+  // se vuelve a sincronizar sola.
+  function sincronizarSimulacionConLosDatosReales() {
+    if (datosSimulados === null) {
+      return;
+    }
+    if (calcularCambiosDeLaSimulacion().total > 0) {
+      return;
+    }
+
+    const cicloQueSeEstabaViendo = indiceCicloEnfocadoSimulacion;
+    datosSimulados = JSON.parse(JSON.stringify(leerDatos()));
+    compromisosMaterializadosSimulacion = materializarCompromisosDelHorizonte(datosSimulados);
+    // Se conserva el ciclo que el usuario estaba viendo: rehacer la copia es un
+    // detalle interno y no debería devolverlo al ciclo actual sin que lo pida.
+    indiceCicloEnfocadoSimulacion = cicloQueSeEstabaViendo;
+  }
+
+  function obtenerCicloEnfocado() {
+    return obtenerHorizonteDeCiclosSimulacion()[indiceCicloEnfocadoSimulacion];
+  }
+
+  // El balance del ciclo enfocado según el motor de simulación — el único que
+  // entiende los diferimientos a crédito: un pago diferido deja de salir de su
+  // ciclo y reaparece como mensualidades en los ciclos que les toca.
+  //
+  // Se calcula una vez por dibujado y se reparte a quien lo necesite, en vez de
+  // que cada parte de la pantalla vuelva a proyectar los siete ciclos.
+  let proyeccionSimuladaDelDibujado = null;
+
+  function recalcularProyeccionSimulada() {
+    asegurarSimulacionAbierta();
+    proyeccionSimuladaDelDibujado = calcularProyeccionSimuladaCompleta(
+      datosSimulados,
+      compromisosMaterializadosSimulacion
+    );
+    return proyeccionSimuladaDelDibujado;
+  }
+
+  function obtenerResultadoSimuladoDelCicloEnfocado() {
+    if (proyeccionSimuladaDelDibujado === null) {
+      recalcularProyeccionSimulada();
+    }
+    return proyeccionSimuladaDelDibujado.resultadosPorCiclo[indiceCicloEnfocadoSimulacion];
+  }
+
+  // Los compromisos del ciclo que se está viendo, ya materializados: incluye
+  // los de ciclos proyectados, que no existen en datos.compromisos.
+  function obtenerItemsSimuladosDelCicloEnfocado() {
+    asegurarSimulacionAbierta();
+    const cicloEnfocado = obtenerCicloEnfocado();
+    return compromisosMaterializadosSimulacion.filter(function (item) {
+      return item.cicloId === cicloEnfocado.id;
+    });
+  }
+
+  // Qué se movió respecto a los datos reales.
+  //
+  // Los compromisos del ciclo actual se comparan contra los reales, uno por
+  // uno. Los de ciclos proyectados no existen en los datos, así que ahí lo
+  // único que se puede consultar es la marca que el motor pone al editarlos
+  // (modificadoEnSimulacion): son cambios reales de la simulación, pero no
+  // guardables — no hay compromiso con id sobre el que escribir.
+  function calcularCambiosDeLaSimulacion() {
+    if (!haySimulacionEnCurso()) {
+      return { montos: 0, fechas: 0, credito: 0, topes: 0, proyectados: 0, guardables: 0, total: 0 };
+    }
+
+    const reales = leerDatos();
+    const ciclo = asegurarCicloActual();
+    let montos = 0;
+    let fechas = 0;
+    let credito = 0;
+    let proyectados = 0;
+
+    (compromisosMaterializadosSimulacion || []).forEach(function (item) {
+      const real = item.id ? reales.compromisos.find(function (c) { return c.id === item.id; }) : null;
+
+      if (!real) {
+        if (item.modificadoEnSimulacion) { proyectados++; }
+        return;
+      }
+
+      if (Number(item.montoEstimado) !== Number(real.montoEstimado)) { montos++; }
+      if (item.fechaProgramada !== real.fechaProgramada || item.cicloId !== real.cicloId) { fechas++; }
+      // El diferimiento a crédito no existe en los datos reales: cualquier
+      // estadoCredito puesto en la simulación es un cambio.
+      if (item.estadoCredito) { credito++; }
+    });
+
+    const cicloSimulado = datosSimulados.ciclos.find(function (c) { return c.id === ciclo.id; });
+    const cicloReal = reales.ciclos.find(function (c) { return c.id === ciclo.id; });
+    let topes = 0;
+    if (cicloSimulado && cicloReal) {
+      const presupuestoSimulado = cicloSimulado.presupuestoSemanal || {};
+      const presupuestoReal = cicloReal.presupuestoSemanal || {};
+      Object.keys(presupuestoSimulado).forEach(function (categoriaId) {
+        if (Number(presupuestoSimulado[categoriaId] || 0) !== Number(presupuestoReal[categoriaId] || 0)) {
+          topes++;
+        }
+      });
+    }
+
+    const guardables = montos + fechas + topes;
+    return {
+      montos: montos,
+      fechas: fechas,
+      credito: credito,
+      topes: topes,
+      proyectados: proyectados,
+      guardables: guardables,
+      total: guardables + credito + proyectados
+    };
+  }
+
+  function renderizarBarraDeSimulacion() {
+    const barra = document.getElementById("barraSimulacion");
+    const cambios = calcularCambiosDeLaSimulacion();
+
+    // Sin cambios no hay nada que guardar ni que descartar: la barra
+    // desaparece en vez de quedarse ocupando espacio con dos botones inertes.
+    if (cambios.total === 0) {
+      barra.innerHTML = "";
+      barra.hidden = true;
+      return;
+    }
+
+    const partes = [];
+    if (cambios.montos > 0) { partes.push(cambios.montos + " monto" + (cambios.montos === 1 ? "" : "s")); }
+    if (cambios.fechas > 0) { partes.push(cambios.fechas + " movido" + (cambios.fechas === 1 ? "" : "s") + " de fecha"); }
+    if (cambios.credito > 0) { partes.push(cambios.credito + " a crédito"); }
+    if (cambios.topes > 0) { partes.push(cambios.topes + " presupuesto" + (cambios.topes === 1 ? "" : "s")); }
+    if (cambios.proyectados > 0) { partes.push(cambios.proyectados + " en ciclos futuros"); }
+
+    // Lo que se puede escribir sobre los datos reales es solo lo del ciclo
+    // actual. Un diferimiento a crédito y los cambios en ciclos proyectados
+    // sirven para decidir, pero no hay compromiso real sobre el que guardarlos
+    // — decirlo aquí evita que Guardar prometa más de lo que hace.
+    const notaNoGuardable = (cambios.credito > 0 || cambios.proyectados > 0)
+      ? "<span class=\"nota-simulacion\">El crédito y los ciclos futuros solo se " +
+        "usan para proyectar: no se guardan.</span>"
+      : "";
+
+    barra.hidden = false;
+    barra.innerHTML =
+      "<span class=\"aviso-simulacion\">Probando: " + partes.join(", ") + "</span>" +
+      notaNoGuardable +
+      "<button type=\"button\" id=\"botonDescartarSimulacion\">Reiniciar</button>" +
+      "<button type=\"button\" id=\"botonGuardarSimulacion\"" +
+        (cambios.guardables === 0 ? " disabled" : "") + ">Guardar</button>";
+
+    document.getElementById("botonDescartarSimulacion").addEventListener("click", reiniciarSimulacion);
+    document.getElementById("botonGuardarSimulacion").addEventListener("click", guardarSimulacion);
+  }
+
+  // Escribe los cambios de la simulación sobre los datos reales. Es el único
+  // punto de la app donde una simulación toca datos de verdad, así que pide
+  // confirmación.
+  function guardarSimulacion() {
+    const cambios = calcularCambiosDeLaSimulacion();
+    if (cambios.guardables === 0) {
+      return;
+    }
+
+    if (!confirm("Vas a guardar " + cambios.guardables + " cambio(s) sobre tus pagos reales. ¿Continuar?")) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+
+    // Solo los compromisos que existen de verdad (los que traen id). Los de
+    // ciclos proyectados no tienen dónde guardarse.
+    compromisosMaterializadosSimulacion.forEach(function (item) {
+      if (!item.id) { return; }
+      const real = datos.compromisos.find(function (c) { return c.id === item.id; });
+      if (!real) { return; }
+
+      real.montoEstimado = Number(item.montoEstimado);
+
+      if (item.fechaProgramada !== real.fechaProgramada) {
+        real.fechaProgramada = item.fechaProgramada;
+        // Mover la fecha puede sacar el pago de su ciclo. Si el cicloId no se
+        // recalcula, el pago sigue contando en el ciclo viejo aunque su fecha
+        // diga otra cosa — el mismo error que ya se corrigió en ingresos.
+        real.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(item.fechaProgramada));
+      } else if (item.cicloId !== real.cicloId) {
+        // Se movió de ciclo con el selector, sin tocar la fecha.
+        real.cicloId = item.cicloId;
+      }
+    });
+
+    const cicloSimulado = datosSimulados.ciclos.find(function (c) { return c.id === ciclo.id; });
+    const cicloReal = datos.ciclos.find(function (c) { return c.id === ciclo.id; });
+    if (cicloSimulado && cicloReal) {
+      cicloReal.presupuestoSemanal = Object.assign({}, cicloSimulado.presupuestoSemanal);
+    }
+
+    guardarDatos(datos);
+    // La simulación se rearma desde los datos ya guardados, así que lo que
+    // queda en pantalla es exactamente lo que se grabó.
+    reiniciarSimulacion();
+    mostrarMensaje("Cambios guardados.");
+  }
+
+  // Editar el monto de un pago. Opera sobre el item materializado, que puede
+  // ser un compromiso real o uno de un ciclo proyectado.
+  function cambiarMontoSimulado(idSimulado, nuevoMonto) {
+    const monto = Number(nuevoMonto);
+    if (!monto || monto <= 0) {
+      renderizarTodo();
+      return;
+    }
+
+    asegurarSimulacionAbierta();
+    const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
+    if (!item) { return; }
+
+    item.montoEstimado = monto;
+    item.modificadoEnSimulacion = true;
+    renderizarTodo();
+  }
+
+  // Mover un pago a otra fecha (posponerlo o adelantarlo).
+  function cambiarFechaSimulada(idSimulado, nuevaFecha) {
+    if (!nuevaFecha) {
+      return;
+    }
+
+    asegurarSimulacionAbierta();
+    const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
+    if (!item) { return; }
+
+    item.fechaProgramada = nuevaFecha;
+    item.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(nuevaFecha));
+    item.modificadoEnSimulacion = true;
+    renderizarTodo();
+  }
+
+  // ============================================================
+  // VISTA ANCHA — TRAYECTORIA
+  // ============================================================
+  //
+  // La misma pregunta que responde el semáforo, pero como recorrido: cuánto
+  // dinero queda cada día del ciclo si el ritmo no cambia, y en qué fecha se
+  // acaba. Reusa calcularTrayectoriaDelSemaforo, que ya calcula el acumulado
+  // día por día con las reglas de SPEC.md — aquí solo se le resta al ingreso
+  // para pasar de "cuánto he gastado" a "cuánto me queda", que es la lectura
+  // que el usuario pidió.
+
+  const ALTO_GRAFICA_TRAYECTORIA = 54;
+
+  // El primer día en que el dinero restante se vuelve negativo. null si el
+  // ciclo cierra sin quedarse sin dinero.
+  function calcularDiaEnQueSeAcabaElDinero(trayectoria, ingresos) {
+    const diaSinDinero = trayectoria.find(function (dia) { return dia.acumulado > ingresos; });
+    return diaSinDinero || null;
+  }
+
+  function renderizarTrayectoriaDeLaPrimeraPantalla() {
+    const datos = obtenerDatosVisibles();
+    // La curva día por día solo tiene sentido en el ciclo en curso: en uno
+    // futuro no hay "hoy" dentro, ni gasto variable real con el que medir un
+    // ritmo. Ahí el veredicto es el balance proyectado, que ya está arriba.
+    const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
+    const banda = document.getElementById("bandaTrayectoria");
+    banda.hidden = !esCicloActual;
+    if (!esCicloActual) {
+      return;
+    }
+
+    const ciclo = obtenerCicloEnfocado();
+    const ingresos = calcularIngresosDelCiclo(ciclo, datos);
+    const veredicto = document.getElementById("veredictoTrayectoria");
+    const contenedor = document.getElementById("graficaTrayectoria");
+
+    // Sin ingreso capturado no hay contra qué comparar — mismo criterio "gris"
+    // que ya usa el semáforo: no es que el ciclo vaya mal, es que todavía no
+    // hay nada que calcular.
+    if (ingresos <= 0) {
+      veredicto.textContent = "Captura un ingreso de este ciclo para ver la trayectoria.";
+      contenedor.innerHTML = "";
+      return;
+    }
+
+    const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
+    const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
+      .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+
+    const trayectoria = calcularTrayectoriaDelSemaforo(ciclo, datos, mensualidadesDeTarjeta);
+    const diaSinDinero = calcularDiaEnQueSeAcabaElDinero(trayectoria, ingresos);
+    const restanteAlCerrar = ingresos - trayectoria[trayectoria.length - 1].acumulado;
+
+    if (diaSinDinero) {
+      const fecha = crearFechaLocal(diaSinDinero.fechaISO);
+      const diasQueFaltanParaCerrar = trayectoria.length -
+        trayectoria.findIndex(function (dia) { return dia.fechaISO === diaSinDinero.fechaISO; }) - 1;
+      veredicto.innerHTML = "Te quedas sin dinero el <strong>" + fecha.getDate() + " de " +
+        NOMBRES_DE_MESES[fecha.getMonth()].toLowerCase() + "</strong>" +
+        (diasQueFaltanParaCerrar > 0
+          ? ", a " + diasQueFaltanParaCerrar + " día" + (diasQueFaltanParaCerrar === 1 ? "" : "s") + " de cerrar."
+          : ", justo al cerrar.");
+    } else {
+      veredicto.innerHTML = "El ciclo cierra con <strong>" + formatearMoneda(restanteAlCerrar) +
+        "</strong> si el ritmo no cambia.";
+    }
+
+    contenedor.innerHTML = construirSVGDeTrayectoria(trayectoria, ingresos, contenedor.clientWidth);
+  }
+
+  // La gráfica se dibuja en píxeles reales, con el ancho medido del
+  // contenedor, y no en un viewBox estirado: estirando un viewBox angosto al
+  // ancho de la pantalla, el punteado de la línea proyectada se deforma con él
+  // y la curva se ve como una hilera de guiones sueltos en vez de una línea.
+  // Al cambiar el tamaño de la ventana se vuelve a generar.
+  function construirSVGDeTrayectoria(trayectoria, ingresos, anchoEnPixeles) {
+    const ancho = Math.max(anchoEnPixeles || 0, 120);
+    const restantes = trayectoria.map(function (dia) { return ingresos - dia.acumulado; });
+    const maximo = Math.max.apply(null, restantes.concat([ingresos]));
+    const minimo = Math.min.apply(null, restantes.concat([0]));
+    const alcance = (maximo - minimo) || 1;
+
+    function coordenadaX(indice) {
+      return (indice / Math.max(trayectoria.length - 1, 1)) * ancho;
+    }
+    function coordenadaY(valor) {
+      // Se deja un pixel de aire arriba y abajo para que el trazo no se corte.
+      return 1 + ((maximo - valor) / alcance) * (ALTO_GRAFICA_TRAYECTORIA - 2);
+    }
+
+    const indiceDeHoy = trayectoria.reduce(function (ultimo, dia, indice) {
+      return dia.esFuturo ? ultimo : indice;
+    }, 0);
+
+    // Lo ya ocurrido y lo proyectado son dos trazos distintos, unidos por el
+    // punto de hoy para que la línea no se vea partida.
+    const puntosReales = restantes.slice(0, indiceDeHoy + 1).map(function (valor, indice) {
+      return coordenadaX(indice).toFixed(2) + "," + coordenadaY(valor).toFixed(2);
+    }).join(" ");
+
+    const puntosProyectados = restantes.slice(indiceDeHoy).map(function (valor, posicion) {
+      return coordenadaX(indiceDeHoy + posicion).toFixed(2) + "," + coordenadaY(valor).toFixed(2);
+    }).join(" ");
+
+    const yDelCero = coordenadaY(0);
+    const xDeHoy = coordenadaX(indiceDeHoy);
+
+    // Marca del día en que el dinero se acaba, si ocurre.
+    let marcaQuiebre = "";
+    const indiceQuiebre = restantes.findIndex(function (valor) { return valor < 0; });
+    if (indiceQuiebre !== -1) {
+      marcaQuiebre = "<circle class=\"punto-quiebre\" cx=\"" + coordenadaX(indiceQuiebre).toFixed(2) +
+        "\" cy=\"" + coordenadaY(restantes[indiceQuiebre]).toFixed(2) + "\" r=\"1.6\"/>";
+    }
+
+    // El primer día del ciclo la parte real es un solo punto, y un polyline de
+    // un punto no dibuja nada: se marca con un círculo para que "hoy" siempre
+    // se vea sobre la curva.
+    const puntoDeHoy = "<circle class=\"punto-hoy\" cx=\"" + xDeHoy.toFixed(2) +
+      "\" cy=\"" + coordenadaY(restantes[indiceDeHoy]).toFixed(2) + "\" r=\"2.5\"/>";
+
+    return "<svg viewBox=\"0 0 " + ancho + " " + ALTO_GRAFICA_TRAYECTORIA + "\" " +
+      "role=\"img\" aria-label=\"Dinero restante día por día en el ciclo\">" +
+      "<line class=\"linea-cero\" x1=\"0\" y1=\"" + yDelCero.toFixed(2) +
+        "\" x2=\"" + ancho + "\" y2=\"" + yDelCero.toFixed(2) + "\"/>" +
+      "<line class=\"marca-hoy\" x1=\"" + xDeHoy.toFixed(2) + "\" y1=\"0\" x2=\"" + xDeHoy.toFixed(2) +
+        "\" y2=\"" + ALTO_GRAFICA_TRAYECTORIA + "\"/>" +
+      "<polyline class=\"linea-real\" points=\"" + puntosReales + "\"/>" +
+      "<polyline class=\"linea-proyectada\" points=\"" + puntosProyectados + "\"/>" +
+      puntoDeHoy +
+      marcaQuiebre +
+    "</svg>";
+  }
+
+  // ============================================================
+  // VISTA ANCHA — CAJÓN DE CALENDARIO (cerrado)
+  // ============================================================
+  //
+  // Cerrado muestra los próximos días con algo pendiente. El despliegue
+  // completo (mes a la izquierda, día elegido a la derecha, con las mismas
+  // filas del muro) es la siguiente pieza y todavía no está construido.
+
+  const DIAS_A_MOSTRAR_EN_EL_CAJON = 7;
+
+  // Qué día está elegido en el calendario y qué mes se está viendo. Viven en
+  // variables de módulo, no en los datos: son estado de la pantalla en este
+  // momento, no algo que deba sobrevivir a un respaldo.
+  let diaElegidoDelCajon = null;   // "AAAA-MM-DD"
+  let mesVisibleDelCajon = null;   // Date con día 1 del mes que se muestra
+
+  function cajonEstaAbierto() {
+    return document.getElementById("cajonCalendario").classList.contains("abierto");
+  }
+
+  function abrirCajonDeCalendario() {
+    const cajon = document.getElementById("cajonCalendario");
+    const asa = document.getElementById("asaCajon");
+
+    // Se abre en el día de hoy si no había nada elegido antes.
+    if (diaElegidoDelCajon === null) {
+      diaElegidoDelCajon = formatearFechaISO(truncarAMedianoche(new Date()));
+    }
+    const elegido = crearFechaLocal(diaElegidoDelCajon);
+    mesVisibleDelCajon = new Date(elegido.getFullYear(), elegido.getMonth(), 1);
+
+    cajon.classList.add("abierto");
+    document.getElementById("primeraPantalla").classList.add("con-cajon-abierto");
+    document.getElementById("cuerpoCajon").hidden = false;
+    asa.setAttribute("aria-expanded", "true");
+    document.getElementById("pistaCajon").textContent =
+      "Toca un día para ver y marcar sus pagos · toca aquí para minimizar";
+
+    renderizarMesDelCajon();
+    renderizarDiaElegidoDelCajon();
+  }
+
+  function cerrarCajonDeCalendario() {
+    const cajon = document.getElementById("cajonCalendario");
+    const asa = document.getElementById("asaCajon");
+
+    cajon.classList.remove("abierto");
+    document.getElementById("primeraPantalla").classList.remove("con-cajon-abierto");
+    document.getElementById("cuerpoCajon").hidden = true;
+    asa.setAttribute("aria-expanded", "false");
+    document.getElementById("pistaCajon").textContent =
+      "Próximos 7 días · toca para ver el mes completo";
+
+    // El muro vuelve a la pantalla con toda la altura disponible, así que su
+    // acomodo se rehace desde cero para ese espacio.
+    renderizarMuroDePagos();
+  }
+
+  function alternarCajonDeCalendario() {
+    if (cajonEstaAbierto()) {
+      cerrarCajonDeCalendario();
+      return;
+    }
+    // Al abrir no se reacomoda el muro: queda oculto detrás del cajón, así
+    // que medirlo contra la altura sobrante sería trabajo tirado.
+    abrirCajonDeCalendario();
+  }
+
+  function cambiarMesDelCajon(cuantosMeses) {
+    mesVisibleDelCajon = new Date(
+      mesVisibleDelCajon.getFullYear(),
+      mesVisibleDelCajon.getMonth() + cuantosMeses,
+      1
+    );
+    renderizarMesDelCajon();
+  }
+
+  // Todos los compromisos de una fecha, sin importar de qué ciclo sean: el
+  // calendario se mueve por meses y un mes cruza dos ciclos.
+  function obtenerCompromisosDeLaFecha(fechaISO, datos) {
+    return datos.compromisos
+      .filter(function (compromiso) { return compromiso.fechaProgramada === fechaISO; })
+      .sort(function (a, b) { return a.nombre < b.nombre ? -1 : 1; });
+  }
+
+  function renderizarMesDelCajon() {
+    const datos = obtenerDatosVisibles();
+    const ciclo = asegurarCicloActual();
+    const anio = mesVisibleDelCajon.getFullYear();
+    const mes = mesVisibleDelCajon.getMonth();
+
+    document.getElementById("nombreMesCajon").textContent =
+      NOMBRES_DE_MESES[mes] + " " + anio;
+
+    // La rejilla arranca en domingo, como el calendario de Análisis, para que
+    // las dos vistas se lean igual.
+    const primerDiaDelMes = new Date(anio, mes, 1);
+    const huecosIniciales = primerDiaDelMes.getDay();
+    const diasDelMes = diasEnElMes(anio, mes);
+    const hoyISO = formatearFechaISO(truncarAMedianoche(new Date()));
+
+    let html = DIAS_SEMANA_ABREVIADOS.map(function (dia) {
+      return "<div class=\"encabezado-dia-semana\">" + dia + "</div>";
+    }).join("");
+
+    for (let i = 0; i < huecosIniciales; i++) {
+      html += "<div class=\"celda-dia fuera-del-mes\"></div>";
+    }
+
+    for (let dia = 1; dia <= diasDelMes; dia++) {
+      const fechaISO = formatearFechaISO(new Date(anio, mes, dia));
+      const compromisos = obtenerCompromisosDeLaFecha(fechaISO, datos);
+
+      // Un punto por compromiso, con su estado. Es la misma lectura que en el
+      // muro, así que no hace falta leyenda.
+      const puntos = compromisos.map(function (compromiso) {
+        return "<span class=\"punto-estado " + calcularEstadoDePago(compromiso) + "\"></span>";
+      }).join("");
+
+      const dentroDelCiclo = fechaISO >= ciclo.fechaInicio && fechaISO <= ciclo.fechaFin;
+      const clases = ["celda-dia"];
+      if (fechaISO === diaElegidoDelCajon) { clases.push("elegida"); }
+      if (fechaISO === hoyISO) { clases.push("es-hoy"); }
+      if (!dentroDelCiclo) { clases.push("fuera-del-ciclo"); }
+
+      html += "<button type=\"button\" class=\"" + clases.join(" ") + "\" data-fecha=\"" + fechaISO + "\">" +
+        "<span class=\"numero-dia\">" + dia + "</span>" +
+        "<span class=\"puntos-del-dia\">" + puntos + "</span>" +
+      "</button>";
+    }
+
+    const rejilla = document.getElementById("rejillaMesCajon");
+    rejilla.innerHTML = html;
+
+    rejilla.querySelectorAll("[data-fecha]").forEach(function (celda) {
+      celda.addEventListener("click", function () {
+        diaElegidoDelCajon = celda.getAttribute("data-fecha");
+        renderizarMesDelCajon();
+        renderizarDiaElegidoDelCajon();
+      });
+    });
+  }
+
+  // El día elegido muestra sus pagos con las mismas filas del muro: mismo
+  // punto de estado, mismo nombre, mismo monto alineado. Así lo que se aprende
+  // a leer en el muro sirve igual aquí.
+  function renderizarDiaElegidoDelCajon() {
+    const datos = obtenerDatosVisibles();
+    const compromisos = obtenerCompromisosDeLaFecha(diaElegidoDelCajon, datos);
+    const fecha = crearFechaLocal(diaElegidoDelCajon);
+
+    const total = compromisos.reduce(function (suma, compromiso) {
+      return suma + Number(compromiso.pagado ? compromiso.montoReal : compromiso.montoEstimado);
+    }, 0);
+
+    document.getElementById("encabezadoDiaCajon").innerHTML =
+      "<span class=\"fecha-dia-elegido\">" +
+        DIAS_SEMANA_COMPLETOS[fecha.getDay()] + " " + fecha.getDate() + " de " +
+        NOMBRES_DE_MESES[fecha.getMonth()].toLowerCase() +
+      "</span>" +
+      (compromisos.length > 0
+        ? "<span class=\"total-dia-elegido\">" + formatearMoneda(total) + "</span>"
+        : "");
+
+    const contenedor = document.getElementById("contenidoDiaCajon");
+
+    if (compromisos.length === 0) {
+      contenedor.innerHTML = "<p class=\"dia-sin-nada\">Nada programado este día.</p>";
+      return;
+    }
+
+    // Se agrupan por categoría para que el día se lea con la misma estructura
+    // del muro, no como una lista plana.
+    const porCategoria = {};
+    compromisos.forEach(function (compromiso) {
+      const categoriaId = resolverCategoriaDeCompromiso(compromiso, datos);
+      const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaId; });
+      const nombre = categoria
+        ? categoria.nombre
+        : (compromiso.origen === "tarjeta" ? "Tarjetas" : compromiso.origen === "deuda" ? "Deudas" : "Sin categoría");
+
+      if (!porCategoria[nombre]) { porCategoria[nombre] = []; }
+      porCategoria[nombre].push(compromiso);
+    });
+
+    contenedor.innerHTML = Object.keys(porCategoria).map(function (nombre) {
+      return htmlDeRecuadroDelMuro({
+        tipo: "pagos",
+        nombre: nombre,
+        grupos: [{ titulo: null, pagos: porCategoria[nombre] }]
+      }, false, true);
+    }).join("");
+
+    // Posponer o adelantar un pago: entra a la simulación como cualquier otro
+    // cambio, así que se ve en el muro y en el balance antes de guardarlo.
+    contenedor.querySelectorAll("[data-fecha-de]").forEach(function (campo) {
+      campo.addEventListener("change", function () {
+        cambiarFechaSimulada(campo.getAttribute("data-fecha-de"), campo.value);
+      });
+    });
+
+    // Marcar pagado desde aquí: es la razón de que el calendario sea
+    // desplegable y no solo consultable.
+    contenedor.querySelectorAll(".boton-marcar-pagado").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        // Un pago es un hecho, no una hipótesis: se escribe en los datos
+        // reales. Con cambios de simulación encima, guardarlo dejaría la copia
+        // de trabajo desfasada de la realidad, así que primero hay que
+        // resolver la simulación.
+        if (haySimulacionEnCurso() && calcularCambiosDeLaSimulacion().total > 0) {
+          alert("Tienes cambios sin guardar en la simulación. Guárdalos o reinicia antes de marcar un pago.");
+          return;
+        }
+        confirmarPagoDeCompromiso(
+          boton.getAttribute("data-compromiso-id"),
+          boton.closest(".confirmacion-en-cajon")
+        );
+      });
+    });
+  }
+
+  function renderizarCajonDeCalendario() {
+    const datos = obtenerDatosVisibles();
+    const ciclo = asegurarCicloActual();
+    const contenedor = document.getElementById("proximosDiasCajon");
+
+    // Si está desplegado, lo que hay que refrescar es el mes y el día, no la
+    // tira cerrada: un pago marcado desde el cajón tiene que verse ahí mismo.
+    if (cajonEstaAbierto()) {
+      renderizarMesDelCajon();
+      renderizarDiaElegidoDelCajon();
+    }
+
+    // Siete días consecutivos desde hoy, uno por celda — no "los siete
+    // próximos días que tienen algo". Los días vacíos también se muestran:
+    // saber que el jueves no cae nada es información, y además mantiene la
+    // tira estable en vez de reacomodarse cada vez que se paga algo.
+    const hoy = truncarAMedianoche(new Date());
+
+    contenedor.innerHTML = "";
+    for (let desplazamiento = 0; desplazamiento < DIAS_A_MOSTRAR_EN_EL_CAJON; desplazamiento++) {
+      const fecha = sumarDias(hoy, desplazamiento);
+      const fechaISO = formatearFechaISO(fecha);
+      const compromisos = obtenerCompromisosDeLaFecha(fechaISO, datos);
+
+      const total = compromisos.reduce(function (suma, compromiso) {
+        return suma + Number(compromiso.pagado ? compromiso.montoReal : compromiso.montoEstimado);
+      }, 0);
+
+      const puntos = compromisos.map(function (compromiso) {
+        return "<span class=\"punto-estado " + calcularEstadoDePago(compromiso) + "\"></span>";
+      }).join("");
+
+      const clases = ["celda-proxima"];
+      if (desplazamiento === 0) { clases.push("es-hoy"); }
+      if (compromisos.length === 0) { clases.push("sin-nada"); }
+
+      contenedor.insertAdjacentHTML("beforeend",
+        "<button type=\"button\" class=\"" + clases.join(" ") + "\" data-fecha=\"" + fechaISO + "\">" +
+          "<span class=\"dia-semana\">" + DIAS_SEMANA_ABREVIADOS[fecha.getDay()] + "</span>" +
+          "<span class=\"numero-grande\">" + fecha.getDate() + "</span>" +
+          "<span class=\"puntos-del-dia\">" + puntos + "</span>" +
+          "<span class=\"monto-del-dia\">" + (compromisos.length > 0 ? formatearMoneda(total) : "—") + "</span>" +
+        "</button>");
+    }
+
+    // Tocar un día de la tira abre el cajón ya puesto en ese día.
+    contenedor.querySelectorAll("[data-fecha]").forEach(function (celda) {
+      celda.addEventListener("click", function () {
+        diaElegidoDelCajon = celda.getAttribute("data-fecha");
+        abrirCajonDeCalendario();
+      });
+    });
+  }
+
+  // ============================================================
+  // MODAL DE AJUSTES
+  // ============================================================
+  //
+  // Reemplaza a la pestaña de Configuración. Es una ventana flotante de
+  // tamaño contenido, nunca a pantalla completa: se abre, se captura o se
+  // corrige algo, y se cierra volviendo al muro.
+  //
+  // El estado (abierto o cerrado) vive en el DOM, no en los datos: es un
+  // detalle de la pantalla en este momento, no algo que deba sobrevivir a un
+  // respaldo ni sincronizarse entre dispositivos.
+
+  function abrirAjustes() {
+    document.getElementById("capaModal").hidden = false;
+    document.getElementById("botonCerrarAjustes").focus();
+  }
+
+  function cerrarAjustes() {
+    document.getElementById("capaModal").hidden = true;
+    document.getElementById("botonAgregarYAjustar").focus();
+  }
+
+  function ajustesEstanAbiertos() {
+    return document.getElementById("capaModal").hidden === false;
   }
 
   function renderizarTodo() {
@@ -5683,27 +8206,75 @@
     renderizarTrayectoriaSemaforo();
     renderizarProximosPagosAnalisis();
     renderizarMovimientosDelCiclo();
-    renderizarCalendario();
     renderizarEstadoDeDeudaAnalisis();
-    mostrarPestanaAncha(pestanaAnchaActiva);
+    // La primera pantalla siempre trabaja sobre la simulación, así que se
+    // asegura antes de dibujar cualquier parte de ella — y se sincroniza con
+    // los datos reales, que pudieron cambiar desde Ajustes o desde Captura.
+    asegurarSimulacionAbierta();
+    sincronizarSimulacionConLosDatosReales();
+    // Los siete ciclos se proyectan una sola vez por dibujado y de ahí leen el
+    // encabezado, la trayectoria y el resumen del muro.
+    recalcularProyeccionSimulada();
+    renderizarEncabezadoDelCiclo();
+    // El muro va al final: su acomodo mide la altura que le queda libre, así
+    // que todo lo que comparte la primera pantalla con él (barra, trayectoria
+    // y cajón) tiene que estar ya dibujado con su tamaño final.
+    renderizarBarraDeSimulacion();
+    renderizarTrayectoriaDeLaPrimeraPantalla();
+    renderizarCajonDeCalendario();
+    renderizarMuroDePagos();
+    // Si la ventana de opciones estaba abierta, se vuelve a armar sobre el
+    // mismo pago: así se prueban varias combinaciones (débito, 3 meses, 6
+    // meses) viendo el efecto en el balance sin tener que reabrirla cada vez.
+    if (idDePagoConOpcionesAbiertas !== null) {
+      abrirOpcionesDePago(idDePagoConOpcionesAbiertas);
+    }
     mostrarDatosEnPantalla();
   }
 
-  document.querySelectorAll("[data-pestana]").forEach(function (boton) {
-    boton.addEventListener("click", function () {
-      const nombre = boton.getAttribute("data-pestana");
-      mostrarPestanaAncha(nombre);
-      // Solo aquí, en el clic real de "entrar a la pestaña" — nunca en la
-      // reaplicación de mostrarPestanaAncha(pestanaAnchaActiva) dentro de
-      // renderizarTodo(), que corre en cada guardado de toda la app y
-      // borraría la simulación en curso sin que el usuario lo pidiera.
-      if (nombre === "simulacion") {
-        reiniciarSimulacion();
-      }
-    });
+  document.getElementById("botonAgregarYAjustar").addEventListener("click", abrirAjustes);
+  document.getElementById("botonCerrarAjustes").addEventListener("click", cerrarAjustes);
+
+  document.getElementById("cicloAnterior").addEventListener("click", function () {
+    cambiarCicloEnfocadoSimulacion(-1);
+  });
+  document.getElementById("cicloSiguiente").addEventListener("click", function () {
+    cambiarCicloEnfocadoSimulacion(1);
   });
 
-  document.getElementById("botonReiniciarSimulacion").addEventListener("click", reiniciarSimulacion);
+  document.getElementById("asaCajon").addEventListener("click", alternarCajonDeCalendario);
+  document.getElementById("mesAnteriorCajon").addEventListener("click", function () {
+    cambiarMesDelCajon(-1);
+  });
+  document.getElementById("mesSiguienteCajon").addEventListener("click", function () {
+    cambiarMesDelCajon(1);
+  });
+
+  // Clic en el fondo oscuro cierra; clic dentro del panel, no.
+  document.getElementById("capaModal").addEventListener("click", function (evento) {
+    if (evento.target === this) {
+      cerrarAjustes();
+    }
+  });
+
+  document.addEventListener("keydown", function (evento) {
+    if (evento.key !== "Escape") { return; }
+    // Se cierra primero lo que esté más encima.
+    if (opcionesDePagoEstanAbiertas()) {
+      cerrarOpcionesDePago();
+      return;
+    }
+    if (ajustesEstanAbiertos()) {
+      cerrarAjustes();
+    }
+  });
+
+  document.getElementById("capaOpcionesPago").addEventListener("click", function (evento) {
+    if (evento.target === this) {
+      cerrarOpcionesDePago();
+    }
+  });
+
 
   document.getElementById("formCategoria").addEventListener("submit", manejarEnvioCategoria);
   document.getElementById("formTarjeta").addEventListener("submit", manejarEnvioTarjeta);
