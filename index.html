@@ -450,6 +450,9 @@
     --superficie-sel-c: #2c2833;
     --texto-c: #f6f3ef;
     --texto-sec-c: #948e9c;
+    /* Tercer nivel de texto del sistema aprobado, para etiquetas y apoyos que
+       no deben competir ni con el dato ni con su rótulo. */
+    --texto-ter-c: #6f6a78;
     --borde-c: #35313c;
     background-color: var(--fondo-c);
     color: var(--texto-c);
@@ -689,6 +692,81 @@
   }
   #vistaCaptura .avance-categoria {
     color: var(--texto-sec-c);
+  }
+
+  /* ---------- Atajos de gasto ---------- */
+  /* Lo que se registra a diario cabe en un toque. Dos columnas de superficies
+     táctiles grandes, con la subcategoría como titular y la categoría en
+     pequeño debajo: al elegir "Súper" uno sabe que va a Comida sin leerlo. */
+  #vistaCaptura .atajos-gasto {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  #vistaCaptura .atajo-gasto {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    border: 1px solid var(--borde-c);
+    background-color: var(--superficie-c);
+    border-radius: 10px;
+    padding: 12px 13px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  #vistaCaptura .atajo-gasto:active { transform: translateY(1px); }
+  #vistaCaptura .atajo-gasto.seleccionado {
+    border-color: var(--texto-c);
+    background-color: var(--superficie-sel-c);
+  }
+  #vistaCaptura .atajo-titulo {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--texto-c);
+  }
+  #vistaCaptura .atajo-categoria {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--texto-ter-c);
+  }
+  /* "Otro" se distingue por trazo, no por color: no es una categoría más, es
+     la salida para lo que no encaja. */
+  #vistaCaptura .atajo-otro {
+    border-style: dashed;
+    background-color: transparent;
+  }
+
+  #vistaCaptura .boton-mas-categorias {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--texto-sec-c);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 0 10px;
+    cursor: pointer;
+  }
+  #vistaCaptura .boton-mas-categorias:active { color: var(--texto-c); }
+
+  /* A dónde va el gasto que se está capturando, cuando se llegó por un atajo
+     y no se vieron los botones de categoría. */
+  #vistaCaptura .destino-del-gasto {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-ter-c);
+  }
+
+  #vistaCaptura .opcional {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto-ter-c);
   }
 
   /* ============================================================ */
@@ -1883,18 +1961,31 @@
     <!-- existen (compromiso.pagado) — no agrega ninguna fórmula nueva. -->
     <div id="resumenSuperiorCaptura" class="resumen-superior"></div>
 
-    <!-- PENDIENTES -->
-    <section>
-      <h2>Pendientes</h2>
+    <!-- PRÓXIMOS PAGOS -->
+    <!-- Lo primero al abrir el teléfono, y lo más usado: ver qué se debe,
+         tocarlo y pagarlo con el monto real. -->
+    <section id="seccionProximosPagos">
+      <h2>Próximos pagos</h2>
       <ul class="lista-items" id="listaPendientes"></ul>
     </section>
 
     <!-- GASTO NUEVO -->
-    <section>
+    <section id="seccionGastoNuevo">
       <h2>Gasto nuevo</h2>
 
-      <p class="pista">Categoría</p>
-      <div class="botones-grandes" id="botonesCategoriaGasto"></div>
+      <!-- Atajos: lo que se registra a diario no debería costar tres toques.
+           Se arman con lo que más se usa de verdad (ver renderizarAtajosDeGasto),
+           más "Otro" para lo que no encaja en nada. -->
+      <div class="atajos-gasto" id="atajosGasto"></div>
+
+      <button type="button" class="boton-mas-categorias" id="botonMasCategorias">
+        Otra categoría
+      </button>
+
+      <div id="pasoCategoriaGasto" style="display: none;">
+        <p class="pista">Categoría</p>
+        <div class="botones-grandes" id="botonesCategoriaGasto"></div>
+      </div>
 
       <div id="pasoSubcategoriaGasto" style="display: none;">
         <p class="pista">Subcategoría</p>
@@ -1902,6 +1993,8 @@
       </div>
 
       <div id="pasoDetalleGasto" style="display: none;">
+        <p class="destino-del-gasto" id="destinoDelGasto"></p>
+
         <label>Monto
           <input type="number" inputmode="decimal" min="0" step="0.01" id="montoGastoNuevo" class="monto-grande">
         </label>
@@ -1917,7 +2010,13 @@
           <div class="botones-grandes" id="botonesTarjetaGasto"></div>
         </div>
 
-        <label>Descripción (opcional)
+        <label>Para quién <span class="opcional">opcional</span>
+          <input type="text" id="destinatarioGastoNuevo" list="destinatariosUsados"
+                 placeholder="Casa de mi abuela, celular de mi mamá...">
+        </label>
+        <datalist id="destinatariosUsados"></datalist>
+
+        <label>Descripción <span class="opcional">opcional</span>
           <input type="text" id="descripcionGastoNuevo">
         </label>
 
@@ -6359,6 +6458,134 @@
     return Math.floor(diasTranscurridos / 7) + 1;
   }
 
+  // ============================================================
+  // CAPTURA — ATAJOS DE GASTO
+  // ============================================================
+  //
+  // Lo que se registra a diario no debería costar tres toques. Los atajos
+  // llevan directo al monto con la categoría y subcategoría ya puestas.
+  //
+  // Se arman con lo que más se usa de verdad, contando los gastos ya
+  // registrados. Mientras no haya historial suficiente se completan con las
+  // subcategorías de las categorías variables (comida, transporte,
+  // entretenimiento), que son las de uso diario por definición.
+
+  const CANTIDAD_DE_ATAJOS = 4;
+
+  // Nombre visible de la categoría "Otros": la que recibe lo que no encaja en
+  // ninguna otra. Se crea sola la primera vez que se usa (decisión del
+  // usuario, 30 jul 2026) en vez de dejar gastos sin categoría.
+  const NOMBRE_CATEGORIA_OTROS = "Otros";
+  const SUBCATEGORIA_OTROS = "Sin clasificar";
+
+  function asegurarCategoriaOtros() {
+    const datos = leerDatos();
+    let categoria = datos.config.categorias.find(function (c) {
+      return c.nombre === NOMBRE_CATEGORIA_OTROS;
+    });
+
+    if (!categoria) {
+      categoria = {
+        id: generarId("cat"),
+        nombre: NOMBRE_CATEGORIA_OTROS,
+        subcategorias: [SUBCATEGORIA_OTROS],
+        esVariableSemanal: false
+      };
+      datos.config.categorias.push(categoria);
+      guardarDatos(datos);
+    } else if (categoria.subcategorias.indexOf(SUBCATEGORIA_OTROS) === -1) {
+      categoria.subcategorias.push(SUBCATEGORIA_OTROS);
+      guardarDatos(datos);
+    }
+
+    return categoria;
+  }
+
+  // Los pares categoría+subcategoría más usados, por número de gastos.
+  function calcularAtajosDeGasto(datos) {
+    const conteo = {};
+
+    datos.gastos.forEach(function (gasto) {
+      if (!gasto.categoriaId || !gasto.subcategoria) {
+        return;
+      }
+      const llave = gasto.categoriaId + "|" + gasto.subcategoria;
+      conteo[llave] = (conteo[llave] || 0) + 1;
+    });
+
+    const usados = Object.keys(conteo)
+      .sort(function (a, b) { return conteo[b] - conteo[a]; })
+      .map(function (llave) {
+        return { categoriaId: llave.split("|")[0], subcategoria: llave.split("|")[1] };
+      });
+
+    // Se rellena con las subcategorías de las categorías variables, que son
+    // las de gasto diario, sin repetir las que ya entraron por uso.
+    const candidatas = usados.slice();
+    datos.config.categorias
+      .filter(function (categoria) { return categoria.esVariableSemanal; })
+      .forEach(function (categoria) {
+        (categoria.subcategorias || []).forEach(function (subcategoria) {
+          const yaEsta = candidatas.some(function (a) {
+            return a.categoriaId === categoria.id && a.subcategoria === subcategoria;
+          });
+          if (!yaEsta) {
+            candidatas.push({ categoriaId: categoria.id, subcategoria: subcategoria });
+          }
+        });
+      });
+
+    return candidatas.slice(0, CANTIDAD_DE_ATAJOS).filter(function (atajo) {
+      // Una categoría pudo borrarse después de haberse usado.
+      return datos.config.categorias.some(function (c) { return c.id === atajo.categoriaId; });
+    });
+  }
+
+  function renderizarAtajosDeGasto() {
+    const datos = leerDatos();
+    const contenedor = document.getElementById("atajosGasto");
+    const atajos = calcularAtajosDeGasto(datos);
+
+    const nombreDeCategoria = {};
+    datos.config.categorias.forEach(function (c) { nombreDeCategoria[c.id] = c.nombre; });
+
+    contenedor.innerHTML = atajos.map(function (atajo) {
+      return "<button type=\"button\" class=\"atajo-gasto\"" +
+        " data-atajo-categoria=\"" + atajo.categoriaId + "\"" +
+        " data-atajo-subcategoria=\"" + escaparHTML(atajo.subcategoria) + "\">" +
+        "<span class=\"atajo-titulo\">" + escaparHTML(atajo.subcategoria) + "</span>" +
+        "<span class=\"atajo-categoria\">" + escaparHTML(nombreDeCategoria[atajo.categoriaId] || "") + "</span>" +
+      "</button>";
+    }).join("") +
+    "<button type=\"button\" class=\"atajo-gasto atajo-otro\" id=\"atajoOtro\">" +
+      "<span class=\"atajo-titulo\">Otro</span>" +
+      "<span class=\"atajo-categoria\">sin clasificar</span>" +
+    "</button>";
+
+    contenedor.querySelectorAll("[data-atajo-categoria]").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        usarAtajoDeGasto(
+          boton.getAttribute("data-atajo-categoria"),
+          boton.getAttribute("data-atajo-subcategoria")
+        );
+      });
+    });
+
+    document.getElementById("atajoOtro").addEventListener("click", function () {
+      const categoria = asegurarCategoriaOtros();
+      renderizarBotonesCategoriaGasto();
+      usarAtajoDeGasto(categoria.id, SUBCATEGORIA_OTROS);
+    });
+  }
+
+  // Salta directo al monto: la categoría y la subcategoría ya quedaron
+  // elegidas por el atajo.
+  function usarAtajoDeGasto(categoriaId, subcategoria) {
+    seleccionarCategoriaGasto(categoriaId);
+    seleccionarSubcategoriaGasto(subcategoria);
+    document.getElementById("montoGastoNuevo").focus();
+  }
+
   function renderizarBotonesCategoriaGasto() {
     const datos = leerDatos();
     const contenedor = document.getElementById("botonesCategoriaGasto");
@@ -6407,7 +6634,33 @@
       boton.classList.toggle("seleccionado", boton.getAttribute("data-subcategoria") === subcategoria);
     });
 
+    // Con los atajos se puede llegar aquí sin haber visto los botones de
+    // categoría, así que el detalle dice en voz alta a dónde va el gasto.
+    const datos = leerDatos();
+    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaSeleccionadaGasto; });
+    document.getElementById("destinoDelGasto").textContent =
+      (categoria ? categoria.nombre : "") + " · " + subcategoria;
+
     document.getElementById("pasoDetalleGasto").style.display = "block";
+  }
+
+  // Los destinatarios ya usados se ofrecen como sugerencia: escribir "Casa de
+  // mi abuela" una vez y que la segunda salga sola es la diferencia entre que
+  // el campo se use y que se ignore.
+  function renderizarDestinatariosUsados() {
+    const datos = leerDatos();
+    const usados = [];
+
+    datos.gastos.concat(datos.recurrentes, datos.compromisos).forEach(function (registro) {
+      const destinatario = registro.destinatario;
+      if (destinatario && usados.indexOf(destinatario) === -1) {
+        usados.push(destinatario);
+      }
+    });
+
+    document.getElementById("destinatariosUsados").innerHTML = usados.map(function (destinatario) {
+      return "<option value=\"" + escaparHTML(destinatario) + "\"></option>";
+    }).join("");
   }
 
   // Si solo hay una tarjeta configurada, se asigna sola (no le cuesta un
@@ -6503,7 +6756,9 @@
       monto: monto,
       categoriaId: categoriaSeleccionadaGasto,
       subcategoria: subcategoriaSeleccionadaGasto,
-      destinatario: null,
+      // Se captura desde el propio gasto: sin esto, el desglose por
+      // destinatario que pide SPEC.md nunca tendría datos de gastos libres.
+      destinatario: document.getElementById("destinatarioGastoNuevo").value.trim() || null,
       fuente: fuenteSeleccionadaGasto,
       tarjetaId: tarjetaSeleccionadaGasto,
       compromisoId: null,
@@ -6523,11 +6778,16 @@
 
     document.getElementById("montoGastoNuevo").value = "";
     document.getElementById("descripcionGastoNuevo").value = "";
+    document.getElementById("destinatarioGastoNuevo").value = "";
+    document.getElementById("pasoCategoriaGasto").style.display = "none";
     document.getElementById("pasoSubcategoriaGasto").style.display = "none";
     document.getElementById("pasoDetalleGasto").style.display = "none";
     document.getElementById("pasoTarjetaGasto").style.display = "none";
 
     document.querySelectorAll("#botonesCategoriaGasto button, #botonesFuenteGasto button").forEach(function (boton) {
+      boton.classList.remove("seleccionado");
+    });
+    document.querySelectorAll("#atajosGasto .atajo-gasto").forEach(function (boton) {
       boton.classList.remove("seleccionado");
     });
   }
@@ -8199,6 +8459,8 @@
     renderizarPresupuestoSemanal();
     renderizarCompromisos();
     renderizarBotonesCategoriaGasto();
+    renderizarAtajosDeGasto();
+    renderizarDestinatariosUsados();
     renderizarPendientes();
     renderizarGastosDeHoy();
     renderizarAvanceSemanal();
@@ -8309,6 +8571,13 @@
     });
   });
   document.getElementById("botonGuardarGastoNuevo").addEventListener("click", manejarGuardarGastoNuevo);
+
+  // Los atajos cubren el día a día; la lista completa de categorías se
+  // despliega solo cuando hace falta, para no llenar la pantalla de botones.
+  document.getElementById("botonMasCategorias").addEventListener("click", function () {
+    const paso = document.getElementById("pasoCategoriaGasto");
+    paso.style.display = paso.style.display === "none" ? "block" : "none";
+  });
 
   function inicializar() {
     const cicloActual = asegurarCicloActual();
