@@ -30,15 +30,22 @@
   en su propia ventana (display: standalone) en vez de como pestaña normal.
 -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f766e">
+<!-- Tiñe la barra de estado del navegador y la pantalla de arranque de la app
+     instalada. Le gana al theme_color del manifest, así que los dos tienen que
+     decir lo mismo. -->
+<meta name="theme-color" content="#18161c">
 
 <title>Ciclo</title>
 
 <style>
+  /* El fondo de la página es el mismo neutro cálido que usan las dos vistas.
+     Antes era el azul pizarra de la paleta original: se pintaba primero al
+     cargar y asomaba alrededor de las tarjetas, así que la app parpadeaba en
+     azul antes de mostrar su color real. */
   body {
     font-family: -apple-system, system-ui, sans-serif;
-    background-color: #0f172a;
-    color: #e2e8f0;
+    background-color: #18161c;
+    color: #f6f3ef;
     margin: 0;
     padding: 16px;
     max-width: 640px;
