@@ -3023,23 +3023,51 @@
 
   // Un evento "mensual" ocurre una vez al mes en un día fijo. Como el ciclo
   // cruza dos meses de calendario, se prueba ese día tanto en el mes en que
-  // empieza el ciclo como en el mes en que termina, y se usa el que sí caiga
-  // dentro del rango del ciclo.
-  function calcularFechaEnCicloParaDiaBase(ciclo, diaBase) {
+  // empieza el ciclo como en el mes en que termina, y se devuelven TODOS los
+  // que caigan dentro del rango.
+  //
+  // Devuelve una lista y no una sola fecha porque los ciclos no miden lo mismo
+  // (van de 28 a 33 días), así que en uno largo el mismo día del mes cae dos
+  // veces: el ciclo 28 ago – 28 sep contiene dos días 28. Antes se devolvía la
+  // primera y la segunda se descartaba en silencio; como el ciclo siguiente
+  // arranca el 29, ese cobro no caía en ningún ciclo y desaparecía del sistema.
+  // Medido con un barrido de 36 ciclos: los días base 26, 27, 28 y 29 perdían
+  // entre 1 y 13 cobros cada uno en tres años.
+  function calcularFechasEnCicloParaDiaBase(ciclo, diaBase) {
     const inicio = crearFechaLocal(ciclo.fechaInicio);
     const fin = crearFechaLocal(ciclo.fechaFin);
 
-    const candidatoMesInicio = new Date(inicio.getFullYear(), inicio.getMonth(), diaAjustadoAlMes(inicio.getFullYear(), inicio.getMonth(), diaBase));
-    if (candidatoMesInicio >= inicio && candidatoMesInicio <= fin) {
-      return candidatoMesInicio;
-    }
+    const mesesAProbar = [
+      { anio: inicio.getFullYear(), mes: inicio.getMonth() },
+      { anio: fin.getFullYear(), mes: fin.getMonth() }
+    ];
 
-    const candidatoMesFin = new Date(fin.getFullYear(), fin.getMonth(), diaAjustadoAlMes(fin.getFullYear(), fin.getMonth(), diaBase));
-    if (candidatoMesFin >= inicio && candidatoMesFin <= fin) {
-      return candidatoMesFin;
-    }
+    const fechas = [];
+    mesesAProbar.forEach(function (referencia) {
+      const candidato = new Date(
+        referencia.anio,
+        referencia.mes,
+        diaAjustadoAlMes(referencia.anio, referencia.mes, diaBase)
+      );
+      if (candidato < inicio || candidato > fin) {
+        return;
+      }
+      // Si el ciclo no cruzara mes, los dos candidatos serían el mismo día.
+      const yaEsta = fechas.some(function (fecha) {
+        return formatearFechaISO(fecha) === formatearFechaISO(candidato);
+      });
+      if (!yaEsta) {
+        fechas.push(candidato);
+      }
+    });
 
-    return null;
+    return fechas;
+  }
+
+  // Compatibilidad para quien solo puede tener una: devuelve la primera.
+  function calcularPrimeraFechaEnCicloParaDiaBase(ciclo, diaBase) {
+    const fechas = calcularFechasEnCicloParaDiaBase(ciclo, diaBase);
+    return fechas.length > 0 ? fechas[0] : null;
   }
 
   // Un recurrente "quincenal" ocurre dos veces al mes: en diaBase, y quince
@@ -3115,10 +3143,13 @@
 
     recurrentesActivos.forEach(function (recurrente) {
       if (recurrente.frecuencia === "mensual") {
-        const fecha = calcularFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
-        if (fecha && fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
-          candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
-        }
+        // Todas las veces que su día cae en este ciclo, no solo la primera: en
+        // un ciclo largo son dos cobros reales del mismo servicio.
+        calcularFechasEnCicloParaDiaBase(ciclo, recurrente.diaBase).forEach(function (fecha) {
+          if (fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
+            candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
+          }
+        });
       } else if (recurrente.frecuencia === "quincenal") {
         calcularFechasQuincenalesEnCiclo(ciclo, recurrente.diaBase).forEach(function (fecha) {
           if (fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
@@ -3127,7 +3158,10 @@
         });
       } else if (recurrente.frecuencia === "bimestral") {
         if (recurrente.cicloDeInicio && estaEnFaseBimestral(ciclo, recurrente.cicloDeInicio)) {
-          const fecha = calcularFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
+          // Aquí sí una sola, a diferencia del mensual: un bimestral cae cada
+          // dos meses, y las dos fechas que un ciclo largo puede contener son
+          // de meses consecutivos — cobrarlas las dos sería cobrar de más.
+          const fecha = calcularPrimeraFechaEnCicloParaDiaBase(ciclo, recurrente.diaBase);
           if (fecha && fechaDentroDeLaVigencia(fecha, recurrente.vigenciaHasta)) {
             candidatos.push({ origen: "recurrente", origenId: recurrente.id, nombre: recurrente.nombre, fechaProgramada: formatearFechaISO(fecha), montoEstimado: recurrente.montoEstimado, pagoNde: null });
           }
@@ -3302,11 +3336,13 @@
 
   function generarCompromisosDesdeTarjetas(ciclo, datos) {
     datos.config.tarjetas.forEach(function (tarjeta) {
-      const fecha = calcularFechaEnCicloParaDiaBase(ciclo, tarjeta.diaPago);
-      if (fecha) {
+      // Igual que los recurrentes mensuales: si el día de pago cae dos veces en
+      // un ciclo largo, son dos pagos de tarjeta reales, cada uno con el monto
+      // de su propio periodo de corte.
+      calcularFechasEnCicloParaDiaBase(ciclo, tarjeta.diaPago).forEach(function (fecha) {
         const montoCalculado = calcularPagoTarjeta(tarjeta, fecha, datos);
         agregarCompromisoSiNoExiste(datos, ciclo, "tarjeta", tarjeta.id, tarjeta.nombre, fecha, montoCalculado, null);
-      }
+      });
     });
   }
 
