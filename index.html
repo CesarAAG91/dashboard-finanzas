@@ -43,32 +43,6 @@
     padding: 16px;
     max-width: 640px;
   }
-  /* La pestaña de Simulación es la única vista pensada para ocupar el
-     ancho completo de una laptop (paneles lado a lado) — el resto del
-     archivo (Captura, Análisis, Configuración) se queda en la columna de
-     640px de siempre, sin tocar. La clase la pone/quita mostrarPestanaAncha
-     solo al entrar/salir de "simulacion". */
-  body.modo-simulacion-ancho {
-    max-width: none;
-  }
-  /* El título "Ciclo" y su párrafo explicativo son documentación de cómo
-     funciona la app en general — útiles la primera vez, no en cada entrada
-     a trabajar en la simulación. Solo se ocultan aquí, nunca en
-     Análisis/Configuración. */
-  body.modo-simulacion-ancho > h1,
-  body.modo-simulacion-ancho > p.descripcion {
-    display: none;
-  }
-  /* Los botones de pestaña (Análisis/Configuración/Simulación) reusan
-     .boton-grande — la misma clase que los botones táctiles grandes de
-     Captura (categoría/fuente/tarjeta), que sí necesitan ese padding para
-     tocarse con el dedo. Escalado solo para esta instancia, vía el
-     selector #vistaAncha > .botones-grandes, que es la única que vive
-     fuera de Captura. */
-  #vistaAncha > .botones-grandes .boton-grande {
-    padding: 8px;
-    font-size: 14px;
-  }
   h1 {
     font-size: 20px;
     margin-bottom: 4px;
@@ -194,24 +168,14 @@
   }
 
   /*
-    Captura (angosta, celular) y Análisis/Configuración (ancha, laptop)
-    nunca se muestran las dos a la vez. Dentro de la pantalla ancha,
-    Análisis y Configuración son pestañas — mostrarPestanaAncha() decide
-    cuál de las dos se ve, con Análisis por default.
+    Captura (angosta, celular) y la vista ancha (laptop) nunca se muestran
+    las dos a la vez: las separa el ancho de pantalla, no un control. La
+    vista ancha es una sola página continua — ya no hay pestañas.
   */
   #vistaCaptura {
     display: block;
   }
   #vistaAncha {
-    display: none;
-  }
-  #vistaAnalisis {
-    display: block;
-  }
-  #vistaConfiguracion {
-    display: none;
-  }
-  #vistaSimulacion {
     display: none;
   }
   @media (min-width: 641px) {
@@ -220,6 +184,23 @@
     }
     #vistaAncha {
       display: block;
+    }
+    /* La vista ancha es una sola página que ocupa la pantalla completa, así
+       que en laptop el body suelta la columna de 640px y su padding: cada
+       zona de la página pone el propio. */
+    body {
+      max-width: none;
+      padding: 0;
+    }
+    /* El título y su párrafo explican cómo funciona la app en general —
+       útiles la primera vez, no cada vez que se entra a trabajar. En la
+       pantalla angosta se siguen viendo. */
+    body > h1,
+    body > p.descripcion {
+      display: none;
+    }
+    body > details {
+      margin: 0 22px 22px;
     }
   }
 
@@ -918,6 +899,395 @@
   .balance-positivo-simulacion {
     color: #5eead4;
   }
+
+  /* ============================================================ */
+  /* VISTA ANCHA — una sola página                                 */
+  /* ============================================================ */
+  /*
+     Sistema de diseño aprobado el 29 jul 2026: neutros cálidos, el color
+     solo significa estado, el dato pesa más que su envoltorio, y la cifra
+     protagonista en peso 300 (no negritas).
+
+     Todo va anclado a #vistaAncha para no tocar la vista de Captura, que
+     tiene su propia paleta ya aprobada.
+  */
+  #vistaAncha {
+    --fondo-a: #18161c;
+    --superficie-a: #221f27;
+    --superficie-alta-a: #2c2833;
+    --borde-a: #35313c;
+    --borde-sutil-a: #29262f;
+    --texto-a: #f6f3ef;
+    --texto-2a: #948e9c;
+    --texto-3a: #6f6a78;
+
+    --mono-a: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+    /* La única variable que reescala el muro: el interior de los recuadros
+       se mide en em, así que cambiar este número los reescala completos.
+       La fija acomodarMuroDePagos. */
+    --escala: 1;
+
+    background-color: var(--fondo-a);
+    color: var(--texto-a);
+  }
+
+  /* ---------- Primera pantalla: ocupa el viewport completo ---------- */
+  /* Requisito duro del usuario: todos los pagos del ciclo visibles de un
+     golpe, sin scroll. La altura la reparten encabezado, muro y cajón; el
+     muro es el único que cede espacio. */
+  #primeraPantalla {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #encabezadoCiclo {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 28px;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+
+  #vistaAncha .etiqueta-ancha {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+  }
+
+  #vistaAncha .veredicto-ciclo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* Un número manda. El peso 300 es lo que más separa el resultado de un
+     panel administrativo. */
+  #vistaAncha .cifra-protagonista {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 40px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  #vistaAncha .identidad-ciclo {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 13px;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .identidad-ciclo .cifra-a { color: var(--texto-a); }
+
+  #vistaAncha .resumen-ciclo {
+    margin-left: auto;
+    display: flex;
+    gap: 24px;
+    align-items: baseline;
+  }
+  #vistaAncha .dato-secundario {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: right;
+  }
+  #vistaAncha .dato-secundario .valor-a {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    color: var(--texto-a);
+  }
+
+  /* ---------- Muro de pagos ---------- */
+  /* Columnas explícitas repartidas por JavaScript, no CSS multi-column:
+     dejando el reparto al navegador, la altura no se puede medir de forma
+     confiable justo después de cambiar columnas y escala en el mismo cuadro
+     (Chromium devuelve el layout anterior), y todo el acomodo depende de
+     esas mediciones. Ver acomodarMuroDePagos. */
+  #vistaAncha .zona-muro {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 14px 22px;
+  }
+  #vistaAncha .zona-muro.con-scroll { overflow-y: auto; }
+  #vistaAncha .zona-muro:not(.con-scroll) { overflow: hidden; }
+
+  #vistaAncha .muro {
+    display: flex;
+    align-items: flex-start;
+    gap: calc(10px * var(--escala));
+  }
+  #vistaAncha .columna-muro {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: calc(10px * var(--escala));
+  }
+
+  #vistaAncha .recuadro {
+    background-color: var(--superficie-a);
+    border: 1px solid var(--borde-sutil-a);
+    border-radius: 8px;
+    padding: calc(0.6em * var(--escala)) calc(0.75em * var(--escala));
+    font-size: calc(1em * var(--escala));
+  }
+
+  #vistaAncha .encabezado-recuadro {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5em;
+    padding-bottom: 0.45em;
+    margin-bottom: 0.35em;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+  #vistaAncha .nombre-categoria-muro {
+    font-size: 0.82em;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #vistaAncha .total-categoria-muro {
+    flex: 0 0 auto;
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.82em;
+  }
+  #vistaAncha .titulo-subcategoria-muro {
+    font-size: 0.65em;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+    padding: 0.3em 0 0.1em;
+  }
+
+  /* Densidad honesta: el aire va entre recuadros, no dentro de cada fila. */
+  #vistaAncha .fila-muro {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45em;
+    padding: 0.14em 0;
+    font-size: 0.78em;
+    line-height: 1.35;
+  }
+  #vistaAncha .punto-estado {
+    flex: 0 0 auto;
+    width: 0.45em;
+    height: 0.45em;
+    border-radius: 50%;
+    margin-bottom: 0.08em;
+  }
+  /* Los tres estados se derivan de pagado + fechaProgramada; no hace falta
+     ningún campo nuevo en el modelo. Son el único color de la pantalla. */
+  #vistaAncha .punto-estado.pagado { background-color: #5eead4; }
+  #vistaAncha .punto-estado.pendiente { background-color: #fde047; }
+  #vistaAncha .punto-estado.vencido { background-color: #f87171; }
+
+  #vistaAncha .nombre-fila-muro {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .fila-muro.es-pagado .nombre-fila-muro { color: var(--texto-3a); }
+
+  #vistaAncha .dia-fila-muro {
+    flex: 0 0 auto;
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9em;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .monto-fila-muro {
+    flex: 0 0 auto;
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    color: var(--texto-a);
+  }
+
+  /* El presupuesto semanal de las categorías variables se edita en el muro. */
+  #vistaAncha .fila-presupuesto-muro {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45em;
+    padding: 0.2em 0;
+    font-size: 0.78em;
+  }
+  #vistaAncha .fila-presupuesto-muro label {
+    flex: 1 1 auto;
+    color: var(--texto-2a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #vistaAncha .fila-presupuesto-muro input {
+    flex: 0 0 auto;
+    width: 5.2em;
+    background-color: var(--superficie-alta-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 5px;
+    color: var(--texto-a);
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 1em;
+    padding: 0.15em 0.35em;
+    text-align: right;
+  }
+  #vistaAncha .nota-recuadro-muro {
+    font-size: 0.7em;
+    color: var(--texto-3a);
+    padding-top: 0.3em;
+  }
+
+  /* ---------- Cajón de calendario ---------- */
+  #cajonCalendario {
+    flex: 0 0 auto;
+    border-top: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    padding: 9px 22px 11px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  #vistaAncha .asa-cajon {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 3px;
+    border-radius: 2px;
+    background-color: var(--borde-a);
+  }
+  #vistaAncha .proximos-dias {
+    display: flex;
+    gap: 18px;
+    overflow: hidden;
+  }
+  #vistaAncha .dia-proximo {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  #vistaAncha .dia-proximo .fecha-proxima {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .dia-proximo .contenido-proximo {
+    font-size: 12px;
+    color: var(--texto-2a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---------- Análisis, debajo ---------- */
+  #zonaAnalisis {
+    padding: 26px 22px;
+    max-width: 1100px;
+  }
+
+  /* ---------- Acciones flotantes ---------- */
+  #accionesFlotantes {
+    position: fixed;
+    right: 22px;
+    bottom: 74px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 40;
+  }
+  /* El "+" destaca por diferente, no por grande: es el único elemento de la
+     app con fondo claro sólido (inversión neutra, el mismo recurso que ya
+     usa Captura). */
+  #botonNuevoRegistro {
+    width: 46px;
+    height: 46px;
+    border-radius: 23px;
+    border: 0;
+    background-color: var(--texto-a);
+    color: var(--fondo-a);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #botonAjustes {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #botonAjustes:hover { color: var(--texto-a); }
+
+  /* ---------- Modal de Ajustes ---------- */
+  /* Ventana flotante de tamaño contenido, nunca a pantalla completa. */
+  #capaModal {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(12, 10, 15, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    z-index: 50;
+  }
+  #capaModal[hidden] { display: none; }
+
+  #panelAjustes {
+    background-color: var(--fondo-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 10px;
+    width: min(760px, 100%);
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #encabezadoAjustes {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+  #encabezadoAjustes h2 { margin: 0; font-size: 15px; }
+  #botonCerrarAjustes {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #contenidoAjustes {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 18px 18px;
+  }
+
+  #vistaAncha button:focus-visible,
+  #vistaAncha input:focus-visible,
+  #vistaAncha select:focus-visible {
+    outline: 2px solid var(--texto-2a);
+    outline-offset: 1px;
+  }
 </style>
 </head>
 <body>
@@ -1002,21 +1372,48 @@
   </div>
 
   <!-- ============================================================ -->
-  <!-- ANÁLISIS Y CONFIGURACIÓN (pantalla ancha)                      -->
+  <!-- VISTA ANCHA (laptop): una sola página                          -->
   <!-- ============================================================ -->
+  <!--
+       Sustituye las tres pestañas (Análisis / Configuración /
+       Simulación) por una página continua. Arriba, ocupando el
+       viewport completo, el muro con todos los pagos del ciclo; al
+       hacer scroll, Análisis. Configuración deja de ser una pestaña:
+       sus formularios viven en el modal de Ajustes, y crear algo
+       nuevo entra por el botón "+".
+  -->
   <div id="vistaAncha">
 
-    <div class="botones-grandes">
-      <button type="button" class="boton-grande seleccionado" data-pestana="analisis">Análisis</button>
-      <button type="button" class="boton-grande" data-pestana="configuracion">Configuración</button>
-      <button type="button" class="boton-grande" data-pestana="simulacion">Simulación</button>
+    <!-- PRIMERA PANTALLA: veredicto, muro de pagos y cajón ---------- -->
+    <div id="primeraPantalla">
+
+      <header id="encabezadoCiclo">
+        <div class="veredicto-ciclo">
+          <span class="etiqueta-ancha">Disponible del ciclo</span>
+          <span class="cifra-protagonista" id="cifraDisponibleAncha">$0</span>
+        </div>
+        <div class="identidad-ciclo" id="identidadCiclo"></div>
+        <div class="resumen-ciclo" id="resumenCiclo"></div>
+      </header>
+
+      <!-- Aviso de que se está simulando, con guardar y reiniciar. -->
+      <div id="barraSimulacion"></div>
+
+      <div class="zona-muro" id="zonaMuro">
+        <div class="muro" id="muroPagos"></div>
+      </div>
+
+      <!-- Cajón de calendario, anclado al fondo. Cerrado muestra los
+           próximos días; el despliegue se construye por separado. -->
+      <div id="cajonCalendario">
+        <div class="asa-cajon" id="asaCajon"></div>
+        <div class="proximos-dias" id="proximosDiasCajon"></div>
+      </div>
+
     </div>
 
-    <!-- ============================================================ -->
-    <!-- ANÁLISIS                                                       -->
-    <!-- ============================================================ -->
-    <div id="vistaAnalisis">
-
+    <!-- ANÁLISIS: debajo, al hacer scroll ------------------------- -->
+    <div id="zonaAnalisis">
       <section id="seccionBalanceCiclo">
         <h2>Balance del ciclo</h2>
         <div id="contenedorBalanceCiclo"></div>
@@ -1042,29 +1439,27 @@
         <h2>Deuda</h2>
         <div id="contenedorDeuda"></div>
       </section>
-
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SIMULACIÓN (pura, nunca escribe en localStorage)               -->
-    <!-- ============================================================ -->
-    <div id="vistaSimulacion">
-      <div class="banner-simulacion">
-        <span>⚠ Simulación — nada de esto se guarda. Al recargar la página vuelve al estado real.</span>
-        <button type="button" id="botonReiniciarSimulacion">Reiniciar simulación</button>
-      </div>
-      <div class="franja-balance-simulacion" id="franjaBalanceSimulacion"></div>
-      <div class="cuerpo-simulacion">
-        <div class="panel-simulacion" id="panelCategoriasSimulacion"></div>
-        <div class="panel-simulacion" id="panelDeudasTarjetasSimulacion"></div>
-      </div>
+    <!-- ACCIONES FLOTANTES ---------------------------------------- -->
+    <!-- El "+" destaca por diferente, no por grande: es el único
+         elemento de la app con fondo claro sólido. -->
+    <div id="accionesFlotantes">
+      <button type="button" id="botonAjustes" title="Ajustes">Ajustes</button>
+      <button type="button" id="botonNuevoRegistro" title="Nuevo registro">+</button>
     </div>
 
-  <!-- ============================================================ -->
-  <!-- CONFIGURACIÓN                                                  -->
-  <!-- ============================================================ -->
-  <div id="vistaConfiguracion">
-
+    <!-- MODAL DE AJUSTES ------------------------------------------ -->
+    <!-- Todo lo que antes era la pestaña Configuración. Se conserva
+         íntegro: son formularios ya probados, solo cambia dónde
+         viven y cómo se llega a ellos. -->
+    <div id="capaModal" hidden>
+      <div id="panelAjustes" role="dialog" aria-modal="true" aria-labelledby="tituloAjustes">
+        <header id="encabezadoAjustes">
+          <h2 id="tituloAjustes">Ajustes</h2>
+          <button type="button" id="botonCerrarAjustes" title="Cerrar">Cerrar</button>
+        </header>
+        <div id="contenidoAjustes">
   <!-- ============================================================ -->
   <!-- CATEGORÍAS                                                     -->
   <!-- ============================================================ -->
@@ -1330,8 +1725,9 @@
     <p class="pista">Se generan solos a partir de recurrentes, deudas y tarjetas.</p>
     <ul class="lista-items" id="listaCompromisos"></ul>
   </section>
-
-  </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 
@@ -1557,11 +1953,24 @@
     localStorage.setItem(CLAVE_ALMACENAMIENTO, JSON.stringify(datos));
   }
 
+  // Cuántos ids se han creado desde que se abrió la app. Existe porque la
+  // hora sola no alcanza: al generar los compromisos de un ciclo se crean
+  // veinte o más registros dentro del mismo milisegundo, así que todos
+  // comparten el Date.now() y lo único que los separaba era un número al azar
+  // de mil valores. Con veinte registros eso choca una de cada cinco veces
+  // (problema del cumpleaños), y se observó de verdad: dos compromisos del
+  // mismo ciclo con el mismo id. Un id repetido es grave — editar o borrar
+  // uno alcanza al otro, y cualquier conteo por id los cuenta como uno.
+  let idsCreadosEnEstaSesion = 0;
+
   // Crea un identificador único para un registro nuevo (categoría, deuda,
-  // compromiso, etc.), combinando la hora exacta con un número al azar para
-  // que dos registros nunca terminen con el mismo id.
+  // compromiso, etc.). El contador garantiza que no se repita dentro de esta
+  // carga; la hora separa entre cargas distintas; el número al azar cubre el
+  // caso de dos respaldos creados en el mismo instante en otro dispositivo.
   function generarId(prefijo) {
-    return prefijo + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    idsCreadosEnEstaSesion++;
+    return prefijo + "_" + Date.now() + "_" + idsCreadosEnEstaSesion +
+      "_" + Math.floor(Math.random() * 1000);
   }
 
   // Convierte texto escrito por el usuario en HTML seguro para mostrar en
@@ -5078,6 +5487,11 @@
 
   const DIAS_SEMANA_ABREVIADOS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
 
+  // Para las filas del muro, donde el año sobra porque todo lo que se ve
+  // pertenece al mismo ciclo.
+  const MESES_ABREVIADOS = ["ene", "feb", "mar", "abr", "may", "jun",
+                            "jul", "ago", "sep", "oct", "nov", "dic"];
+
   function renderizarResumenSuperior() {
     const datos = leerDatos();
     const ciclo = asegurarCicloActual();
@@ -5642,22 +6056,579 @@
   // INICIALIZACIÓN
   // ============================================================
 
-  // Qué pestaña de la pantalla ancha está activa. Se guarda en una
-  // variable de módulo (no en los datos) porque es un detalle de la
-  // pantalla en este momento, no algo que deba sobrevivir a un respaldo o
-  // sincronizarse entre dispositivos — mismo criterio que
-  // categoriaSeleccionadaGasto para el flujo de Gasto nuevo.
-  let pestanaAnchaActiva = "analisis";
+  // ============================================================
+  // VISTA ANCHA — MURO DE PAGOS DEL CICLO
+  // ============================================================
+  //
+  // Requisito duro del usuario: todos los pagos del ciclo visibles de un
+  // golpe, sin scroll, agrupados por categoría y subcategoría, cada uno en su
+  // recuadro con su total.
+  //
+  // Nada aquí fija cuántos pagos caben. Se mide el contenido real y se busca
+  // el acomodo que quepa completo con el texto más grande posible. Se pueden
+  // mover tres cosas, en este orden, que es el orden de lo que menos cuesta
+  // perder:
+  //
+  //   1. Cuántas columnas. No cuesta nada, solo reparte.
+  //   2. La escala del texto, dentro de un margen chico — el muro debe verse
+  //      casi igual de un mes a otro, no cambiar de tamaño cada ciclo.
+  //   3. Los títulos de subcategoría. Cuesta contexto pero no pierde ni un
+  //      dato: la fila ya dice "Totalplay", el título "Internet" es
+  //      envoltorio. Medido en un mes real, esos títulos pesaban más de la
+  //      mitad de lo que pesaban los datos del recuadro más cargado.
+  //
+  // Si ni el modo más compacto cabe, ese mes concreto se resuelve con scroll.
 
-  function mostrarPestanaAncha(nombre) {
-    pestanaAnchaActiva = nombre;
-    document.getElementById("vistaAnalisis").style.display = nombre === "analisis" ? "block" : "none";
-    document.getElementById("vistaConfiguracion").style.display = nombre === "configuracion" ? "block" : "none";
-    document.getElementById("vistaSimulacion").style.display = nombre === "simulacion" ? "block" : "none";
-    document.body.classList.toggle("modo-simulacion-ancho", nombre === "simulacion");
-    document.querySelectorAll("[data-pestana]").forEach(function (boton) {
-      boton.classList.toggle("seleccionado", boton.getAttribute("data-pestana") === nombre);
+  const ESCALA_MINIMA_MURO = 0.85;
+  const ESCALA_MAXIMA_MURO = 1.15;
+  const PASOS_DE_BISECCION_MURO = 7;
+  const COLUMNAS_A_PROBAR_MURO = [2, 3, 4, 5, 6];
+  const SEPARACION_BASE_MURO = 10;
+
+  // De menos a más pérdida. Se usa el primero que quepa.
+  const MODOS_DE_DENSIDAD_MURO = [
+    { id: "completo", titulos: true },
+    { id: "compacto", titulos: false }
+  ];
+
+  // El estado de un pago se deriva de pagado + fechaProgramada; no hace falta
+  // ningún campo nuevo en el modelo.
+  function calcularEstadoDePago(compromiso) {
+    if (compromiso.pagado) {
+      return "pagado";
+    }
+    const hoy = truncarAMedianoche(new Date());
+    return crearFechaLocal(compromiso.fechaProgramada) < hoy ? "vencido" : "pendiente";
+  }
+
+  // Etiqueta corta de fecha para las filas del muro ("14 ago"), donde el año
+  // sobra porque todo lo que se ve pertenece al mismo ciclo.
+  function formatearDiaYMes(fechaISO) {
+    const fecha = crearFechaLocal(fechaISO);
+    return fecha.getDate() + " " + MESES_ABREVIADOS[fecha.getMonth()];
+  }
+
+  // ¿Este título de subcategoría aporta algo?
+  //
+  // No aporta cuando agrupa un solo pago que ya se llama igual: "SUSCRIPCIONES
+  // → Amazon → • Amazon" dice tres veces lo mismo. Sí aporta cuando el nombre
+  // del pago no revela la subcategoría ("INTERNET → • Totalplay") o cuando
+  // agrupa varios pagos.
+  //
+  // El caso surgió al separar las suscripciones en su propia categoría, donde
+  // cada servicio quedó como su propia subcategoría.
+  function tituloAportaAlgo(subcategoria, pagos) {
+    if (pagos.length > 1) {
+      return true;
+    }
+    return pagos[0].nombre.trim().toLowerCase() !== String(subcategoria).trim().toLowerCase();
+  }
+
+  // La decisión de mostrar títulos es de todo el recuadro, no de cada grupo.
+  //
+  // Si se decidiera grupo por grupo, un grupo sin título colocado después de
+  // uno con título se leería como si perteneciera al anterior: en Servicios,
+  // "Agua" y "Luz" sin título quedaban visualmente colgados bajo "INTERNET",
+  // que es peor que la repetición que se quería evitar. Así que o los lleva
+  // todos, o ninguno.
+  function elRecuadroNecesitaTitulos(gruposCandidatos) {
+    return gruposCandidatos.some(function (grupo) {
+      return grupo.titulo !== null && tituloAportaAlgo(grupo.titulo, grupo.pagos);
     });
+  }
+
+  // Arma los recuadros del muro a partir de los compromisos del ciclo.
+  //
+  // Un recuadro por categoría de presupuesto, más uno de Deudas y otro de
+  // Tarjetas: esos dos no tienen categoría (su gasto no es de presupuesto,
+  // es saldo) pero sí son pagos del ciclo y el usuario los quiere ver.
+  // Las categorías variables no traen pagos con fecha: traen su tope semanal,
+  // editable desde aquí.
+  function construirRecuadrosDelMuro(ciclo, datos) {
+    const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
+    const presupuestoVigente = obtenerPresupuestoSemanalVigente(ciclo, datos);
+
+    // Se recorre config.categorias, no los compromisos, para que el orden de
+    // los recuadros sea el orden de las categorías del usuario.
+    const recuadros = [];
+
+    datos.config.categorias.forEach(function (categoria) {
+      if (categoria.esVariableSemanal) {
+        return; // van al final, con su tope semanal
+      }
+
+      const suyos = compromisosDelCiclo.filter(function (compromiso) {
+        return resolverCategoriaDeCompromiso(compromiso, datos) === categoria.id;
+      });
+      if (suyos.length === 0) {
+        return;
+      }
+
+      // Agrupados por subcategoría, en el orden en que la categoría las
+      // declara; lo que no encaje en ninguna cae en un grupo sin título.
+      //
+      // Se reparte en UN solo recorrido, resolviendo la subcategoría de cada
+      // pago una única vez. Hacerlo en dos pases (uno por subcategoría y otro
+      // para los sobrantes) obliga a que las dos condiciones sean exactamente
+      // complementarias, y cualquier diferencia entre ellas duplica un pago o
+      // lo pierde en silencio — que es lo peor que puede pasar en una pantalla
+      // cuyo único trabajo es mostrarlos todos.
+      const pagosPorSubcategoria = {};
+      const sinSubcategoria = [];
+
+      suyos.forEach(function (compromiso) {
+        const subcategoria = resolverSubcategoriaDeCompromiso(compromiso, datos);
+        const esConocida = subcategoria && (categoria.subcategorias || []).indexOf(subcategoria) !== -1;
+
+        if (!esConocida) {
+          sinSubcategoria.push(compromiso);
+          return;
+        }
+        if (!pagosPorSubcategoria[subcategoria]) {
+          pagosPorSubcategoria[subcategoria] = [];
+        }
+        pagosPorSubcategoria[subcategoria].push(compromiso);
+      });
+
+      const grupos = [];
+
+      (categoria.subcategorias || []).forEach(function (subcategoria) {
+        const pagos = pagosPorSubcategoria[subcategoria];
+        if (pagos && pagos.length > 0) {
+          grupos.push({ titulo: subcategoria, pagos: pagos });
+        }
+      });
+
+      if (sinSubcategoria.length > 0) {
+        grupos.push({ titulo: null, pagos: sinSubcategoria });
+      }
+
+      // Se decide una sola vez para todo el recuadro (ver
+      // elRecuadroNecesitaTitulos) y se aplica a todos sus grupos.
+      if (!elRecuadroNecesitaTitulos(grupos)) {
+        grupos.forEach(function (grupo) { grupo.titulo = null; });
+      }
+
+      recuadros.push({ tipo: "pagos", nombre: categoria.nombre, grupos: grupos });
+    });
+
+    // Deudas y tarjetas, cada una en su recuadro.
+    [
+      { nombre: "Deudas", origen: "deuda" },
+      { nombre: "Tarjetas", origen: "tarjeta" }
+    ].forEach(function (bloque) {
+      const pagos = compromisosDelCiclo.filter(function (c) { return c.origen === bloque.origen; });
+      if (pagos.length > 0) {
+        recuadros.push({
+          tipo: "pagos",
+          nombre: bloque.nombre,
+          grupos: [{ titulo: null, pagos: pagos }]
+        });
+      }
+    });
+
+    // Categorías variables: tope semanal editable, no pagos con fecha.
+    datos.config.categorias.forEach(function (categoria) {
+      if (!categoria.esVariableSemanal) {
+        return;
+      }
+      recuadros.push({
+        tipo: "presupuesto",
+        nombre: categoria.nombre,
+        categoriaId: categoria.id,
+        monto: Number(presupuestoVigente[categoria.id] || 0)
+      });
+    });
+
+    return recuadros;
+  }
+
+  function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos) {
+    if (recuadro.tipo === "presupuesto") {
+      return "<div class=\"recuadro\">" +
+        "<div class=\"encabezado-recuadro\">" +
+          "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
+          "<span class=\"total-categoria-muro\">" + formatearMoneda(recuadro.monto) + "</span>" +
+        "</div>" +
+        "<div class=\"fila-presupuesto-muro\">" +
+          "<label for=\"topeMuro_" + recuadro.categoriaId + "\">por semana</label>" +
+          "<input type=\"number\" min=\"0\" step=\"50\" id=\"topeMuro_" + recuadro.categoriaId + "\"" +
+            " data-categoria-tope=\"" + recuadro.categoriaId + "\" value=\"" + recuadro.monto + "\">" +
+        "</div>" +
+      "</div>";
+    }
+
+    const total = recuadro.grupos.reduce(function (suma, grupo) {
+      return suma + grupo.pagos.reduce(function (s, pago) {
+        return s + Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
+      }, 0);
+    }, 0);
+
+    return "<div class=\"recuadro\">" +
+      "<div class=\"encabezado-recuadro\">" +
+        "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
+        "<span class=\"total-categoria-muro\">" + formatearMoneda(total) + "</span>" +
+      "</div>" +
+      recuadro.grupos.map(function (grupo) {
+        const titulo = (grupo.titulo && mostrarTitulos)
+          ? "<div class=\"titulo-subcategoria-muro\">" + escaparHTML(grupo.titulo) + "</div>"
+          : "";
+        return titulo + grupo.pagos.map(function (pago) {
+          const estado = calcularEstadoDePago(pago);
+          const monto = Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
+          return "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") + "\">" +
+            "<span class=\"punto-estado " + estado + "\"></span>" +
+            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + "</span>" +
+            "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
+            "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>" +
+          "</div>";
+        }).join("");
+      }).join("") +
+    "</div>";
+  }
+
+  // Reparte los recuadros en N columnas conservando el orden de las
+  // categorías (el orden es decisión del usuario, no del algoritmo) y
+  // mandando cada uno a la columna que va más corta. Es lo que produce el
+  // efecto de mampostería sin dejar huecos.
+  function repartirRecuadrosEnColumnas(alturas, numeroDeColumnas, separacion) {
+    const columnas = [];
+    for (let i = 0; i < numeroDeColumnas; i++) {
+      columnas.push({ indices: [], alto: 0 });
+    }
+
+    alturas.forEach(function (alto, indice) {
+      let masCorta = columnas[0];
+      columnas.forEach(function (columna) {
+        if (columna.alto < masCorta.alto) {
+          masCorta = columna;
+        }
+      });
+      masCorta.indices.push(indice);
+      masCorta.alto += alto + (masCorta.indices.length > 1 ? separacion : 0);
+    });
+
+    return columnas;
+  }
+
+  function alturaDelReparto(columnas) {
+    return columnas.reduce(function (maximo, columna) {
+      return Math.max(maximo, columna.alto);
+    }, 0);
+  }
+
+  // Cuánto mide cada recuadro con un ancho y una escala dados. Se dibujan
+  // todos en una columna oculta del ancho que les tocaría y se leen las
+  // alturas de un tirón: un solo reflujo por combinación.
+  //
+  // El medidor se cuelga dentro de #vistaAncha, no de <body>, porque las
+  // reglas del muro y sus variables de color están ancladas ahí.
+  function medirRecuadrosDelMuro(recuadros, numeroDeColumnas, escala, mostrarTitulos) {
+    const zona = document.getElementById("zonaMuro");
+    const estilos = getComputedStyle(zona);
+    const separacion = SEPARACION_BASE_MURO * escala;
+    const anchoUtil = zona.clientWidth - parseFloat(estilos.paddingLeft) - parseFloat(estilos.paddingRight);
+    const anchoDeColumna = (anchoUtil - separacion * (numeroDeColumnas - 1)) / numeroDeColumnas;
+
+    const medidor = document.createElement("div");
+    medidor.className = "columna-muro";
+    medidor.style.position = "absolute";
+    medidor.style.visibility = "hidden";
+    medidor.style.pointerEvents = "none";
+    medidor.style.left = "-10000px";
+    medidor.style.top = "0";
+    medidor.style.width = anchoDeColumna + "px";
+    medidor.style.setProperty("--escala", String(escala));
+    medidor.innerHTML = recuadros.map(function (recuadro) {
+      return htmlDeRecuadroDelMuro(recuadro, mostrarTitulos);
+    }).join("");
+
+    document.getElementById("vistaAncha").appendChild(medidor);
+    const alturas = Array.prototype.map.call(medidor.children, function (hijo) {
+      return hijo.getBoundingClientRect().height;
+    });
+    medidor.parentNode.removeChild(medidor);
+
+    return { alturas: alturas, separacion: separacion };
+  }
+
+  // La escala más grande, dentro del margen permitido, con la que el
+  // contenido cabe en N columnas. Devuelve null si no cabe ni con la mínima.
+  function buscarMejorEscalaDelMuro(recuadros, numeroDeColumnas, mostrarTitulos, disponible) {
+    function probar(escala) {
+      const medicion = medirRecuadrosDelMuro(recuadros, numeroDeColumnas, escala, mostrarTitulos);
+      const reparto = repartirRecuadrosEnColumnas(medicion.alturas, numeroDeColumnas, medicion.separacion);
+      const alto = alturaDelReparto(reparto);
+      return { cabe: alto <= disponible, reparto: reparto, alto: alto };
+    }
+
+    const conMaxima = probar(ESCALA_MAXIMA_MURO);
+    if (conMaxima.cabe) {
+      return { escala: ESCALA_MAXIMA_MURO, reparto: conMaxima.reparto, alto: conMaxima.alto };
+    }
+
+    const conMinima = probar(ESCALA_MINIMA_MURO);
+    if (!conMinima.cabe) {
+      return null;
+    }
+
+    // Cabe en la mínima pero no en la máxima: el punto está en medio. La
+    // altura no baja de forma lineal con la escala (el texto se reacomoda),
+    // así que se busca por bisección en vez de despejarlo de una fórmula.
+    let cabe = ESCALA_MINIMA_MURO;
+    let noCabe = ESCALA_MAXIMA_MURO;
+    let mejorReparto = conMinima.reparto;
+    let mejorAlto = conMinima.alto;
+
+    for (let paso = 0; paso < PASOS_DE_BISECCION_MURO; paso++) {
+      const medio = (cabe + noCabe) / 2;
+      const intento = probar(medio);
+      if (intento.cabe) {
+        cabe = medio;
+        mejorReparto = intento.reparto;
+        mejorAlto = intento.alto;
+      } else {
+        noCabe = medio;
+      }
+    }
+
+    return { escala: cabe, reparto: mejorReparto, alto: mejorAlto };
+  }
+
+  function pintarMuro(recuadros, columnas, mostrarTitulos) {
+    document.getElementById("muroPagos").innerHTML = columnas.map(function (columna) {
+      return "<div class=\"columna-muro\">" +
+        columna.indices.map(function (indice) {
+          return htmlDeRecuadroDelMuro(recuadros[indice], mostrarTitulos);
+        }).join("") +
+      "</div>";
+    }).join("");
+
+    // Los topes semanales se guardan al salir del campo, no en cada tecla:
+    // guardar por tecla dispararía un redibujado completo con el cursor
+    // dentro del input.
+    document.querySelectorAll("#muroPagos [data-categoria-tope]").forEach(function (campo) {
+      campo.addEventListener("change", function () {
+        guardarTopeSemanalDesdeElMuro(campo.getAttribute("data-categoria-tope"), campo.value);
+      });
+    });
+  }
+
+  function guardarTopeSemanalDesdeElMuro(categoriaId, valor) {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const cicloGuardado = datos.ciclos.find(function (c) { return c.id === ciclo.id; });
+
+    if (!cicloGuardado.presupuestoSemanal) {
+      cicloGuardado.presupuestoSemanal = {};
+    }
+    cicloGuardado.presupuestoSemanal[categoriaId] = Number(valor) || 0;
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  function alturaDisponibleDelMuro() {
+    const zona = document.getElementById("zonaMuro");
+    const estilos = getComputedStyle(zona);
+    return zona.clientHeight - parseFloat(estilos.paddingTop) - parseFloat(estilos.paddingBottom);
+  }
+
+  function acomodarMuroDePagos(recuadros) {
+    const zona = document.getElementById("zonaMuro");
+    const vista = document.getElementById("vistaAncha");
+
+    // Se mide siempre en el mismo estado: si la clase de scroll quedara
+    // puesta del acomodo anterior, la barra angostaría la zona y las
+    // mediciones no serían comparables entre sí.
+    zona.classList.remove("con-scroll");
+    const disponible = alturaDisponibleDelMuro();
+
+    for (let indiceModo = 0; indiceModo < MODOS_DE_DENSIDAD_MURO.length; indiceModo++) {
+      const modo = MODOS_DE_DENSIDAD_MURO[indiceModo];
+      let mejor = null;
+
+      COLUMNAS_A_PROBAR_MURO.forEach(function (numeroDeColumnas) {
+        const resultado = buscarMejorEscalaDelMuro(recuadros, numeroDeColumnas, modo.titulos, disponible);
+        if (resultado === null) {
+          return;
+        }
+        if (mejor === null) {
+          mejor = { columnas: numeroDeColumnas, escala: resultado.escala, reparto: resultado.reparto, alto: resultado.alto };
+          return;
+        }
+        // Primero manda la legibilidad: gana la escala más grande. Entre dos
+        // igual de legibles gana la que deja menos pantalla sin usar; sin ese
+        // desempate el muro se apila arriba y deja hueco abajo.
+        const esMasLegible = resultado.escala > mejor.escala + 0.001;
+        const esIgualDeLegible = Math.abs(resultado.escala - mejor.escala) <= 0.001;
+        if (esMasLegible || (esIgualDeLegible && resultado.alto > mejor.alto)) {
+          mejor = { columnas: numeroDeColumnas, escala: resultado.escala, reparto: resultado.reparto, alto: resultado.alto };
+        }
+      });
+
+      if (mejor !== null) {
+        vista.style.setProperty("--escala", String(mejor.escala));
+        pintarMuro(recuadros, mejor.reparto, modo.titulos);
+        return { columnas: mejor.columnas, escala: mejor.escala, modo: modo.id, conScroll: false };
+      }
+    }
+
+    // Ni el modo más compacto cabe: este mes se resuelve con scroll, en el
+    // reparto que menos desborde.
+    const modoFinal = MODOS_DE_DENSIDAD_MURO[MODOS_DE_DENSIDAD_MURO.length - 1];
+    let menosDesborde = null;
+
+    COLUMNAS_A_PROBAR_MURO.forEach(function (numeroDeColumnas) {
+      const medicion = medirRecuadrosDelMuro(recuadros, numeroDeColumnas, ESCALA_MINIMA_MURO, modoFinal.titulos);
+      const reparto = repartirRecuadrosEnColumnas(medicion.alturas, numeroDeColumnas, medicion.separacion);
+      const alto = alturaDelReparto(reparto);
+      if (menosDesborde === null || alto < menosDesborde.alto) {
+        menosDesborde = { columnas: numeroDeColumnas, reparto: reparto, alto: alto };
+      }
+    });
+
+    vista.style.setProperty("--escala", String(ESCALA_MINIMA_MURO));
+    pintarMuro(recuadros, menosDesborde.reparto, modoFinal.titulos);
+    zona.classList.add("con-scroll");
+    return { columnas: menosDesborde.columnas, escala: ESCALA_MINIMA_MURO, modo: modoFinal.id, conScroll: true };
+  }
+
+  function renderizarMuroDePagos() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const recuadros = construirRecuadrosDelMuro(ciclo, datos);
+
+    if (recuadros.length === 0) {
+      document.getElementById("muroPagos").innerHTML =
+        "<p class=\"pista\">Todavía no hay pagos ni presupuestos en este ciclo. " +
+        "Captura categorías, recurrentes o deudas desde Ajustes.</p>";
+      return null;
+    }
+
+    return acomodarMuroDePagos(recuadros);
+  }
+
+  // El acomodo depende del tamaño de la ventana, así que se recalcula al
+  // cambiarla. Con espera, para no correr la búsqueda completa en cada uno de
+  // los cuadros intermedios de un arrastre.
+  let temporizadorDeReacomodoDelMuro = null;
+  window.addEventListener("resize", function () {
+    clearTimeout(temporizadorDeReacomodoDelMuro);
+    temporizadorDeReacomodoDelMuro = setTimeout(function () {
+      if (document.getElementById("vistaAncha").offsetParent !== null) {
+        renderizarMuroDePagos();
+      }
+    }, 120);
+  });
+
+  // ============================================================
+  // VISTA ANCHA — ENCABEZADO DEL CICLO
+  // ============================================================
+  //
+  // Un solo número manda: el disponible real, el mismo que ya muestra
+  // Captura y el titular de Balance del ciclo. Al lado, la identidad del
+  // ciclo — el usuario pidió explícitamente que quede claro cuáles son los
+  // ciclos, porque no son meses de calendario.
+
+  function renderizarEncabezadoDelCiclo() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+
+    const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
+    const pagados = compromisosDelCiclo.filter(function (c) { return c.pagado; }).length;
+
+    document.getElementById("cifraDisponibleAncha").textContent =
+      formatearMoneda(calcularDisponibleReal(ciclo, datos));
+
+    document.getElementById("identidadCiclo").innerHTML =
+      "<span class=\"etiqueta-ancha\">Ciclo " + ciclo.id + "</span>" +
+      "<span>del <span class=\"cifra-a\">" + ciclo.fechaInicio + "</span>" +
+      " al <span class=\"cifra-a\">" + ciclo.fechaFin + "</span>" +
+      " · <span class=\"cifra-a\">" + calcularDiasTotalesDelCiclo(ciclo) + "</span> días</span>";
+
+    document.getElementById("resumenCiclo").innerHTML =
+      "<div class=\"dato-secundario\">" +
+        "<span class=\"etiqueta-ancha\">Ingresos</span>" +
+        "<span class=\"valor-a\">" + formatearMoneda(calcularIngresosDelCiclo(ciclo, datos)) + "</span>" +
+      "</div>" +
+      "<div class=\"dato-secundario\">" +
+        "<span class=\"etiqueta-ancha\">Comprometido</span>" +
+        "<span class=\"valor-a\">" + formatearMoneda(calcularMontoComprometidoTotalDelCiclo(ciclo, datos)) + "</span>" +
+      "</div>" +
+      "<div class=\"dato-secundario\">" +
+        "<span class=\"etiqueta-ancha\">Pagado</span>" +
+        "<span class=\"valor-a\">" + pagados + " / " + compromisosDelCiclo.length + "</span>" +
+      "</div>";
+  }
+
+  // ============================================================
+  // VISTA ANCHA — CAJÓN DE CALENDARIO (cerrado)
+  // ============================================================
+  //
+  // Cerrado muestra los próximos días con algo pendiente. El despliegue
+  // completo (mes a la izquierda, día elegido a la derecha, con las mismas
+  // filas del muro) es la siguiente pieza y todavía no está construido.
+
+  const DIAS_A_MOSTRAR_EN_EL_CAJON = 7;
+
+  function renderizarCajonDeCalendario() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const contenedor = document.getElementById("proximosDiasCajon");
+
+    // Se agrupan por fecha para que un día con tres pagos sea una sola
+    // columna del cajón, no tres.
+    const pendientesPorFecha = {};
+    obtenerPendientesDelCiclo(datos, ciclo.id).forEach(function (compromiso) {
+      if (!pendientesPorFecha[compromiso.fechaProgramada]) {
+        pendientesPorFecha[compromiso.fechaProgramada] = [];
+      }
+      pendientesPorFecha[compromiso.fechaProgramada].push(compromiso.nombre);
+    });
+
+    const fechas = Object.keys(pendientesPorFecha).sort().slice(0, DIAS_A_MOSTRAR_EN_EL_CAJON);
+
+    if (fechas.length === 0) {
+      contenedor.innerHTML = "<div class=\"dia-proximo\"><span class=\"contenido-proximo\">" +
+        "No queda nada pendiente en este ciclo.</span></div>";
+      return;
+    }
+
+    contenedor.innerHTML = fechas.map(function (fecha) {
+      const fechaLocal = crearFechaLocal(fecha);
+      const etiqueta = DIAS_SEMANA_ABREVIADOS[fechaLocal.getDay()] + " " + fechaLocal.getDate();
+      return "<div class=\"dia-proximo\">" +
+        "<span class=\"fecha-proxima\">" + etiqueta + "</span>" +
+        "<span class=\"contenido-proximo\">" + escaparHTML(pendientesPorFecha[fecha].join(", ")) + "</span>" +
+      "</div>";
+    }).join("");
+  }
+
+  // ============================================================
+  // MODAL DE AJUSTES
+  // ============================================================
+  //
+  // Reemplaza a la pestaña de Configuración. Es una ventana flotante de
+  // tamaño contenido, nunca a pantalla completa: se abre, se captura o se
+  // corrige algo, y se cierra volviendo al muro.
+  //
+  // El estado (abierto o cerrado) vive en el DOM, no en los datos: es un
+  // detalle de la pantalla en este momento, no algo que deba sobrevivir a un
+  // respaldo ni sincronizarse entre dispositivos.
+
+  function abrirAjustes() {
+    document.getElementById("capaModal").hidden = false;
+    document.getElementById("botonCerrarAjustes").focus();
+  }
+
+  function cerrarAjustes() {
+    document.getElementById("capaModal").hidden = true;
+    document.getElementById("botonAjustes").focus();
+  }
+
+  function ajustesEstanAbiertos() {
+    return document.getElementById("capaModal").hidden === false;
   }
 
   function renderizarTodo() {
@@ -5685,25 +6656,35 @@
     renderizarMovimientosDelCiclo();
     renderizarCalendario();
     renderizarEstadoDeDeudaAnalisis();
-    mostrarPestanaAncha(pestanaAnchaActiva);
+    renderizarEncabezadoDelCiclo();
+    // El muro va después del encabezado y del cajón: su acomodo mide la
+    // altura que le queda libre, así que los dos tienen que estar ya
+    // dibujados con su tamaño final.
+    renderizarCajonDeCalendario();
+    renderizarMuroDePagos();
     mostrarDatosEnPantalla();
   }
 
-  document.querySelectorAll("[data-pestana]").forEach(function (boton) {
-    boton.addEventListener("click", function () {
-      const nombre = boton.getAttribute("data-pestana");
-      mostrarPestanaAncha(nombre);
-      // Solo aquí, en el clic real de "entrar a la pestaña" — nunca en la
-      // reaplicación de mostrarPestanaAncha(pestanaAnchaActiva) dentro de
-      // renderizarTodo(), que corre en cada guardado de toda la app y
-      // borraría la simulación en curso sin que el usuario lo pidiera.
-      if (nombre === "simulacion") {
-        reiniciarSimulacion();
-      }
-    });
+  document.getElementById("botonAjustes").addEventListener("click", abrirAjustes);
+  document.getElementById("botonCerrarAjustes").addEventListener("click", cerrarAjustes);
+
+  // Clic en el fondo oscuro cierra; clic dentro del panel, no.
+  document.getElementById("capaModal").addEventListener("click", function (evento) {
+    if (evento.target === this) {
+      cerrarAjustes();
+    }
   });
 
-  document.getElementById("botonReiniciarSimulacion").addEventListener("click", reiniciarSimulacion);
+  document.addEventListener("keydown", function (evento) {
+    if (evento.key === "Escape" && ajustesEstanAbiertos()) {
+      cerrarAjustes();
+    }
+  });
+
+  // Provisional: todos los formularios de alta viven hoy dentro de Ajustes,
+  // así que el "+" abre ese mismo modal. Cuando exista el modal de registro
+  // con su desplegable de tipo de evento, el "+" apuntará ahí.
+  document.getElementById("botonNuevoRegistro").addEventListener("click", abrirAjustes);
 
   document.getElementById("formCategoria").addEventListener("submit", manejarEnvioCategoria);
   document.getElementById("formTarjeta").addEventListener("submit", manejarEnvioTarjeta);
