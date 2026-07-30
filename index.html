@@ -6752,13 +6752,15 @@
 
     // Lo ya pagado son hechos: solo cuentan los pagos de verdad marcados, y
     // nunca uno diferido (si se difirió, no se pagó de esta cuenta).
+    //
+    // El gasto variable ya hecho NO se suma aquí, aunque sea dinero que ya
+    // salió: "Variable previsto" es el presupuesto del ciclo completo y ya lo
+    // incluye. Sumarlo en las dos filas lo contaba doble y las cuatro filas
+    // dejaban de explicar el balance — con este respaldo, por 860 pesos
+    // exactos. Las filas de un resumen tienen que dar el número que encabezan.
     const comprometidoPagado = items
       .filter(function (item) { return item.pagado && !item.estadoCredito; })
       .reduce(function (suma, item) { return suma + Number(item.montoReal); }, 0);
-
-    const variableGastado = datos.gastos
-      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
-      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
     const faltaPagar = Math.max(resultado.totalComprometido - comprometidoPagado, 0);
 
@@ -6768,7 +6770,7 @@
       balance: resultado.balanceDelCiclo,
       filas: [
         { etiqueta: "Ingreso del ciclo", monto: resultado.ingresoDelCiclo },
-        { etiqueta: "Ya pagado", monto: comprometidoPagado + variableGastado },
+        { etiqueta: "Ya pagado", monto: comprometidoPagado },
         { etiqueta: "Falta pagar", monto: faltaPagar },
         { etiqueta: "Variable previsto", monto: resultado.gastoVariableProyectado }
       ]
@@ -7332,6 +7334,34 @@
       indiceCicloEnfocadoSimulacion = 0;
     }
     return datosSimulados;
+  }
+
+  // Vuelve a partir de los datos reales cuando estos cambiaron por fuera de la
+  // simulación: capturar un ingreso, dar de alta un recurrente, editar una
+  // categoría desde Ajustes.
+  //
+  // Sin esto, la copia se creaba una sola vez y nunca se refrescaba: los datos
+  // reales cambiaban, Análisis lo mostraba porque lee de ellos directo, y la
+  // primera pantalla seguía dibujando la copia vieja. Un ingreso recién
+  // capturado no aparecía y la trayectoria seguía diciendo que no había ninguno.
+  //
+  // Solo se rehace si no hay nada sin guardar: con cambios en curso, rehacer los
+  // borraría. En ese caso se respeta la simulación, y al guardarla o reiniciarla
+  // se vuelve a sincronizar sola.
+  function sincronizarSimulacionConLosDatosReales() {
+    if (datosSimulados === null) {
+      return;
+    }
+    if (calcularCambiosDeLaSimulacion().total > 0) {
+      return;
+    }
+
+    const cicloQueSeEstabaViendo = indiceCicloEnfocadoSimulacion;
+    datosSimulados = JSON.parse(JSON.stringify(leerDatos()));
+    compromisosMaterializadosSimulacion = materializarCompromisosDelHorizonte(datosSimulados);
+    // Se conserva el ciclo que el usuario estaba viendo: rehacer la copia es un
+    // detalle interno y no debería devolverlo al ciclo actual sin que lo pida.
+    indiceCicloEnfocadoSimulacion = cicloQueSeEstabaViendo;
   }
 
   function obtenerCicloEnfocado() {
@@ -8016,8 +8046,10 @@
     renderizarMovimientosDelCiclo();
     renderizarEstadoDeDeudaAnalisis();
     // La primera pantalla siempre trabaja sobre la simulación, así que se
-    // asegura antes de dibujar cualquier parte de ella.
+    // asegura antes de dibujar cualquier parte de ella — y se sincroniza con
+    // los datos reales, que pudieron cambiar desde Ajustes o desde Captura.
     asegurarSimulacionAbierta();
+    sincronizarSimulacionConLosDatosReales();
     // Los siete ciclos se proyectan una sola vez por dibujado y de ahí leen el
     // encabezado, la trayectoria y el resumen del muro.
     recalcularProyeccionSimulada();
