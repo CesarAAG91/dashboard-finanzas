@@ -1004,6 +1004,57 @@
     color: var(--texto-a);
   }
 
+  /* ---------- Trayectoria ---------- */
+  /* Lo real y lo proyectado no se disfrazan uno de otro: trazo sólido y color
+     pleno para lo que ya pasó, el mismo color al 55% y punteado para lo que
+     todavía no. Sin leyenda — la diferencia se lee sola. */
+  #bandaTrayectoria {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) 1fr;
+    align-items: center;
+    gap: 22px;
+    padding: 12px 22px 0;
+  }
+  #vistaAncha .texto-trayectoria {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 13px;
+    color: var(--texto-2a);
+  }
+  #vistaAncha .texto-trayectoria strong { color: var(--texto-a); }
+  #vistaAncha .grafica-trayectoria-banda { line-height: 0; }
+  #vistaAncha .grafica-trayectoria-banda svg { width: 100%; height: 54px; display: block; }
+  #vistaAncha .linea-real {
+    fill: none;
+    stroke: var(--texto-a);
+    stroke-width: 1.5;
+  }
+  #vistaAncha .linea-proyectada {
+    fill: none;
+    stroke: var(--texto-a);
+    stroke-opacity: 0.55;
+    stroke-width: 1.5;
+    stroke-dasharray: 3 3;
+  }
+  #vistaAncha .marca-hoy {
+    stroke: var(--borde-a);
+    stroke-width: 1;
+  }
+  #vistaAncha .linea-cero {
+    stroke: #f87171;
+    stroke-opacity: 0.35;
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+  }
+  #vistaAncha .punto-quiebre {
+    fill: #f87171;
+  }
+  #vistaAncha .punto-hoy {
+    fill: var(--texto-a);
+  }
+
   /* ---------- Muro de pagos ---------- */
   /* Columnas explícitas repartidas por JavaScript, no CSS multi-column:
      dejando el reparto al navegador, la altura no se puede medir de forma
@@ -1143,11 +1194,38 @@
     padding: 0.15em 0.35em;
     text-align: right;
   }
+  #vistaAncha .unidad-tope {
+    flex: 0 0 auto;
+    font-size: 0.85em;
+    color: var(--texto-3a);
+  }
   #vistaAncha .nota-recuadro-muro {
     font-size: 0.7em;
     color: var(--texto-3a);
     padding-top: 0.3em;
   }
+
+  /* Resumen del ciclo: cierra el muro con a dónde llega todo esto. */
+  #vistaAncha .fila-resumen-muro {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6em;
+    padding: 0.16em 0;
+    font-size: 0.78em;
+  }
+  #vistaAncha .etiqueta-resumen { color: var(--texto-2a); }
+  #vistaAncha .fila-balance {
+    margin-top: 0.35em;
+    padding-top: 0.4em;
+    border-top: 1px solid var(--borde-sutil-a);
+    font-weight: 600;
+  }
+  #vistaAncha .fila-balance .etiqueta-resumen { color: var(--texto-a); }
+  /* Único caso en que el color no marca el estado de un pago sino el del
+     ciclo entero: alcanza o no alcanza. Reusa los mismos dos colores. */
+  #vistaAncha .fila-balance.balance-alcanza .monto-fila-muro { color: #5eead4; }
+  #vistaAncha .fila-balance.balance-no-alcanza .monto-fila-muro { color: #f87171; }
 
   /* ---------- Cajón de calendario ---------- */
   /* Cerrado es una tira; abierto crece hacia arriba tapando el muro. No se
@@ -1679,6 +1757,16 @@
 
       <!-- Aviso de que se está simulando, con guardar y reiniciar. -->
       <div id="barraSimulacion"></div>
+
+      <!-- Trayectoria: cómo se vacía el ciclo día por día, y en qué fecha se
+           acaba el dinero si el ritmo no cambia. -->
+      <div id="bandaTrayectoria">
+        <div class="texto-trayectoria">
+          <span class="etiqueta-ancha">Trayectoria</span>
+          <span id="veredictoTrayectoria"></span>
+        </div>
+        <div class="grafica-trayectoria-banda" id="graficaTrayectoria"></div>
+      </div>
 
       <div class="zona-muro" id="zonaMuro">
         <div class="muro" id="muroPagos"></div>
@@ -6389,20 +6477,78 @@
       }
     });
 
-    // Categorías variables: tope semanal editable, no pagos con fecha.
-    datos.config.categorias.forEach(function (categoria) {
-      if (!categoria.esVariableSemanal) {
-        return;
-      }
-      recuadros.push({
-        tipo: "presupuesto",
-        nombre: categoria.nombre,
-        categoriaId: categoria.id,
-        monto: Number(presupuestoVigente[categoria.id] || 0)
-      });
+    // Las categorías variables van juntas en un solo recuadro: no tienen
+    // pagos con fecha, tienen un tope semanal, y verlas una al lado de otra es
+    // lo que permite repartir entre ellas. Un recuadro por cada una las
+    // separaba sin motivo y llenaba el muro de cajas de una sola fila.
+    const categoriasVariables = datos.config.categorias.filter(function (categoria) {
+      return categoria.esVariableSemanal;
     });
 
+    if (categoriasVariables.length > 0) {
+      recuadros.push({
+        tipo: "presupuesto",
+        nombre: "Presupuesto variable",
+        topes: categoriasVariables.map(function (categoria) {
+          return {
+            categoriaId: categoria.id,
+            nombre: categoria.nombre,
+            monto: Number(presupuestoVigente[categoria.id] || 0)
+          };
+        })
+      });
+    }
+
+    recuadros.push(construirResumenDelCiclo(ciclo, datos, categoriasVariables, presupuestoVigente));
+
     return recuadros;
+  }
+
+  // El recuadro que cierra el muro: a dónde llega el ciclo si todo sigue así.
+  //
+  // Usa las fórmulas que ya están en SPEC.md, no versiones simplificadas:
+  // "lo que falta del gasto variable" se proyecta al ritmo diario que se lleva
+  // de verdad (calcularProyeccionDeCierre), no con el presupuesto teórico. Si
+  // el ciclo aún no tiene gasto variable, ese ritmo es cero, así que en ese
+  // caso se cae al presupuesto configurado para no prometer un cierre
+  // demasiado optimista el día uno.
+  function construirResumenDelCiclo(ciclo, datos, categoriasVariables, presupuestoVigente) {
+    const ingresos = calcularIngresosDelCiclo(ciclo, datos);
+
+    const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
+    const comprometidoPagado = compromisosDelCiclo
+      .filter(function (c) { return c.pagado; })
+      .reduce(function (suma, c) { return suma + Number(c.montoReal); }, 0);
+    const comprometidoPendiente = compromisosDelCiclo
+      .filter(function (c) { return !c.pagado; })
+      .reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
+
+    const variableGastado = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    const proyeccionCierre = calcularProyeccionDeCierre(ciclo, datos);
+    const variableProyectadoTotal = proyeccionCierre - calcularMontoComprometidoTotalDelCiclo(ciclo, datos);
+
+    // Sin gasto variable todavía, el ritmo diario es cero y la proyección
+    // diría que no se va a gastar nada más en todo el ciclo.
+    const variablePorVenir = variableGastado > 0
+      ? Math.max(variableProyectadoTotal - variableGastado, 0)
+      : calcularGastoVariableProyectado(ciclo, categoriasVariables, presupuestoVigente);
+
+    const balanceAlCerrar = ingresos - comprometidoPagado - comprometidoPendiente - variableGastado - variablePorVenir;
+
+    return {
+      tipo: "resumen",
+      nombre: "Resumen del ciclo",
+      balance: balanceAlCerrar,
+      filas: [
+        { etiqueta: "Ingreso del ciclo", monto: ingresos },
+        { etiqueta: "Ya pagado", monto: comprometidoPagado + variableGastado },
+        { etiqueta: "Falta pagar", monto: comprometidoPendiente },
+        { etiqueta: "Variable por venir", monto: variablePorVenir }
+      ]
+    };
   }
 
   // conAccionDePago solo lo usa el panel del día del calendario: agrega bajo
@@ -6412,15 +6558,38 @@
   // así que esa función funciona sin saber quién la llamó.
   function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
     if (recuadro.tipo === "presupuesto") {
+      const totalSemanal = recuadro.topes.reduce(function (suma, tope) { return suma + tope.monto; }, 0);
       return "<div class=\"recuadro\">" +
         "<div class=\"encabezado-recuadro\">" +
           "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
-          "<span class=\"total-categoria-muro\">" + formatearMoneda(recuadro.monto) + "</span>" +
+          "<span class=\"total-categoria-muro\">" + formatearMoneda(totalSemanal) + "</span>" +
         "</div>" +
-        "<div class=\"fila-presupuesto-muro\">" +
-          "<label for=\"topeMuro_" + recuadro.categoriaId + "\">por semana</label>" +
-          "<input type=\"number\" min=\"0\" step=\"50\" id=\"topeMuro_" + recuadro.categoriaId + "\"" +
-            " data-categoria-tope=\"" + recuadro.categoriaId + "\" value=\"" + recuadro.monto + "\">" +
+        recuadro.topes.map(function (tope) {
+          return "<div class=\"fila-presupuesto-muro\">" +
+            "<label for=\"topeMuro_" + tope.categoriaId + "\">" + escaparHTML(tope.nombre) + "</label>" +
+            "<input type=\"number\" min=\"0\" step=\"50\" id=\"topeMuro_" + tope.categoriaId + "\"" +
+              " data-categoria-tope=\"" + tope.categoriaId + "\" value=\"" + tope.monto + "\">" +
+            "<span class=\"unidad-tope\">/sem</span>" +
+          "</div>";
+        }).join("") +
+      "</div>";
+    }
+
+    if (recuadro.tipo === "resumen") {
+      const claseBalance = recuadro.balance >= 0 ? " balance-alcanza" : " balance-no-alcanza";
+      return "<div class=\"recuadro\">" +
+        "<div class=\"encabezado-recuadro\">" +
+          "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
+        "</div>" +
+        recuadro.filas.map(function (fila) {
+          return "<div class=\"fila-resumen-muro\">" +
+            "<span class=\"etiqueta-resumen\">" + fila.etiqueta + "</span>" +
+            "<span class=\"monto-fila-muro\">" + formatearMoneda(fila.monto) + "</span>" +
+          "</div>";
+        }).join("") +
+        "<div class=\"fila-resumen-muro fila-balance" + claseBalance + "\">" +
+          "<span class=\"etiqueta-resumen\">Balance al cerrar</span>" +
+          "<span class=\"monto-fila-muro\">" + formatearMoneda(recuadro.balance) + "</span>" +
         "</div>" +
       "</div>";
     }
@@ -6762,6 +6931,127 @@
   }
 
   // ============================================================
+  // VISTA ANCHA — TRAYECTORIA
+  // ============================================================
+  //
+  // La misma pregunta que responde el semáforo, pero como recorrido: cuánto
+  // dinero queda cada día del ciclo si el ritmo no cambia, y en qué fecha se
+  // acaba. Reusa calcularTrayectoriaDelSemaforo, que ya calcula el acumulado
+  // día por día con las reglas de SPEC.md — aquí solo se le resta al ingreso
+  // para pasar de "cuánto he gastado" a "cuánto me queda", que es la lectura
+  // que el usuario pidió.
+
+  const ALTO_GRAFICA_TRAYECTORIA = 54;
+
+  // El primer día en que el dinero restante se vuelve negativo. null si el
+  // ciclo cierra sin quedarse sin dinero.
+  function calcularDiaEnQueSeAcabaElDinero(trayectoria, ingresos) {
+    const diaSinDinero = trayectoria.find(function (dia) { return dia.acumulado > ingresos; });
+    return diaSinDinero || null;
+  }
+
+  function renderizarTrayectoriaDeLaPrimeraPantalla() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const ingresos = calcularIngresosDelCiclo(ciclo, datos);
+    const veredicto = document.getElementById("veredictoTrayectoria");
+    const contenedor = document.getElementById("graficaTrayectoria");
+
+    // Sin ingreso capturado no hay contra qué comparar — mismo criterio "gris"
+    // que ya usa el semáforo: no es que el ciclo vaya mal, es que todavía no
+    // hay nada que calcular.
+    if (ingresos <= 0) {
+      veredicto.textContent = "Captura un ingreso de este ciclo para ver la trayectoria.";
+      contenedor.innerHTML = "";
+      return;
+    }
+
+    const trayectoria = calcularTrayectoriaDelSemaforo(ciclo, datos);
+    const diaSinDinero = calcularDiaEnQueSeAcabaElDinero(trayectoria, ingresos);
+    const restanteAlCerrar = ingresos - trayectoria[trayectoria.length - 1].acumulado;
+
+    if (diaSinDinero) {
+      const fecha = crearFechaLocal(diaSinDinero.fechaISO);
+      const diasQueFaltanParaCerrar = trayectoria.length -
+        trayectoria.findIndex(function (dia) { return dia.fechaISO === diaSinDinero.fechaISO; }) - 1;
+      veredicto.innerHTML = "Te quedas sin dinero el <strong>" + fecha.getDate() + " de " +
+        NOMBRES_DE_MESES[fecha.getMonth()].toLowerCase() + "</strong>" +
+        (diasQueFaltanParaCerrar > 0
+          ? ", a " + diasQueFaltanParaCerrar + " día" + (diasQueFaltanParaCerrar === 1 ? "" : "s") + " de cerrar."
+          : ", justo al cerrar.");
+    } else {
+      veredicto.innerHTML = "El ciclo cierra con <strong>" + formatearMoneda(restanteAlCerrar) +
+        "</strong> si el ritmo no cambia.";
+    }
+
+    contenedor.innerHTML = construirSVGDeTrayectoria(trayectoria, ingresos, contenedor.clientWidth);
+  }
+
+  // La gráfica se dibuja en píxeles reales, con el ancho medido del
+  // contenedor, y no en un viewBox estirado: estirando un viewBox angosto al
+  // ancho de la pantalla, el punteado de la línea proyectada se deforma con él
+  // y la curva se ve como una hilera de guiones sueltos en vez de una línea.
+  // Al cambiar el tamaño de la ventana se vuelve a generar.
+  function construirSVGDeTrayectoria(trayectoria, ingresos, anchoEnPixeles) {
+    const ancho = Math.max(anchoEnPixeles || 0, 120);
+    const restantes = trayectoria.map(function (dia) { return ingresos - dia.acumulado; });
+    const maximo = Math.max.apply(null, restantes.concat([ingresos]));
+    const minimo = Math.min.apply(null, restantes.concat([0]));
+    const alcance = (maximo - minimo) || 1;
+
+    function coordenadaX(indice) {
+      return (indice / Math.max(trayectoria.length - 1, 1)) * ancho;
+    }
+    function coordenadaY(valor) {
+      // Se deja un pixel de aire arriba y abajo para que el trazo no se corte.
+      return 1 + ((maximo - valor) / alcance) * (ALTO_GRAFICA_TRAYECTORIA - 2);
+    }
+
+    const indiceDeHoy = trayectoria.reduce(function (ultimo, dia, indice) {
+      return dia.esFuturo ? ultimo : indice;
+    }, 0);
+
+    // Lo ya ocurrido y lo proyectado son dos trazos distintos, unidos por el
+    // punto de hoy para que la línea no se vea partida.
+    const puntosReales = restantes.slice(0, indiceDeHoy + 1).map(function (valor, indice) {
+      return coordenadaX(indice).toFixed(2) + "," + coordenadaY(valor).toFixed(2);
+    }).join(" ");
+
+    const puntosProyectados = restantes.slice(indiceDeHoy).map(function (valor, posicion) {
+      return coordenadaX(indiceDeHoy + posicion).toFixed(2) + "," + coordenadaY(valor).toFixed(2);
+    }).join(" ");
+
+    const yDelCero = coordenadaY(0);
+    const xDeHoy = coordenadaX(indiceDeHoy);
+
+    // Marca del día en que el dinero se acaba, si ocurre.
+    let marcaQuiebre = "";
+    const indiceQuiebre = restantes.findIndex(function (valor) { return valor < 0; });
+    if (indiceQuiebre !== -1) {
+      marcaQuiebre = "<circle class=\"punto-quiebre\" cx=\"" + coordenadaX(indiceQuiebre).toFixed(2) +
+        "\" cy=\"" + coordenadaY(restantes[indiceQuiebre]).toFixed(2) + "\" r=\"1.6\"/>";
+    }
+
+    // El primer día del ciclo la parte real es un solo punto, y un polyline de
+    // un punto no dibuja nada: se marca con un círculo para que "hoy" siempre
+    // se vea sobre la curva.
+    const puntoDeHoy = "<circle class=\"punto-hoy\" cx=\"" + xDeHoy.toFixed(2) +
+      "\" cy=\"" + coordenadaY(restantes[indiceDeHoy]).toFixed(2) + "\" r=\"2.5\"/>";
+
+    return "<svg viewBox=\"0 0 " + ancho + " " + ALTO_GRAFICA_TRAYECTORIA + "\" " +
+      "role=\"img\" aria-label=\"Dinero restante día por día en el ciclo\">" +
+      "<line class=\"linea-cero\" x1=\"0\" y1=\"" + yDelCero.toFixed(2) +
+        "\" x2=\"" + ancho + "\" y2=\"" + yDelCero.toFixed(2) + "\"/>" +
+      "<line class=\"marca-hoy\" x1=\"" + xDeHoy.toFixed(2) + "\" y1=\"0\" x2=\"" + xDeHoy.toFixed(2) +
+        "\" y2=\"" + ALTO_GRAFICA_TRAYECTORIA + "\"/>" +
+      "<polyline class=\"linea-real\" points=\"" + puntosReales + "\"/>" +
+      "<polyline class=\"linea-proyectada\" points=\"" + puntosProyectados + "\"/>" +
+      puntoDeHoy +
+      marcaQuiebre +
+    "</svg>";
+  }
+
+  // ============================================================
   // VISTA ANCHA — CAJÓN DE CALENDARIO (cerrado)
   // ============================================================
   //
@@ -7071,9 +7361,10 @@
     renderizarMovimientosDelCiclo();
     renderizarEstadoDeDeudaAnalisis();
     renderizarEncabezadoDelCiclo();
-    // El muro va después del encabezado y del cajón: su acomodo mide la
-    // altura que le queda libre, así que los dos tienen que estar ya
-    // dibujados con su tamaño final.
+    // El muro va al final: su acomodo mide la altura que le queda libre, así
+    // que todo lo que comparte la primera pantalla con él (trayectoria y
+    // cajón) tiene que estar ya dibujado con su tamaño final.
+    renderizarTrayectoriaDeLaPrimeraPantalla();
     renderizarCajonDeCalendario();
     renderizarMuroDePagos();
     mostrarDatosEnPantalla();
