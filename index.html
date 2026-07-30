@@ -1004,6 +1004,46 @@
     color: var(--texto-a);
   }
 
+  /* ---------- Barra de simulación ---------- */
+  /* Solo aparece cuando hay algo sin guardar. Usa el ámbar del semáforo, que
+     ya significa "atención, pendiente" en toda la app. */
+  #barraSimulacion {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 10px 22px 0;
+    padding: 8px 12px;
+    border: 1px solid rgba(253, 224, 71, 0.35);
+    border-radius: 8px;
+    background-color: rgba(253, 224, 71, 0.07);
+  }
+  #barraSimulacion[hidden] { display: none; }
+  #vistaAncha .aviso-simulacion {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: #fde047;
+  }
+  #barraSimulacion button {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    padding: 6px 13px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #barraSimulacion button:hover { color: var(--texto-a); }
+  /* Guardar es la acción que toca datos reales: se distingue con la misma
+     inversión neutra del botón de agregar, no con un color nuevo. */
+  #botonGuardarSimulacion {
+    background-color: var(--texto-a) !important;
+    border-color: var(--texto-a) !important;
+    color: var(--fondo-a) !important;
+    font-weight: 500;
+  }
+
   /* ---------- Trayectoria ---------- */
   /* Lo real y lo proyectado no se disfrazan uno de otro: trazo sólido y color
      pleno para lo que ya pasó, el mismo color al 55% y punteado para lo que
@@ -1164,6 +1204,37 @@
     font-family: var(--mono-a);
     font-variant-numeric: tabular-nums;
     color: var(--texto-a);
+  }
+  /* El monto de un pago pendiente es editable, pero se ve como el texto que
+     reemplaza hasta que se enfoca: si trajera borde y fondo, cada fila del
+     muro parecería un formulario y la pantalla dejaría de leerse de un golpe.
+     Mismo ancho y misma tipografía, así que editarlo no reacomoda nada. */
+  #vistaAncha .monto-editable-muro {
+    flex: 0 0 auto;
+    width: 5.4em;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 5px;
+    padding: 0 2px;
+    color: var(--texto-a);
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 1em;
+    text-align: right;
+  }
+  #vistaAncha .monto-editable-muro:hover {
+    border-color: var(--borde-a);
+  }
+  #vistaAncha .monto-editable-muro:focus {
+    border-color: var(--texto-2a);
+    background-color: var(--superficie-alta-a);
+    outline: none;
+  }
+  /* Las flechitas del campo numérico roban ancho y ensucian la fila. */
+  #vistaAncha .monto-editable-muro::-webkit-outer-spin-button,
+  #vistaAncha .monto-editable-muro::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 
   /* El presupuesto semanal de las categorías variables se edita en el muro. */
@@ -6614,11 +6685,22 @@
           const monto = Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
           const etiquetaPago = pago.pagoNde ? " <span class=\"dia-fila-muro\">(pago " + pago.pagoNde + ")</span>" : "";
 
+          // Un pago pendiente lleva su monto como campo editable; uno ya
+          // pagado, como texto: su monto real ya ocurrió y no es negociable.
+          // El campo se ve igual que el texto hasta que se enfoca, así que
+          // editarlo no cambia la altura de la fila ni obliga a reacomodar el
+          // muro entero.
+          const montoHTML = pago.pagado
+            ? "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>"
+            : "<input type=\"number\" min=\"0\" step=\"1\" class=\"monto-editable-muro\"" +
+              " data-monto-de=\"" + pago.id + "\" value=\"" + monto + "\"" +
+              " aria-label=\"Monto de " + escaparHTML(pago.nombre) + "\">";
+
           const fila = "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") + "\">" +
             "<span class=\"punto-estado " + estado + "\"></span>" +
             "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + "</span>" +
             "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
-            "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>" +
+            montoHTML +
           "</div>";
 
           if (!conAccionDePago || pago.pagado) {
@@ -6627,6 +6709,10 @@
 
           return fila +
             "<div class=\"confirmacion-en-cajon\">" +
+              "<label>Mover a" +
+                "<input type=\"date\" class=\"fecha-a-posponer\" data-fecha-de=\"" + pago.id + "\"" +
+                  " value=\"" + pago.fechaProgramada + "\">" +
+              "</label>" +
               "<label>Monto real" +
                 "<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + pago.montoEstimado + "\">" +
               "</label>" +
@@ -6762,27 +6848,37 @@
       "</div>";
     }).join("");
 
-    // Los topes semanales se guardan al salir del campo, no en cada tecla:
-    // guardar por tecla dispararía un redibujado completo con el cursor
-    // dentro del input.
+    // Los cambios se aplican al salir del campo, no en cada tecla: por tecla
+    // se dispararía un redibujado completo con el cursor dentro del input.
     document.querySelectorAll("#muroPagos [data-categoria-tope]").forEach(function (campo) {
       campo.addEventListener("change", function () {
-        guardarTopeSemanalDesdeElMuro(campo.getAttribute("data-categoria-tope"), campo.value);
+        cambiarTopeSemanalSimulado(campo.getAttribute("data-categoria-tope"), campo.value);
+      });
+    });
+
+    document.querySelectorAll("#muroPagos [data-monto-de]").forEach(function (campo) {
+      campo.addEventListener("change", function () {
+        cambiarMontoSimulado(campo.getAttribute("data-monto-de"), campo.value);
       });
     });
   }
 
-  function guardarTopeSemanalDesdeElMuro(categoriaId, valor) {
-    const datos = leerDatos();
+  // El tope semanal se edita dentro de la simulación, como los montos: mover
+  // el presupuesto variable es justo una de las cosas con las que se juega
+  // para ver si el ciclo cierra, y no debe escribirse hasta guardar.
+  function cambiarTopeSemanalSimulado(categoriaId, valor) {
+    const trabajo = asegurarDatosDeTrabajo();
     const ciclo = asegurarCicloActual();
-    const cicloGuardado = datos.ciclos.find(function (c) { return c.id === ciclo.id; });
+    const cicloDeTrabajo = trabajo.ciclos.find(function (c) { return c.id === ciclo.id; });
 
-    if (!cicloGuardado.presupuestoSemanal) {
-      cicloGuardado.presupuestoSemanal = {};
+    if (!cicloDeTrabajo) {
+      return;
     }
-    cicloGuardado.presupuestoSemanal[categoriaId] = Number(valor) || 0;
+    if (!cicloDeTrabajo.presupuestoSemanal) {
+      cicloDeTrabajo.presupuestoSemanal = {};
+    }
+    cicloDeTrabajo.presupuestoSemanal[categoriaId] = Number(valor) || 0;
 
-    guardarDatos(datos);
     renderizarTodo();
   }
 
@@ -6863,7 +6959,7 @@
       return null;
     }
 
-    const datos = leerDatos();
+    const datos = obtenerDatosVisibles();
     const ciclo = asegurarCicloActual();
     const recuadros = construirRecuadrosDelMuro(ciclo, datos);
 
@@ -6900,7 +6996,7 @@
   // ciclos, porque no son meses de calendario.
 
   function renderizarEncabezadoDelCiclo() {
-    const datos = leerDatos();
+    const datos = obtenerDatosVisibles();
     const ciclo = asegurarCicloActual();
 
     const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
@@ -6931,6 +7027,185 @@
   }
 
   // ============================================================
+  // VISTA ANCHA — SIMULACIÓN DE LA PRIMERA PANTALLA
+  // ============================================================
+  //
+  // La primera pantalla no es solo de consulta: se juega con los números para
+  // armar la estrategia del ciclo. Decisión del usuario: "hago la simulación,
+  // si me gusta la guardo, si no que se devuelva a lo original" — sin
+  // historial de escenarios.
+  //
+  // Mientras se está simulando existe una copia de trabajo. Todo lo que dibuja
+  // la primera pantalla lee de ella, así que los totales, la trayectoria y el
+  // balance al cerrar responden en vivo a cada cambio. Los datos reales no se
+  // tocan hasta que se guarda.
+  //
+  // Guardar aplica los cambios uno por uno sobre los datos reales, en vez de
+  // escribir la copia completa encima: si algo más cambió en los datos
+  // mientras se simulaba, sobreescribir el objeto entero lo perdería.
+
+  let datosDeTrabajo = null;
+
+  // De aquí leen todos los render de la primera pantalla.
+  function obtenerDatosVisibles() {
+    return datosDeTrabajo || leerDatos();
+  }
+
+  function haySimulacionEnCurso() {
+    return datosDeTrabajo !== null;
+  }
+
+  function asegurarDatosDeTrabajo() {
+    if (datosDeTrabajo === null) {
+      datosDeTrabajo = JSON.parse(JSON.stringify(leerDatos()));
+    }
+    return datosDeTrabajo;
+  }
+
+  // Qué se movió respecto a los datos reales. Se recalcula comparando, no
+  // llevando una lista aparte: así nunca puede desincronizarse de la copia.
+  function calcularCambiosDeLaSimulacion() {
+    if (!haySimulacionEnCurso()) {
+      return { montos: 0, fechas: 0, topes: 0, total: 0 };
+    }
+
+    const reales = leerDatos();
+    const ciclo = asegurarCicloActual();
+    let montos = 0;
+    let fechas = 0;
+
+    datosDeTrabajo.compromisos.forEach(function (simulado) {
+      const real = reales.compromisos.find(function (c) { return c.id === simulado.id; });
+      if (!real) { return; }
+      if (Number(simulado.montoEstimado) !== Number(real.montoEstimado)) { montos++; }
+      if (simulado.fechaProgramada !== real.fechaProgramada) { fechas++; }
+    });
+
+    const cicloSimulado = datosDeTrabajo.ciclos.find(function (c) { return c.id === ciclo.id; });
+    const cicloReal = reales.ciclos.find(function (c) { return c.id === ciclo.id; });
+    let topes = 0;
+    if (cicloSimulado && cicloReal) {
+      const presupuestoSimulado = cicloSimulado.presupuestoSemanal || {};
+      const presupuestoReal = cicloReal.presupuestoSemanal || {};
+      Object.keys(presupuestoSimulado).forEach(function (categoriaId) {
+        if (Number(presupuestoSimulado[categoriaId] || 0) !== Number(presupuestoReal[categoriaId] || 0)) {
+          topes++;
+        }
+      });
+    }
+
+    return { montos: montos, fechas: fechas, topes: topes, total: montos + fechas + topes };
+  }
+
+  function renderizarBarraDeSimulacion() {
+    const barra = document.getElementById("barraSimulacion");
+    const cambios = calcularCambiosDeLaSimulacion();
+
+    // Sin cambios no hay nada que guardar ni que descartar: la barra
+    // desaparece en vez de quedarse ocupando espacio con dos botones inertes.
+    if (cambios.total === 0) {
+      barra.innerHTML = "";
+      barra.hidden = true;
+      return;
+    }
+
+    const partes = [];
+    if (cambios.montos > 0) { partes.push(cambios.montos + " monto" + (cambios.montos === 1 ? "" : "s")); }
+    if (cambios.fechas > 0) { partes.push(cambios.fechas + " fecha" + (cambios.fechas === 1 ? "" : "s")); }
+    if (cambios.topes > 0) { partes.push(cambios.topes + " presupuesto" + (cambios.topes === 1 ? "" : "s")); }
+
+    barra.hidden = false;
+    barra.innerHTML =
+      "<span class=\"aviso-simulacion\">Estás probando cambios · " + partes.join(", ") +
+        " sin guardar</span>" +
+      "<button type=\"button\" id=\"botonDescartarSimulacion\">Reiniciar</button>" +
+      "<button type=\"button\" id=\"botonGuardarSimulacion\">Guardar</button>";
+
+    document.getElementById("botonDescartarSimulacion").addEventListener("click", descartarSimulacion);
+    document.getElementById("botonGuardarSimulacion").addEventListener("click", guardarSimulacion);
+  }
+
+  function descartarSimulacion() {
+    datosDeTrabajo = null;
+    renderizarTodo();
+  }
+
+  // Escribe los cambios de la simulación sobre los datos reales. Es el único
+  // punto de la app donde una simulación toca datos de verdad, así que pide
+  // confirmación.
+  function guardarSimulacion() {
+    const cambios = calcularCambiosDeLaSimulacion();
+    if (cambios.total === 0) {
+      return;
+    }
+
+    if (!confirm("Vas a guardar " + cambios.total + " cambio(s) sobre tus pagos reales. ¿Continuar?")) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+
+    datosDeTrabajo.compromisos.forEach(function (simulado) {
+      const real = datos.compromisos.find(function (c) { return c.id === simulado.id; });
+      if (!real) { return; }
+
+      real.montoEstimado = Number(simulado.montoEstimado);
+
+      if (simulado.fechaProgramada !== real.fechaProgramada) {
+        real.fechaProgramada = simulado.fechaProgramada;
+        // Mover la fecha puede sacar el pago de su ciclo. Si el cicloId no se
+        // recalcula, el pago sigue contando en el ciclo viejo aunque su fecha
+        // diga otra cosa — el mismo error que ya se corrigió en ingresos.
+        real.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(simulado.fechaProgramada));
+      }
+    });
+
+    const cicloSimulado = datosDeTrabajo.ciclos.find(function (c) { return c.id === ciclo.id; });
+    const cicloReal = datos.ciclos.find(function (c) { return c.id === ciclo.id; });
+    if (cicloSimulado && cicloReal) {
+      cicloReal.presupuestoSemanal = Object.assign({}, cicloSimulado.presupuestoSemanal);
+    }
+
+    guardarDatos(datos);
+    datosDeTrabajo = null;
+    renderizarTodo();
+    mostrarMensaje("Cambios guardados.");
+  }
+
+  // Editar el monto de un pago dentro de la simulación.
+  function cambiarMontoSimulado(compromisoId, nuevoMonto) {
+    const monto = Number(nuevoMonto);
+    if (!monto || monto <= 0) {
+      renderizarTodo();
+      return;
+    }
+
+    const trabajo = asegurarDatosDeTrabajo();
+    const compromiso = trabajo.compromisos.find(function (c) { return c.id === compromisoId; });
+    if (!compromiso) { return; }
+
+    compromiso.montoEstimado = monto;
+    renderizarTodo();
+  }
+
+  // Mover un pago a otra fecha (posponerlo o adelantarlo) dentro de la
+  // simulación.
+  function cambiarFechaSimulada(compromisoId, nuevaFecha) {
+    if (!nuevaFecha) {
+      return;
+    }
+
+    const trabajo = asegurarDatosDeTrabajo();
+    const compromiso = trabajo.compromisos.find(function (c) { return c.id === compromisoId; });
+    if (!compromiso) { return; }
+
+    compromiso.fechaProgramada = nuevaFecha;
+    compromiso.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(nuevaFecha));
+    renderizarTodo();
+  }
+
+  // ============================================================
   // VISTA ANCHA — TRAYECTORIA
   // ============================================================
   //
@@ -6951,7 +7226,7 @@
   }
 
   function renderizarTrayectoriaDeLaPrimeraPantalla() {
-    const datos = leerDatos();
+    const datos = obtenerDatosVisibles();
     const ciclo = asegurarCicloActual();
     const ingresos = calcularIngresosDelCiclo(ciclo, datos);
     const veredicto = document.getElementById("veredictoTrayectoria");
@@ -7137,7 +7412,7 @@
   }
 
   function renderizarMesDelCajon() {
-    const datos = leerDatos();
+    const datos = obtenerDatosVisibles();
     const ciclo = asegurarCicloActual();
     const anio = mesVisibleDelCajon.getFullYear();
     const mes = mesVisibleDelCajon.getMonth();
@@ -7198,7 +7473,7 @@
   // punto de estado, mismo nombre, mismo monto alineado. Así lo que se aprende
   // a leer en el muro sirve igual aquí.
   function renderizarDiaElegidoDelCajon() {
-    const datos = leerDatos();
+    const datos = obtenerDatosVisibles();
     const compromisos = obtenerCompromisosDeLaFecha(diaElegidoDelCajon, datos);
     const fecha = crearFechaLocal(diaElegidoDelCajon);
 
@@ -7244,10 +7519,26 @@
       }, false, true);
     }).join("");
 
+    // Posponer o adelantar un pago: entra a la simulación como cualquier otro
+    // cambio, así que se ve en el muro y en el balance antes de guardarlo.
+    contenedor.querySelectorAll("[data-fecha-de]").forEach(function (campo) {
+      campo.addEventListener("change", function () {
+        cambiarFechaSimulada(campo.getAttribute("data-fecha-de"), campo.value);
+      });
+    });
+
     // Marcar pagado desde aquí: es la razón de que el calendario sea
     // desplegable y no solo consultable.
     contenedor.querySelectorAll(".boton-marcar-pagado").forEach(function (boton) {
       boton.addEventListener("click", function () {
+        // Un pago es un hecho, no una hipótesis: se escribe en los datos
+        // reales. Con cambios de simulación encima, guardarlo dejaría la copia
+        // de trabajo desfasada de la realidad, así que primero hay que
+        // resolver la simulación.
+        if (haySimulacionEnCurso() && calcularCambiosDeLaSimulacion().total > 0) {
+          alert("Tienes cambios sin guardar en la simulación. Guárdalos o reinicia antes de marcar un pago.");
+          return;
+        }
         confirmarPagoDeCompromiso(
           boton.getAttribute("data-compromiso-id"),
           boton.closest(".confirmacion-en-cajon")
@@ -7257,7 +7548,7 @@
   }
 
   function renderizarCajonDeCalendario() {
-    const datos = leerDatos();
+    const datos = obtenerDatosVisibles();
     const ciclo = asegurarCicloActual();
     const contenedor = document.getElementById("proximosDiasCajon");
 
@@ -7362,8 +7653,9 @@
     renderizarEstadoDeDeudaAnalisis();
     renderizarEncabezadoDelCiclo();
     // El muro va al final: su acomodo mide la altura que le queda libre, así
-    // que todo lo que comparte la primera pantalla con él (trayectoria y
-    // cajón) tiene que estar ya dibujado con su tamaño final.
+    // que todo lo que comparte la primera pantalla con él (barra, trayectoria
+    // y cajón) tiene que estar ya dibujado con su tamaño final.
+    renderizarBarraDeSimulacion();
     renderizarTrayectoriaDeLaPrimeraPantalla();
     renderizarCajonDeCalendario();
     renderizarMuroDePagos();
