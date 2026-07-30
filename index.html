@@ -3622,16 +3622,44 @@
       .reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
   }
 
-  // El dinero comprometido no está disponible aunque siga en la cuenta, y
-  // los gastos a crédito no salen de la cuenta hasta que se paga la
-  // tarjeta (eso ya está contemplado como compromiso) — por eso solo se
-  // resta el gasto a débito.
+  // Lo que queda del presupuesto semanal para los días que faltan del ciclo.
+  //
+  // Se cuentan los días restantes y no el ciclo completo a propósito: el
+  // presupuesto de los días ya transcurridos se materializó (o no) en gastos
+  // reales, que se restan aparte. Descontar el ciclo entero contaría dos veces
+  // lo que ya se gastó.
+  function calcularPresupuestoVariablePendiente(ciclo, datos) {
+    const rango = calcularRangoDeDiasDelCiclo(ciclo);
+    const presupuesto = obtenerPresupuestoSemanalVigente(ciclo, datos);
+
+    return datos.config.categorias
+      .filter(function (categoria) { return categoria.esVariableSemanal; })
+      .reduce(function (suma, categoria) {
+        const tasaDiaria = (Number(presupuesto[categoria.id]) || 0) / 7;
+        return suma + (tasaDiaria * rango.diasRestantes);
+      }, 0);
+  }
+
+  // Cuánto se puede gastar libremente en lo que queda del ciclo.
+  //
+  // El dinero comprometido no está disponible aunque siga en la cuenta, y los
+  // gastos a crédito no salen de la cuenta hasta que se paga la tarjeta (eso ya
+  // está contemplado como compromiso) — por eso solo se resta el gasto a débito.
+  //
+  // También se resta el presupuesto variable que todavía no se gasta. Decisión
+  // del usuario (30 jul 2026): la comida y la gasolina son gasto variable, pero
+  // ese mínimo semanal está tan comprometido como un recibo. Sin descontarlo,
+  // la cifra grande de la pantalla prometía $9,839 disponibles cuando $10,771
+  // ya estaban destinados a comer y a cargar gasolina.
   function calcularDisponibleReal(ciclo, datos) {
     const gastosDebitoDelCiclo = datos.gastos
       .filter(function (g) { return g.cicloId === ciclo.id && g.fuente === "debito"; })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
-    return calcularIngresosDelCiclo(ciclo, datos) - gastosDebitoDelCiclo - calcularCompromisosPendientesDelCiclo(ciclo, datos);
+    return calcularIngresosDelCiclo(ciclo, datos)
+      - gastosDebitoDelCiclo
+      - calcularCompromisosPendientesDelCiclo(ciclo, datos)
+      - calcularPresupuestoVariablePendiente(ciclo, datos);
   }
 
   // Todos los compromisos del ciclo cuentan siempre, se hayan pagado o no
@@ -5037,8 +5065,11 @@
     contenedor.innerHTML =
       "<div class=\"monto-grande\">" + formatearMoneda(disponibleReal) + "</div>" +
       "<div class=\"semaforo semaforo-" + color + "\">" + ETIQUETA_SEMAFORO[color] + "</div>" +
+      "<p class=\"detalle\">Libre para gastar en lo que queda del ciclo</p>" +
       "<p class=\"detalle\">Ingresos del ciclo: " + formatearMoneda(ingresosDelCiclo) + "</p>" +
       "<p class=\"detalle\">Compromisos pendientes: " + formatearMoneda(compromisosPendientes) + "</p>" +
+      "<p class=\"detalle\">Presupuesto variable por gastar: " +
+        formatearMoneda(calcularPresupuestoVariablePendiente(ciclo, datos)) + "</p>" +
       "<p class=\"detalle\">Proyección de cierre: " + formatearMoneda(proyeccionCierre) + "</p>" +
       margenHTML +
       proximoCambioHTML +
@@ -6029,7 +6060,7 @@
       "</div>" +
       "<div class=\"resumen-disponible\">" +
         "<p class=\"resumen-numero mono\">" + formatearMoneda(disponible) + "</p>" +
-        "<p class=\"resumen-etiqueta\">Disponible</p>" +
+        "<p class=\"resumen-etiqueta\">Libre para gastar</p>" +
       "</div>";
   }
 
@@ -7284,7 +7315,7 @@
     // ciclo futuro no existe "disponible": lo que se puede saber es con cuánto
     // cerraría, así que esa pasa a ser la cifra principal.
     document.getElementById("etiquetaCifraPrincipal").textContent =
-      esCicloActual ? "Disponible del ciclo" : "Balance proyectado";
+      esCicloActual ? "Libre para gastar" : "Balance proyectado";
     document.getElementById("cifraDisponibleAncha").textContent = formatearMoneda(
       esCicloActual
         ? calcularDisponibleReal(ciclo, obtenerDatosVisibles())
