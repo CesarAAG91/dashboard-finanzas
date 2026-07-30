@@ -59,7 +59,7 @@
     margin-bottom: 10px;
   }
   p.descripcion {
-    color: #94a3b8;
+    color: #948e9c;
     font-size: 14px;
     margin-top: 0;
     margin-bottom: 20px;
@@ -67,13 +67,13 @@
   section {
     margin-bottom: 28px;
     padding-bottom: 20px;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid #221f27;
   }
   label {
     display: block;
     margin-bottom: 10px;
     font-size: 14px;
-    color: #cbd5e1;
+    color: #f6f3ef;
   }
   label input,
   label select {
@@ -82,9 +82,9 @@
     box-sizing: border-box;
     margin-top: 4px;
     padding: 8px;
-    background-color: #1e293b;
-    color: #e2e8f0;
-    border: 1px solid #334155;
+    background-color: #221f27;
+    color: #f6f3ef;
+    border: 1px solid #35313c;
     border-radius: 6px;
     font-size: 14px;
   }
@@ -96,7 +96,7 @@
     vertical-align: middle;
   }
   button {
-    background-color: #0f766e;
+    background-color: #948e9c;
     color: white;
     border: none;
     border-radius: 8px;
@@ -108,7 +108,7 @@
     background-color: #0d5f58;
   }
   .pista {
-    color: #64748b;
+    color: #6f6a78;
     font-size: 12px;
     margin: -4px 0 12px 0;
   }
@@ -132,25 +132,25 @@
   }
   ul.lista-items li {
     padding: 8px 0;
-    border-bottom: 1px solid #1e293b;
+    border-bottom: 1px solid #221f27;
     font-size: 14px;
   }
   ul.lista-items li.vacio {
-    color: #64748b;
+    color: #6f6a78;
     font-style: italic;
     border-bottom: none;
   }
   .detalle {
-    color: #94a3b8;
+    color: #948e9c;
     font-size: 12px;
   }
   textarea {
     width: 100%;
     box-sizing: border-box;
     height: 260px;
-    background-color: #1e293b;
-    color: #e2e8f0;
-    border: 1px solid #334155;
+    background-color: #221f27;
+    color: #f6f3ef;
+    border: 1px solid #35313c;
     border-radius: 8px;
     padding: 12px;
     font-family: monospace;
@@ -169,7 +169,7 @@
   }
   details summary {
     cursor: pointer;
-    color: #94a3b8;
+    color: #948e9c;
     font-size: 14px;
     margin-bottom: 12px;
   }
@@ -224,16 +224,16 @@
     min-width: 100px;
     padding: 16px 8px;
     font-size: 15px;
-    background-color: #1e293b;
-    color: #e2e8f0;
-    border: 2px solid #334155;
+    background-color: #221f27;
+    color: #f6f3ef;
+    border: 2px solid #35313c;
     border-radius: 10px;
     cursor: pointer;
     text-align: center;
   }
   .boton-grande.seleccionado {
-    border-color: #0f766e;
-    background-color: #0f766e55;
+    border-color: #948e9c;
+    background-color: #2c283355;
   }
   .monto-grande {
     font-size: 22px;
@@ -254,7 +254,7 @@
   .edicion-ingreso {
     margin-top: 10px;
     padding: 10px;
-    background-color: #1e293b;
+    background-color: #221f27;
     border-radius: 8px;
   }
   .avance-semanal-item {
@@ -264,14 +264,14 @@
     margin-bottom: 14px;
   }
   .barra-fondo {
-    background-color: #1e293b;
+    background-color: #221f27;
     border-radius: 6px;
     height: 10px;
     overflow: hidden;
   }
   .barra-relleno {
     height: 100%;
-    background-color: #0f766e;
+    background-color: #948e9c;
   }
   .barra-relleno.excedido {
     background-color: #f87171;
@@ -287,7 +287,7 @@
     margin-bottom: 8px;
   }
   .semaforo-verde {
-    background-color: #0f766e55;
+    background-color: #2c283355;
     color: #5eead4;
   }
   .semaforo-amarillo {
@@ -299,76 +299,8 @@
     color: #fca5a5;
   }
   .semaforo-gris {
-    background-color: #64748b55;
-    color: #cbd5e1;
-  }
-
-  /* Calendario de Análisis: grid de 7 columnas, un día por celda. Los
-     bordes reusan los mismos colores que el resto de la app: rojo de
-     pendiente urgente, verde de barra de avance, gris punteado para lo
-     que todavía es una proyección, no un compromiso real. */
-  .calendario-cabecera {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-  }
-  .calendario-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-  }
-  .dia-calendario {
-    background-color: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 6px;
-    padding: 6px 4px;
-    min-height: 44px;
-    text-align: center;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .dia-calendario.dia-vacio {
-    visibility: hidden;
-    cursor: default;
-  }
-  .dia-calendario.tiene-pendiente {
-    border-color: #94a3b8;
-  }
-  .dia-calendario.tiene-pendiente-urgente {
-    border-color: #f87171;
-  }
-  .dia-calendario.tiene-pagado {
-    border-color: #0f766e;
-  }
-  .dia-calendario.tiene-proyectado {
-    border-style: dashed;
-    border-color: #64748b;
-  }
-  .dia-calendario.dia-seleccionado {
-    outline: 2px solid #e2e8f0;
-  }
-
-  /* Trayectoria del semáforo (solo ciclo actual real): el fondo de cada día
-     es la salud financiera acumulada a esa fecha; el borde (arriba) sigue
-     indicando el estado de sus compromisos — son dos preguntas distintas. */
-  .dia-calendario.dia-semaforo-verde {
-    background-color: #0f766e55;
-  }
-  .dia-calendario.dia-semaforo-amarillo {
-    background-color: #eab30855;
-  }
-  .dia-calendario.dia-semaforo-rojo {
-    background-color: #f8717155;
-  }
-  .panel-detalle-dia {
-    margin-top: 12px;
-    padding: 10px;
-    background-color: #1e293b;
-    border-radius: 8px;
-  }
-  .item-dia {
-    margin-bottom: 10px;
+    background-color: #6f6a7855;
+    color: #f6f3ef;
   }
 
   /* Gráfica de trayectoria del semáforo: mismos colores de estado que
@@ -377,7 +309,7 @@
     position: relative;
     margin-top: 12px;
     padding: 10px;
-    background-color: #1e293b;
+    background-color: #221f27;
     border-radius: 8px;
   }
   .grafica-trayectoria svg {
@@ -387,20 +319,20 @@
     overflow: visible;
   }
   .grafica-eje-texto {
-    fill: #94a3b8;
+    fill: #948e9c;
     font-size: 10px;
   }
   .grafica-linea-referencia {
-    stroke: #334155;
+    stroke: #35313c;
     stroke-width: 1;
   }
   .grafica-linea-hoy {
-    stroke: #64748b;
+    stroke: #6f6a78;
     stroke-width: 1;
     stroke-dasharray: 2 2;
   }
   .grafica-crosshair {
-    stroke: #e2e8f0;
+    stroke: #f6f3ef;
     stroke-width: 1;
     pointer-events: none;
     display: none;
@@ -411,7 +343,7 @@
     flex-wrap: wrap;
     margin-top: 6px;
     font-size: 12px;
-    color: #94a3b8;
+    color: #948e9c;
   }
   .grafica-leyenda span {
     display: inline-flex;
@@ -426,8 +358,8 @@
   .grafica-tooltip {
     position: absolute;
     pointer-events: none;
-    background-color: #0f172a;
-    border: 1px solid #334155;
+    background-color: #18161c;
+    border: 1px solid #35313c;
     border-radius: 6px;
     padding: 4px 8px;
     font-size: 12px;
@@ -437,7 +369,7 @@
   }
   .grafica-tooltip .valor {
     font-weight: 600;
-    color: #e2e8f0;
+    color: #f6f3ef;
   }
 
   /* ============================================================
@@ -815,8 +747,8 @@
     flex-shrink: 0;
   }
   .tile-simulacion {
-    background-color: #1e293b;
-    border: 1px solid #334155;
+    background-color: #221f27;
+    border: 1px solid #35313c;
     border-radius: 8px;
     padding: 10px 14px;
     flex: 1;
@@ -825,7 +757,7 @@
   .tile-simulacion .etiqueta-tile {
     display: block;
     font-size: 11px;
-    color: #94a3b8;
+    color: #948e9c;
   }
   .tile-simulacion .monto-tile {
     font-size: 18px;
@@ -839,8 +771,8 @@
     min-height: 0;
   }
   .panel-simulacion {
-    background-color: #1e293b;
-    border: 1px solid #334155;
+    background-color: #221f27;
+    border: 1px solid #35313c;
     border-radius: 8px;
     padding: 10px 14px;
     overflow-y: auto;
@@ -860,9 +792,9 @@
   }
   .categoria-simulada {
     box-sizing: border-box;
-    background-color: #0f172a;
-    border: 1px solid #334155;
-    border-left: 4px solid #334155;
+    background-color: #18161c;
+    border: 1px solid #35313c;
+    border-left: 4px solid #35313c;
     border-radius: 8px;
     padding: 8px 10px;
     margin-bottom: 8px;
@@ -909,7 +841,7 @@
     gap: 6px;
     flex-wrap: wrap;
     padding: 6px 0;
-    border-bottom: 1px solid #0f172a;
+    border-bottom: 1px solid #18161c;
   }
   .fila-compromiso-simulado .nombre-compromiso-simulado {
     flex: 1;
@@ -938,7 +870,7 @@
     border-left-color: #5eead4;
   }
   .tarjeta-deuda-simulada {
-    border-top: 1px solid #334155;
+    border-top: 1px solid #35313c;
     padding: 6px 0;
   }
   .tarjeta-deuda-simulada:first-child {
@@ -952,7 +884,7 @@
     font-weight: 600;
   }
   .barra-progreso {
-    background-color: #334155;
+    background-color: #35313c;
     border-radius: 4px;
     height: 6px;
     margin: 4px 0;
@@ -972,7 +904,7 @@
     display: flex;
     justify-content: space-between;
     padding: 6px 0;
-    border-bottom: 1px solid #0f172a;
+    border-bottom: 1px solid #18161c;
   }
   .fila-horizonte-simulacion.ciclo-enfocado {
     font-weight: 600;
