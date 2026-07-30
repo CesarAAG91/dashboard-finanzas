@@ -4,3 +4,10 @@ DECISIONES.md
 PROGRESO.md
 PROMPT-INICIAL.md
 .claude/
+
+# Imágenes de referencia y capturas de trabajo: se quedan locales, el repo
+# solo lleva los tres archivos de la app (index.html, manifest.json, icon.png).
+*.png
+*.jpeg
+*.jpg
+!icon.png

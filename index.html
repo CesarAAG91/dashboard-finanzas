@@ -43,6 +43,32 @@
     padding: 16px;
     max-width: 640px;
   }
+  /* La pestaña de Simulación es la única vista pensada para ocupar el
+     ancho completo de una laptop (paneles lado a lado) — el resto del
+     archivo (Captura, Análisis, Configuración) se queda en la columna de
+     640px de siempre, sin tocar. La clase la pone/quita mostrarPestanaAncha
+     solo al entrar/salir de "simulacion". */
+  body.modo-simulacion-ancho {
+    max-width: none;
+  }
+  /* El título "Ciclo" y su párrafo explicativo son documentación de cómo
+     funciona la app en general — útiles la primera vez, no en cada entrada
+     a trabajar en la simulación. Solo se ocultan aquí, nunca en
+     Análisis/Configuración. */
+  body.modo-simulacion-ancho > h1,
+  body.modo-simulacion-ancho > p.descripcion {
+    display: none;
+  }
+  /* Los botones de pestaña (Análisis/Configuración/Simulación) reusan
+     .boton-grande — la misma clase que los botones táctiles grandes de
+     Captura (categoría/fuente/tarjeta), que sí necesitan ese padding para
+     tocarse con el dedo. Escalado solo para esta instancia, vía el
+     selector #vistaAncha > .botones-grandes, que es la única que vive
+     fuera de Captura. */
+  #vistaAncha > .botones-grandes .boton-grande {
+    padding: 8px;
+    font-size: 14px;
+  }
   h1 {
     font-size: 20px;
     margin-bottom: 4px;
@@ -104,6 +130,12 @@
     color: #64748b;
     font-size: 12px;
     margin: -4px 0 12px 0;
+  }
+  .aviso {
+    color: #fde047;
+    border-left: 3px solid #fde047;
+    padding-left: 8px;
+    margin: 4px 0;
   }
   .costo-credito {
     color: #f87171;
@@ -177,6 +209,9 @@
     display: block;
   }
   #vistaConfiguracion {
+    display: none;
+  }
+  #vistaSimulacion {
     display: none;
   }
   @media (min-width: 641px) {
@@ -674,6 +709,215 @@
   #vistaCaptura .avance-categoria {
     color: var(--texto-sec-c);
   }
+
+  /* ============================================================ */
+  /* PESTAÑA DE SIMULACIÓN — densa, sin scroll de página. El       */
+  /* balance del ciclo enfocado va en una franja fija arriba para  */
+  /* que nunca se pierda de vista mientras se explora la lista de  */
+  /* compromisos; los dos paneles de abajo scrollean por dentro,   */
+  /* nunca la página completa.                                     */
+  /* ============================================================ */
+  #vistaSimulacion {
+    height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .banner-simulacion {
+    background-color: #422006;
+    border: 1px solid #fde047;
+    color: #fde047;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .franja-balance-simulacion {
+    /* Sin position:sticky a propósito: el bloque de depuración (JSON
+       crudo) siempre vive después de #vistaSimulacion en el documento, así
+       que si la página completa llega a hacer scroll, un sticky aquí se
+       despega de su contenedor y termina flotando encima de esos controles
+       — el balance ya queda siempre visible por ser un hermano fuera de
+       los paneles con scroll interno, no hace falta sticky para eso. */
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .tile-simulacion {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 14px;
+    flex: 1;
+    min-width: 120px;
+  }
+  .tile-simulacion .etiqueta-tile {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+  .tile-simulacion .monto-tile {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .cuerpo-simulacion {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+  }
+  .panel-simulacion {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 14px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  /* Cada categoría (y "Ciclos del horizonte") es una tarjeta dentro de una
+     composición en columnas tipo mampostería (CSS multi-column, no grid):
+     una tarjeta corta (ej. Seguros, con un solo compromiso) deja que la
+     SIGUIENTE tarjeta empiece justo debajo en la misma columna, en vez de
+     dejar un hueco vacío hasta la fila siguiente — así se aprovecha todo el
+     espacio de la primera pantalla en vez de alinear todo a una grilla
+     rígida por filas. */
+  .grilla-categorias-simulacion {
+    columns: 3 250px;
+    column-gap: 8px;
+    margin-top: 8px;
+  }
+  .categoria-simulada {
+    box-sizing: border-box;
+    background-color: #0f172a;
+    border: 1px solid #334155;
+    border-left: 4px solid #334155;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    break-inside: avoid;
+    display: inline-block;
+    width: 100%;
+  }
+  .categoria-simulada .encabezado-categoria-simulada {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 2px 0 6px 0;
+  }
+  .punto-categoria {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  /* Sub-agrupamiento por subcategoría (ej. Servicios -> Luz, Agua...) —
+     mismo campo que ya se captura en cada recurrente/único, sin inventar
+     nada nuevo. Cada uno es un "globo" (píldora) teñido a baja opacidad con
+     el color de su categoría — agrupa por familia de color sin necesitar un
+     tono nuevo por subcategoría. */
+  .subgrupo-categoria-simulada {
+    margin-top: 6px;
+  }
+  .encabezado-subgrupo-simulada {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    margin-bottom: 2px;
+  }
+  .fila-compromiso-simulado {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 6px 0;
+    border-bottom: 1px solid #0f172a;
+  }
+  .fila-compromiso-simulado .nombre-compromiso-simulado {
+    flex: 1;
+    min-width: 100px;
+  }
+  .fila-compromiso-simulado input,
+  .fila-compromiso-simulado select {
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+  .monto-simulado-editado {
+    width: 90px;
+  }
+  .marca-modificado {
+    color: #fde047;
+    font-size: 11px;
+    border: 1px solid #fde047;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  /* La tarjeta de "Ciclos del horizonte" no es una categoría de gasto — se
+     distingue con el mismo acento que ya usa el resto de la app para datos
+     proyectados/positivos. Deudas y Tarjetas ya no vive aquí: tiene su
+     propio panel a la derecha (ver #panelDeudasTarjetasSimulacion). */
+  .tarjeta-horizonte-simulacion {
+    border-left-color: #5eead4;
+  }
+  .tarjeta-deuda-simulada {
+    border-top: 1px solid #334155;
+    padding: 6px 0;
+  }
+  .tarjeta-deuda-simulada:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+  .encabezado-tarjeta-deuda {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .barra-progreso {
+    background-color: #334155;
+    border-radius: 4px;
+    height: 6px;
+    margin: 4px 0;
+    overflow: hidden;
+  }
+  .barra-progreso-relleno {
+    background-color: #5eead4;
+    height: 100%;
+  }
+  .barra-progreso-relleno.excede {
+    background-color: #fca5a5;
+  }
+  .tarjeta-deuda-simulada.excede-linea .encabezado-tarjeta-deuda {
+    color: #fca5a5;
+  }
+  .fila-horizonte-simulacion {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #0f172a;
+  }
+  .fila-horizonte-simulacion.ciclo-enfocado {
+    font-weight: 600;
+    color: #5eead4;
+  }
+  .balance-negativo-simulacion {
+    color: #fca5a5;
+  }
+  .balance-positivo-simulacion {
+    color: #5eead4;
+  }
 </style>
 </head>
 <body>
@@ -765,6 +1009,7 @@
     <div class="botones-grandes">
       <button type="button" class="boton-grande seleccionado" data-pestana="analisis">Análisis</button>
       <button type="button" class="boton-grande" data-pestana="configuracion">Configuración</button>
+      <button type="button" class="boton-grande" data-pestana="simulacion">Simulación</button>
     </div>
 
     <!-- ============================================================ -->
@@ -798,6 +1043,21 @@
         <div id="contenedorDeuda"></div>
       </section>
 
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SIMULACIÓN (pura, nunca escribe en localStorage)               -->
+    <!-- ============================================================ -->
+    <div id="vistaSimulacion">
+      <div class="banner-simulacion">
+        <span>⚠ Simulación — nada de esto se guarda. Al recargar la página vuelve al estado real.</span>
+        <button type="button" id="botonReiniciarSimulacion">Reiniciar simulación</button>
+      </div>
+      <div class="franja-balance-simulacion" id="franjaBalanceSimulacion"></div>
+      <div class="cuerpo-simulacion">
+        <div class="panel-simulacion" id="panelCategoriasSimulacion"></div>
+        <div class="panel-simulacion" id="panelDeudasTarjetasSimulacion"></div>
+      </div>
     </div>
 
   <!-- ============================================================ -->
@@ -845,6 +1105,8 @@
         <input type="number" id="lineaTotalTarjeta" min="0" step="0.01" required>
       </label>
       <p class="pista">La línea total es solo informativa: nunca se suma al disponible.</p>
+      <label><input type="checkbox" id="permiteDiferirAMesesTarjeta"> Permite diferir a meses (MSI)</label>
+      <p class="pista">Solo para la pestaña de Simulación: qué tarjetas ofrecen meses sin intereses en la vida real.</p>
       <button type="submit">Agregar tarjeta</button>
     </form>
     <ul class="lista-items" id="listaTarjetas"></ul>
@@ -999,37 +1261,56 @@
   <!-- ============================================================ -->
   <section>
     <h2>Ingresos</h2>
+    <p class="pista">Cada ingreso se captura una sola vez, como regla. Los
+      depósitos de cada mes se calculan solos a partir de ella. Si un festivo
+      mueve un depósito o un mes cae distinto, se ajusta ese mes en particular
+      desde la lista, sin tocar los demás.</p>
     <form id="formIngreso">
-      <label>Fecha
-        <input type="date" id="fechaIngreso" required>
-      </label>
-      <label>Monto
-        <input type="number" id="montoIngreso" min="0" step="0.01" required>
+      <label>Nombre
+        <input type="text" id="nombreIngreso" placeholder="Sueldo, renta, beca..." required>
       </label>
       <label>Tipo
         <select id="tipoIngreso">
           <option value="mensual">Mensual</option>
-          <option value="extra">Extra</option>
+          <option value="bimestral">Bimestral (cada 2 meses)</option>
+          <option value="extra">Extra (una sola vez)</option>
         </select>
+      </label>
+      <label>Monto
+        <input type="number" id="montoIngreso" min="0" step="0.01" required>
+      </label>
+      <label id="campoReglaDeFechaIngreso">
+        <input type="checkbox" id="reglaPrimerDiaHabilIngreso">
+        Cae el primer día hábil del mes
+        <span class="pista">Si no lo marcas, cae el día hábil antes de que
+          termine el mes.</span>
+      </label>
+      <label id="campoFechaInicioIngreso">Primer mes en que cae
+        <input type="date" id="fechaInicioIngreso">
+        <span class="pista">Solo sirve para saber en qué meses toca (agosto,
+          octubre, diciembre...). El día exacto lo pone la regla de arriba.</span>
+      </label>
+      <label id="campoFechaIngreso">Fecha
+        <input type="date" id="fechaIngreso">
       </label>
       <label>Nota (opcional)
         <input type="text" id="notaIngreso">
       </label>
+      <p class="pista" id="vistaPreviaIngreso"></p>
       <button type="submit">Agregar ingreso</button>
     </form>
     <ul class="lista-items" id="listaIngresos"></ul>
   </section>
 
   <!-- ============================================================ -->
-  <!-- INGRESO RECURRENTE ESPERADO (para proyectar ciclos futuros)    -->
+  <!-- DEPÓSITOS DEL CICLO (calculados a partir de las reglas)        -->
   <!-- ============================================================ -->
   <section>
-    <h2>Ingreso mensual esperado</h2>
-    <p class="pista">No es un ingreso real capturado — es el monto que se
-      asume para proyectar ciclos futuros en Análisis, hasta que tú lo
-      cambies a mano. El ingreso real de cada ciclo se sigue capturando
-      arriba, en Ingresos, cuando de verdad cae.</p>
-    <div id="contenedorIngresoRecurrenteEsperado"></div>
+    <h2>Depósitos del ciclo</h2>
+    <p class="pista">Lo que las reglas de arriba producen para el ciclo en
+      curso. Aquí se ajusta un depósito suelto cuando cae en otra fecha o por
+      otro monto.</p>
+    <div id="contenedorOcurrenciasDelCiclo"></div>
   </section>
 
   <!-- ============================================================ -->
@@ -1126,8 +1407,7 @@
     return {
       config: {
         categorias: [],
-        tarjetas: [],
-        ingresoRecurrenteEsperado: { monto: 0, activo: true }
+        tarjetas: []
       },
       ciclos: [],
       ingresos: [],
@@ -1156,10 +1436,99 @@
     }
 
     const datos = JSON.parse(textoGuardado);
-    if (completarCamposDeRespaldoFaltantes(datos)) {
+    const seCompletaronCampos = completarCamposDeRespaldoFaltantes(datos);
+    const seLimpiaronCiclos = eliminarCiclosDuplicados(datos);
+    const seLimpiaronIngresos = eliminarIngresosDelModeloViejo(datos);
+    if (seCompletaronCampos || seLimpiaronCiclos || seLimpiaronIngresos) {
       guardarDatos(datos);
     }
     return datos;
+  }
+
+  // Limpieza de una sola vez, decidida por el usuario el 30 jul 2026.
+  //
+  // Hasta esa fecha los ingresos se capturaban en tres lugares distintos: un
+  // ingreso real por ciclo (con cicloId guardado a mano), un monto mensual
+  // esperado global que servía solo para proyectar, y una lista de esperados
+  // sueltos por ciclo. Ese esquema no permitía lo que el usuario necesita —
+  // varias fuentes de ingreso conviviendo, cada una con su propia regla de
+  // fecha — y mezclaba "lo que espero" con "lo que cayó".
+  //
+  // El modelo nuevo (ver la sección "INGRESOS — reglas y ocurrencias") es una
+  // sola lista de reglas de las que los depósitos se derivan solos. Como no
+  // hay forma honesta de convertir los datos viejos a reglas (un ingreso
+  // suelto no dice si era mensual, bimestral o de una vez), el usuario pidió
+  // explícitamente borrarlos y recapturar limpio. Los ciclos, gastos y
+  // compromisos no se tocan: nada de eso referencia un ingreso por id.
+  //
+  // Un ingreso del modelo viejo se reconoce porque trae cicloId guardado; los
+  // nuevos nunca lo tienen, porque el ciclo se deriva de la fecha.
+  function eliminarIngresosDelModeloViejo(datos) {
+    let seLimpioAlgo = false;
+
+    if (Array.isArray(datos.ingresos)) {
+      const ingresosDelModeloNuevo = datos.ingresos.filter(function (ingreso) {
+        return ingreso.cicloId === undefined;
+      });
+      if (ingresosDelModeloNuevo.length !== datos.ingresos.length) {
+        datos.ingresos = ingresosDelModeloNuevo;
+        seLimpioAlgo = true;
+      }
+    }
+
+    if (datos.ingresosEsperadosPorCiclo !== undefined) {
+      delete datos.ingresosEsperadosPorCiclo;
+      seLimpioAlgo = true;
+    }
+
+    if (datos.config && datos.config.ingresoRecurrenteEsperado !== undefined) {
+      delete datos.config.ingresoRecurrenteEsperado;
+      seLimpioAlgo = true;
+    }
+
+    return seLimpioAlgo;
+  }
+
+  // Limpieza de una sola vez para datos que ya venían dañados.
+  //
+  // Hubo un periodo en el que la app podía crear ciclos repetidos: el
+  // último día de cada ciclo no se reconocía a sí mismo (ver
+  // truncarAMedianoche) y cada dibujado de pantalla agregaba un ciclo más,
+  // siempre con el presupuesto semanal vacío. Los repetidos comparten el
+  // mismo id que el ciclo bueno, así que borrarlos no deja huérfano ningún
+  // gasto ni compromiso: todos siguen apuntando a un id que existe.
+  //
+  // De cada id se conserva el ciclo que sí tiene presupuesto capturado; si
+  // ninguno lo tiene, el primero. Devuelve true solo si borró algo, para
+  // no reescribir localStorage en cada lectura sin motivo.
+  function eliminarCiclosDuplicados(datos) {
+    if (!Array.isArray(datos.ciclos)) {
+      return false;
+    }
+
+    const ciclosPorId = {};
+    datos.ciclos.forEach(function (ciclo) {
+      const yaGuardado = ciclosPorId[ciclo.id];
+      if (!yaGuardado) {
+        ciclosPorId[ciclo.id] = ciclo;
+        return;
+      }
+      const guardadoTienePresupuesto = yaGuardado.presupuestoSemanal && Object.keys(yaGuardado.presupuestoSemanal).length > 0;
+      const nuevoTienePresupuesto = ciclo.presupuestoSemanal && Object.keys(ciclo.presupuestoSemanal).length > 0;
+      if (!guardadoTienePresupuesto && nuevoTienePresupuesto) {
+        ciclosPorId[ciclo.id] = ciclo;
+      }
+    });
+
+    const ciclosSinRepetir = Object.keys(ciclosPorId).map(function (id) { return ciclosPorId[id]; });
+    if (ciclosSinRepetir.length === datos.ciclos.length) {
+      return false;
+    }
+
+    datos.ciclos = ciclosSinRepetir.sort(function (a, b) {
+      return crearFechaLocal(a.fechaInicio) - crearFechaLocal(b.fechaInicio);
+    });
+    return true;
   }
 
   // Datos guardados antes de que existiera el aviso de respaldo (o un
@@ -1315,6 +1684,19 @@
     return new Date(anio, mes, dia);
   }
 
+  // Deja una fecha en la medianoche de su propio día, tirando la hora.
+  //
+  // Existe por un bug real: "new Date()" trae la hora actual (por ejemplo,
+  // las 14:30), mientras que todas las fechas guardadas por la app se
+  // reconstruyen con crearFechaLocal, que siempre da medianoche. Comparar
+  // "hoy a las 14:30" contra "medianoche del último día del ciclo" daba
+  // falso justo el último día de cada ciclo, y la app creía que ese ciclo
+  // no existía. Cualquier fecha que vaya a compararse contra las fechas
+  // guardadas tiene que pasar por aquí primero.
+  function truncarAMedianoche(fecha) {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+  }
+
   // Hace el camino inverso: de un objeto Date a texto "YYYY-MM-DD", para
   // guardarlo o compararlo como el resto de las fechas de la app.
   function formatearFechaISO(fecha) {
@@ -1375,6 +1757,28 @@
     return fecha;
   }
 
+  // La segunda regla de depósito que maneja el usuario: hay ingresos que
+  // caen el primer día hábil del mes. Si el día 1 cae en sábado el depósito
+  // se recorre al lunes 3; si cae en domingo, al lunes 2. Nunca se adelanta
+  // al mes anterior, a diferencia de la regla de fin de mes: un depósito de
+  // "principios de mes" que llegara antes del día 1 no tendría sentido.
+  //
+  // Igual que en calcularFechaDeCorteDelMes, los días festivos entre semana
+  // quedan fuera a propósito: cambian cada año y no hay regla fija. Cuando
+  // uno recorre el depósito, el usuario ajusta esa ocurrencia a mano (ver
+  // "ajustes" en la sección de ingresos) y ninguna otra se entera.
+  function calcularPrimerDiaHabilDelMes(anio, mesIndiceCero) {
+    const primerDia = new Date(anio, mesIndiceCero, 1);
+
+    if (primerDia.getDay() === 6) {
+      return sumarDias(primerDia, 2);
+    }
+    if (primerDia.getDay() === 0) {
+      return sumarDias(primerDia, 1);
+    }
+    return primerDia;
+  }
+
   // Dado un mes, calcula en qué fecha exacta empieza el ciclo que arranca
   // ahí.
   function calcularInicioDeCicloParaFecha(fecha) {
@@ -1410,6 +1814,14 @@
     return anio + "-" + mes;
   }
 
+  // A qué ciclo pertenece una fecha, sin crear ni guardar nada (a diferencia
+  // de obtenerOCrearCicloParaFecha, que sí escribe en localStorage). Sirve
+  // para responder "¿en qué ciclo cae esto?" en vistas previas y avisos, sin
+  // el efecto secundario de materializar un ciclo que quizá no exista.
+  function calcularIdDeCicloParaFecha(fecha) {
+    return generarIdDeCiclo(calcularFinDeCiclo(calcularInicioDeCicloParaFecha(fecha)));
+  }
+
   // Calcula el ciclo que sigue a uno dado, sin guardarlo en ningún lado —
   // a diferencia de obtenerOCrearCicloParaFecha, esta función nunca toca
   // localStorage. Sirve tanto para la proyección multi-ciclo (ciclos que
@@ -1441,8 +1853,13 @@
   // ejemplo, la primera vez que se abre la app, o al registrar un ingreso
   // con fecha pasada que cae fuera de cualquier ciclo ya creado), lo crea y
   // lo guarda en ese momento.
-  function obtenerOCrearCicloParaFecha(fecha) {
+  function obtenerOCrearCicloParaFecha(fechaConHoraPosible) {
     const datos = leerDatos();
+
+    // Se compara siempre día contra día, nunca instante contra instante:
+    // si aquí entrara "hoy a las 14:30", el último día del ciclo quedaría
+    // fuera de su propio ciclo y la app crearía un ciclo duplicado.
+    const fecha = truncarAMedianoche(fechaConHoraPosible);
 
     const cicloExistente = datos.ciclos.find(function (ciclo) {
       return fecha >= crearFechaLocal(ciclo.fechaInicio) && fecha <= crearFechaLocal(ciclo.fechaFin);
@@ -1479,6 +1896,37 @@
   // Atajo para el caso más común: el ciclo que contiene el día de hoy.
   function asegurarCicloActual() {
     return obtenerOCrearCicloParaFecha(new Date());
+  }
+
+  // Cuál es el presupuesto semanal que le toca a un ciclo.
+  //
+  // Copiar el presupuesto del ciclo anterior en el momento de crear el
+  // ciclo nuevo no alcanza: un ciclo futuro puede nacer antes de que el
+  // presupuesto exista (pasa al registrar un ingreso con fecha adelantada,
+  // que crea el ciclo de esa fecha en ese instante). Ese ciclo se quedaba
+  // con el presupuesto vacío para siempre, y el gasto variable proyectado
+  // daba cero.
+  //
+  // La regla es: un ciclo usa su propio presupuesto si alguna vez se le
+  // capturó uno; si no, hereda el del ciclo anterior más reciente que sí
+  // tenga. "Tener uno" significa tener al menos una categoría anotada — un
+  // presupuesto de 0 sí cuenta como decisión tomada, porque guardar el
+  // formulario escribe todas las categorías, incluidas las que valen 0.
+  function obtenerPresupuestoSemanalVigente(ciclo, datos) {
+    if (ciclo.presupuestoSemanal && Object.keys(ciclo.presupuestoSemanal).length > 0) {
+      return ciclo.presupuestoSemanal;
+    }
+
+    const ciclosAnterioresConPresupuesto = datos.ciclos
+      .filter(function (otro) {
+        return crearFechaLocal(otro.fechaFin) < crearFechaLocal(ciclo.fechaInicio) &&
+          otro.presupuestoSemanal && Object.keys(otro.presupuestoSemanal).length > 0;
+      })
+      .sort(function (a, b) { return crearFechaLocal(b.fechaFin) - crearFechaLocal(a.fechaFin); });
+
+    return ciclosAnterioresConPresupuesto.length > 0
+      ? ciclosAnterioresConPresupuesto[0].presupuestoSemanal
+      : {};
   }
 
   // ============================================================
@@ -1770,6 +2218,41 @@
     return { inicio: inicioPeriodo, fin: finPeriodo };
   }
 
+  // Camino inverso al de arriba: dada la fecha de una compra, en qué fecha
+  // se paga. Primero, cuál es el corte que la captura — el primer día de
+  // corte igual o posterior a la compra (el día del corte todavía cuenta
+  // dentro de ese periodo, mismo criterio que usa calcularPagoTarjeta).
+  function calcularCorteQueCapturaLaCompra(tarjeta, fechaCompra) {
+    const anio = fechaCompra.getFullYear();
+    const mes = fechaCompra.getMonth();
+    const corteDeEsteMes = new Date(anio, mes, diaAjustadoAlMes(anio, mes, tarjeta.diaCorte));
+
+    if (corteDeEsteMes >= fechaCompra) {
+      return corteDeEsteMes;
+    }
+    return sumarMeses(corteDeEsteMes, 1);
+  }
+
+  // Y de ese corte, la fecha en que se cobra: el mismo mes si el día de
+  // pago es posterior al de corte (ej. corte 5, pago 20), o el mes
+  // siguiente si no (ej. corte 25, pago 12). Es la misma regla de
+  // calcularPeriodoDeCorteParaPago, leída al revés.
+  //
+  // Existe porque la simulación necesita saber en qué CICLO cae realmente
+  // la primera mensualidad de una compra diferida: mover un pago del 5 al
+  // 26 de agosto, con corte el 25, recorre su primer cargo un mes entero.
+  function calcularFechaDePrimerPagoDeTarjeta(tarjeta, fechaCompra) {
+    const corte = calcularCorteQueCapturaLaCompra(tarjeta, fechaCompra);
+    const corteEsDelMismoMes = tarjeta.diaPago > tarjeta.diaCorte;
+    const mesDelPago = corteEsDelMismoMes ? corte : sumarMeses(corte, 1);
+
+    return new Date(
+      mesDelPago.getFullYear(),
+      mesDelPago.getMonth(),
+      diaAjustadoAlMes(mesDelPago.getFullYear(), mesDelPago.getMonth(), tarjeta.diaPago)
+    );
+  }
+
   // pagoTarjeta = compras a crédito de esa tarjeta dentro de su periodo de
   // corte. Las deudas MSI quedan fuera a propósito: en este modelo son
   // compromisos independientes pagados por débito, igual que un préstamo
@@ -1888,10 +2371,183 @@
     return calcularRangoDeDias(formatearFechaISO(inicioSemana), formatearFechaISO(finSemana));
   }
 
+  // ============================================================
+  // INGRESOS — reglas y ocurrencias
+  // ============================================================
+  //
+  // Un ingreso guardado es una **regla**, no un depósito. Los depósitos
+  // concretos ("ocurrencias") se calculan cuando se necesitan y nunca se
+  // guardan: mismo patrón de regla/instancia que ya usan los recurrentes de
+  // gasto, y la razón por la que un ingreso ya no guarda cicloId — el ciclo
+  // se deriva de la fecha, así que nunca puede quedar contado en el ciclo
+  // equivocado.
+  //
+  // Hay tres tipos:
+  //   mensual    — cae todos los meses, en la fecha que diga su regla.
+  //   bimestral  — cae cada dos meses, contando desde el mes de fechaInicio.
+  //   extra      — un solo depósito, en su fecha exacta. No se repite.
+  //
+  // Y dos reglas de fecha para los recurrentes:
+  //   finDeMes       — el día antes de que termine el mes, adelantado al
+  //                    viernes si cae en fin de semana (calcularFechaDeCorteDelMes).
+  //   primerDiaHabil — el día 1, recorrido al lunes si cae en fin de semana.
+  //
+  // Cuando un festivo mueve un depósito, el usuario ajusta esa ocurrencia
+  // suelta y el ajuste se guarda en `ingreso.ajustes` con el mes como llave
+  // ("2026-09"). Se usa el mes y no la fecha a propósito: así el ajuste
+  // sobrevive aunque la fecha se mueva, y ninguna otra ocurrencia ni ningún
+  // otro ingreso se ve afectado. Un ajuste puede cambiar la fecha, el monto,
+  // o los dos.
+
+  // Etiqueta "AAAA-MM" de un mes. Es la llave con la que se identifica cada
+  // ocurrencia de un ingreso recurrente.
+  function generarClaveDeMes(anio, mesIndiceCero) {
+    return anio + "-" + String(mesIndiceCero + 1).padStart(2, "0");
+  }
+
+  // Los ingresos capturados antes de que existiera la segunda regla no traen
+  // el campo, y la regla de fin de mes es la que el usuario tenía desde el
+  // principio — así que es la que se asume cuando falta.
+  function obtenerReglaDeFechaDeIngreso(ingreso) {
+    return ingreso.reglaDeFecha === "primerDiaHabil" ? "primerDiaHabil" : "finDeMes";
+  }
+
+  // ¿A este ingreso recurrente le toca caer en este mes?
+  //
+  // Al mensual siempre le toca. Al bimestral le toca en el mes de su
+  // fechaInicio y de ahí cada dos meses hacia adelante — nunca antes, porque
+  // esa fecha es el ancla que dice en qué meses cae (agosto, octubre,
+  // diciembre...), no una vigencia.
+  function leTocaAlIngresoEsteMes(ingreso, anio, mesIndiceCero) {
+    if (ingreso.tipo === "mensual") {
+      return true;
+    }
+    if (ingreso.tipo !== "bimestral" || !ingreso.fechaInicio) {
+      return false;
+    }
+
+    const fechaAncla = crearFechaLocal(ingreso.fechaInicio);
+    const mesesDeDiferencia =
+      (anio - fechaAncla.getFullYear()) * 12 + (mesIndiceCero - fechaAncla.getMonth());
+
+    return mesesDeDiferencia >= 0 && mesesDeDiferencia % 2 === 0;
+  }
+
+  // La fecha que le tocaría a este ingreso en este mes según su regla, antes
+  // de aplicar cualquier ajuste manual.
+  function calcularFechaBaseDeOcurrencia(ingreso, anio, mesIndiceCero) {
+    if (obtenerReglaDeFechaDeIngreso(ingreso) === "primerDiaHabil") {
+      return calcularPrimerDiaHabilDelMes(anio, mesIndiceCero);
+    }
+    return calcularFechaDeCorteDelMes(anio, mesIndiceCero);
+  }
+
+  function buscarAjusteDeOcurrencia(ingreso, claveDeMes) {
+    return (ingreso.ajustes || []).find(function (ajuste) {
+      return ajuste.mes === claveDeMes;
+    });
+  }
+
+  // Arma la ocurrencia de un ingreso recurrente en un mes concreto, ya con su
+  // ajuste manual aplicado si lo tiene. Devuelve null si a ese ingreso no le
+  // toca caer ese mes.
+  function construirOcurrenciaDeIngreso(ingreso, anio, mesIndiceCero) {
+    if (!leTocaAlIngresoEsteMes(ingreso, anio, mesIndiceCero)) {
+      return null;
+    }
+
+    const claveDeMes = generarClaveDeMes(anio, mesIndiceCero);
+    const ajuste = buscarAjusteDeOcurrencia(ingreso, claveDeMes);
+    const fechaBase = formatearFechaISO(calcularFechaBaseDeOcurrencia(ingreso, anio, mesIndiceCero));
+
+    return {
+      ingresoId: ingreso.id,
+      nombre: ingreso.nombre,
+      tipo: ingreso.tipo,
+      mes: claveDeMes,
+      fecha: (ajuste && ajuste.fecha) ? ajuste.fecha : fechaBase,
+      fechaBase: fechaBase,
+      monto: (ajuste && ajuste.monto !== undefined && ajuste.monto !== null) ? Number(ajuste.monto) : Number(ingreso.monto),
+      montoBase: Number(ingreso.monto),
+      fueAjustada: Boolean(ajuste)
+    };
+  }
+
+  // Un ingreso "extra" no tiene regla que repetir: es su propia ocurrencia,
+  // con la fecha exacta que capturó el usuario. Se le da la misma forma que
+  // a las demás para que todo lo que consume ocurrencias las trate igual.
+  function construirOcurrenciaDeIngresoExtra(ingreso) {
+    return {
+      ingresoId: ingreso.id,
+      nombre: ingreso.nombre,
+      tipo: "extra",
+      mes: (ingreso.fecha || "").slice(0, 7),
+      fecha: ingreso.fecha,
+      fechaBase: ingreso.fecha,
+      monto: Number(ingreso.monto),
+      montoBase: Number(ingreso.monto),
+      fueAjustada: false
+    };
+  }
+
+  // Todas las ocurrencias de todos los ingresos activos que caen dentro de un
+  // rango de fechas, ordenadas por fecha.
+  //
+  // Se recorren los meses del rango con un mes de margen a cada lado: un
+  // ajuste manual puede haber movido la ocurrencia de un mes vecino hacia
+  // adentro del rango, y sin ese margen se perdería.
+  function calcularOcurrenciasDeIngresosEnRango(datos, fechaDesdeISO, fechaHastaISO) {
+    const fechaDesde = crearFechaLocal(fechaDesdeISO);
+    const fechaHasta = crearFechaLocal(fechaHastaISO);
+    const ingresosActivos = (datos.ingresos || []).filter(function (ingreso) {
+      return ingreso.activo !== false;
+    });
+
+    const ocurrencias = [];
+
+    ingresosActivos.forEach(function (ingreso) {
+      if (ingreso.tipo === "extra") {
+        ocurrencias.push(construirOcurrenciaDeIngresoExtra(ingreso));
+        return;
+      }
+
+      let mesRecorrido = new Date(fechaDesde.getFullYear(), fechaDesde.getMonth() - 1, 1);
+      const ultimoMes = new Date(fechaHasta.getFullYear(), fechaHasta.getMonth() + 1, 1);
+
+      while (mesRecorrido <= ultimoMes) {
+        const ocurrencia = construirOcurrenciaDeIngreso(ingreso, mesRecorrido.getFullYear(), mesRecorrido.getMonth());
+        if (ocurrencia) {
+          ocurrencias.push(ocurrencia);
+        }
+        mesRecorrido = new Date(mesRecorrido.getFullYear(), mesRecorrido.getMonth() + 1, 1);
+      }
+    });
+
+    return ocurrencias
+      .filter(function (ocurrencia) {
+        if (!ocurrencia.fecha) {
+          return false;
+        }
+        const fecha = crearFechaLocal(ocurrencia.fecha);
+        return fecha >= fechaDesde && fecha <= fechaHasta;
+      })
+      .sort(function (a, b) {
+        return a.fecha < b.fecha ? -1 : 1;
+      });
+  }
+
+  // Los depósitos que caen dentro de un ciclo. El ciclo es el rango: no hace
+  // falta que nadie guarde a qué ciclo pertenece un ingreso.
+  function calcularOcurrenciasDeIngresosDelCiclo(ciclo, datos) {
+    return calcularOcurrenciasDeIngresosEnRango(datos, ciclo.fechaInicio, ciclo.fechaFin);
+  }
+
+  // El ingreso total de un ciclo: todo lo que cae dentro de su rango, haya
+  // llegado ya o no. Un ciclo se analiza completo (decisión del usuario, 30
+  // jul 2026), así que el día uno ya cuenta con todo lo que va a entrar.
   function calcularIngresosDelCiclo(ciclo, datos) {
-    return datos.ingresos
-      .filter(function (i) { return i.cicloId === ciclo.id; })
-      .reduce(function (suma, i) { return suma + Number(i.monto); }, 0);
+    return calcularOcurrenciasDeIngresosDelCiclo(ciclo, datos)
+      .reduce(function (suma, ocurrencia) { return suma + ocurrencia.monto; }, 0);
   }
 
   function calcularCompromisosPendientesDelCiclo(ciclo, datos) {
@@ -2089,8 +2745,9 @@
   // Encadena CANTIDAD_DE_CICLOS_A_PROYECTAR ciclos simulados a partir del
   // ciclo actual, estimando el balance de cada uno con lo único que se
   // puede saber de antemano: compromisos de recurrentes y deudas (con la
-  // misma regla determinista de siempre), el ingreso recurrente esperado,
-  // y el gasto variable a la tasa diaria del presupuesto semanal vigente.
+  // misma regla determinista de siempre), los ingresos que las reglas de
+  // ingreso hacen caer en ese ciclo, y el gasto variable a la tasa diaria
+  // del presupuesto semanal vigente.
   // Nunca persiste nada — ni ciclos, ni compromisos.
 
   // Cuánto se espera gastar en categorías variables (comida, transporte...)
@@ -2107,29 +2764,18 @@
     }, 0);
   }
 
-  // Si ya se capturó un ingreso real "mensual" para este ciclo (porque el
-  // usuario lo registró por adelantado, o porque ya llegó), ese dato real
-  // gana sobre el ingreso esperado — usarlos a los dos sería contarlo
-  // doble. Los ingresos "extra" ya capturados siempre se suman aparte,
-  // vengan o no acompañados de un ingreso mensual real.
-  function calcularIngresoProyectadoDelCiclo(ciclo, datos, montoIngresoEsperado) {
-    const ingresosRealesDelCiclo = datos.ingresos.filter(function (i) { return i.cicloId === ciclo.id; });
-    const huboMensualReal = ingresosRealesDelCiclo.some(function (i) { return i.tipo === "mensual"; });
-
-    if (huboMensualReal) {
-      return calcularIngresosDelCiclo(ciclo, datos);
-    }
-    const extrasReales = ingresosRealesDelCiclo.reduce(function (suma, i) { return suma + Number(i.monto); }, 0);
-    return montoIngresoEsperado + extrasReales;
-  }
-
   // Balance de un solo ciclo simulado: lo que ya traía de remanente, más
-  // el ingreso (real ya capturado si existe, si no el esperado), menos los
-  // compromisos proyectados (recurrentes + deudas + compromisos único ya
-  // capturados a futuro para ese ciclo — son datos reales, no estimaciones)
-  // y el gasto variable proyectado.
-  function calcularBalanceProyectadoDelCiclo(ciclo, datos, remanenteInicial, montoIngresoEsperado, categoriasVariables, presupuestoSemanalBase) {
-    const ingresoDelCiclo = calcularIngresoProyectadoDelCiclo(ciclo, datos, montoIngresoEsperado);
+  // el ingreso del ciclo, menos los compromisos proyectados (recurrentes +
+  // deudas + compromisos único ya capturados a futuro para ese ciclo — son
+  // datos reales, no estimaciones) y el gasto variable proyectado.
+  //
+  // El ingreso de un ciclo futuro se calcula exactamente igual que el del
+  // ciclo actual: las reglas de ingreso son deterministas, así que no hay
+  // "esperado" que pueda contradecir a un "real". Antes sí lo había, y con
+  // él toda una lógica de cuál de los dos ganaba para no contar el mismo
+  // dinero dos veces; ya no hace falta.
+  function calcularBalanceProyectadoDelCiclo(ciclo, datos, remanenteInicial, categoriasVariables, presupuestoSemanalBase) {
+    const ingresoDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
     const candidatos = calcularCandidatosDelCiclo(ciclo, datos);
     const unicosFuturos = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.origen === "unico"; });
     const totalCompromisos = candidatos.concat(unicosFuturos).reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
@@ -2143,7 +2789,7 @@
       totalCompromisos: totalCompromisos,
       gastoVariableProyectado: gastoVariableProyectado,
       remanenteInicial: remanenteInicial,
-      montoIngresoEsperado: ingresoDelCiclo,
+      ingresoDelCiclo: ingresoDelCiclo,
       balanceDelCiclo: balanceDelCiclo
     };
   }
@@ -2161,12 +2807,10 @@
     const cicloActual = asegurarCicloActual();
     const ciclosSimulados = generarCiclosSimulados(cicloActual, CANTIDAD_DE_CICLOS_A_PROYECTAR);
     const categoriasVariables = datos.config.categorias.filter(function (c) { return c.esVariableSemanal; });
-    const ingresoEsperado = datos.config.ingresoRecurrenteEsperado;
-    const montoIngresoEsperado = (ingresoEsperado && ingresoEsperado.activo) ? Number(ingresoEsperado.monto) : 0;
 
     let remanente = calcularIngresosDelCiclo(cicloActual, datos) > 0 ? calcularDisponibleReal(cicloActual, datos) : 0;
     return ciclosSimulados.map(function (ciclo) {
-      const resultado = calcularBalanceProyectadoDelCiclo(ciclo, datos, remanente, montoIngresoEsperado, categoriasVariables, cicloActual.presupuestoSemanal);
+      const resultado = calcularBalanceProyectadoDelCiclo(ciclo, datos, remanente, categoriasVariables, obtenerPresupuestoSemanalVigente(cicloActual, datos));
       remanente = resultado.balanceDelCiclo;
       return resultado;
     });
@@ -2313,7 +2957,8 @@
       nombre: document.getElementById("nombreTarjeta").value.trim(),
       diaCorte: Number(document.getElementById("diaCorteTarjeta").value),
       diaPago: Number(document.getElementById("diaPagoTarjeta").value),
-      lineaTotal: Number(document.getElementById("lineaTotalTarjeta").value)
+      lineaTotal: Number(document.getElementById("lineaTotalTarjeta").value),
+      permiteDiferirAMeses: document.getElementById("permiteDiferirAMesesTarjeta").checked
     });
     guardarDatos(datos);
 
@@ -2338,7 +2983,8 @@
       return "<li data-tarjeta-id=\"" + tarjeta.id + "\">" +
         "<div><strong>" + escaparHTML(tarjeta.nombre) + "</strong> — corte día " + tarjeta.diaCorte +
         ", pago día " + tarjeta.diaPago +
-        " <span class=\"detalle\">(línea: " + formatearMoneda(tarjeta.lineaTotal) + ")</span></div>" +
+        " <span class=\"detalle\">(línea: " + formatearMoneda(tarjeta.lineaTotal) +
+          (tarjeta.permiteDiferirAMeses ? ", permite MSI" : "") + ")</span></div>" +
         "<button type=\"button\" class=\"boton-editar-tarjeta\">Editar</button>" +
         "<div class=\"edicion-tarjeta\" id=\"edicionTarjeta_" + tarjeta.id + "\" style=\"display: none;\">" +
           "<p class=\"pista\">Día de corte (" + tarjeta.diaCorte + ") y día de pago (" + tarjeta.diaPago +
@@ -2346,6 +2992,7 @@
             "de verdad te cambió esas fechas, es más seguro dar de alta la tarjeta de nuevo.</p>" +
           "<label>Nombre<input type=\"text\" class=\"nombre-editado\" value=\"" + escaparHTML(tarjeta.nombre) + "\"></label>" +
           "<label>Línea total<input type=\"number\" min=\"0\" step=\"0.01\" class=\"linea-total-editada\" value=\"" + tarjeta.lineaTotal + "\"></label>" +
+          "<label><input type=\"checkbox\" class=\"permite-diferir-editado\"" + (tarjeta.permiteDiferirAMeses ? " checked" : "") + "> Permite diferir a meses (MSI)</label>" +
           "<button type=\"button\" class=\"boton-guardar-tarjeta\">Guardar cambios</button>" +
         "</div>" +
       "</li>";
@@ -2381,6 +3028,7 @@
     const tarjeta = datos.config.tarjetas.find(function (t) { return t.id === tarjetaId; });
     tarjeta.nombre = nombre;
     tarjeta.lineaTotal = lineaTotal || 0;
+    tarjeta.permiteDiferirAMeses = filaLi.querySelector(".permite-diferir-editado").checked;
 
     actualizarCompromisosPendientesDeOrigen(datos, "tarjeta", tarjetaId, { nombre: nombre });
 
@@ -2810,31 +3458,153 @@
   // ============================================================
   // CONFIGURACIÓN — INGRESOS
   // ============================================================
+  //
+  // Un solo formulario para los tres tipos. Los campos que no le tocan al
+  // tipo elegido se ocultan en vez de quedarse vacíos en pantalla: el
+  // formulario anterior pedía siempre todos los campos de todos los casos, y
+  // esa era justo la queja del usuario.
+  //
+  // Lo que se guarda aquí es la regla. Los depósitos concretos se calculan
+  // en la sección "INGRESOS — reglas y ocurrencias" del motor.
+
+  // Muestra solo los campos que le corresponden al tipo elegido:
+  //   mensual   → regla de fecha
+  //   bimestral → regla de fecha + primer mes en que cae
+  //   extra     → fecha exacta
+  function ajustarCamposDelFormularioDeIngreso() {
+    const tipo = document.getElementById("tipoIngreso").value;
+
+    document.getElementById("campoReglaDeFechaIngreso").style.display = tipo === "extra" ? "none" : "block";
+    document.getElementById("campoFechaInicioIngreso").style.display = tipo === "bimestral" ? "block" : "none";
+    document.getElementById("campoFechaIngreso").style.display = tipo === "extra" ? "block" : "none";
+
+    renderizarVistaPreviaDeIngreso();
+  }
+
+  // Dice, antes de guardar, en qué fecha exacta va a caer el primer depósito
+  // y a qué ciclo pertenece.
+  //
+  // Existe por una asimetría que es imposible de adivinar al capturar: con la
+  // regla de fin de mes, el depósito del mes de julio (el 30) es el que abre
+  // el ciclo llamado "2026-08". Así que un bimestral anclado en agosto cae el
+  // 30 de agosto y ese día ya pertenece al ciclo 2026-09 — un ciclo después
+  // de donde el usuario probablemente lo quería. En vez de cambiar la regla
+  // (el ciclo se define así desde el principio y todo lo demás depende de
+  // eso), se muestra el resultado para que el usuario lo corrija antes de
+  // guardar.
+  function renderizarVistaPreviaDeIngreso() {
+    const contenedor = document.getElementById("vistaPreviaIngreso");
+    const tipo = document.getElementById("tipoIngreso").value;
+    const monto = Number(document.getElementById("montoIngreso").value);
+
+    if (tipo === "extra") {
+      const fecha = document.getElementById("fechaIngreso").value;
+      contenedor.textContent = fecha
+        ? "Cae el " + fecha + ", dentro del ciclo " + calcularIdDeCicloParaFecha(crearFechaLocal(fecha)) + "."
+        : "";
+      return;
+    }
+
+    const fechaInicio = document.getElementById("fechaInicioIngreso").value;
+    if (tipo === "bimestral" && !fechaInicio) {
+      contenedor.textContent = "Elige el primer mes en que cae para ver las fechas.";
+      return;
+    }
+
+    // Se arma un ingreso de mentiras con lo que hay capturado hasta ahora y se
+    // le piden sus primeras ocurrencias, usando exactamente el mismo motor que
+    // usará una vez guardado — así la vista previa nunca puede mentir.
+    const ingresoTentativo = {
+      id: "vista-previa",
+      nombre: "",
+      tipo: tipo,
+      monto: monto || 0,
+      reglaDeFecha: document.getElementById("reglaPrimerDiaHabilIngreso").checked ? "primerDiaHabil" : "finDeMes",
+      fechaInicio: fechaInicio,
+      activo: true,
+      ajustes: []
+    };
+
+    const desde = tipo === "bimestral" ? crearFechaLocal(fechaInicio) : new Date();
+    const hasta = new Date(desde.getFullYear(), desde.getMonth() + 5, 1);
+    const proximas = calcularOcurrenciasDeIngresosEnRango(
+      { ingresos: [ingresoTentativo] },
+      formatearFechaISO(desde),
+      formatearFechaISO(hasta)
+    ).slice(0, 3);
+
+    if (proximas.length === 0) {
+      contenedor.textContent = "";
+      return;
+    }
+
+    contenedor.textContent = "Próximos depósitos: " + proximas.map(function (ocurrencia) {
+      return ocurrencia.fecha + " (ciclo " + calcularIdDeCicloParaFecha(crearFechaLocal(ocurrencia.fecha)) + ")";
+    }).join(", ") + ".";
+  }
 
   function manejarEnvioIngreso(evento) {
     evento.preventDefault();
 
-    const fechaTexto = document.getElementById("fechaIngreso").value;
-    const cicloDelIngreso = obtenerOCrearCicloParaFecha(crearFechaLocal(fechaTexto));
+    const nombre = document.getElementById("nombreIngreso").value.trim();
+    const tipo = document.getElementById("tipoIngreso").value;
+    const monto = Number(document.getElementById("montoIngreso").value);
+    const fechaInicio = document.getElementById("fechaInicioIngreso").value;
+    const fecha = document.getElementById("fechaIngreso").value;
+
+    if (!nombre || !monto || monto <= 0) {
+      return;
+    }
+    if (tipo === "bimestral" && !fechaInicio) {
+      alert("Un ingreso bimestral necesita el primer mes en que cae, para saber en qué meses toca.");
+      return;
+    }
+    if (tipo === "extra" && !fecha) {
+      alert("Un ingreso extra necesita su fecha exacta.");
+      return;
+    }
+
+    const ingresoNuevo = {
+      id: generarId("ing"),
+      nombre: nombre,
+      tipo: tipo,
+      monto: monto,
+      nota: document.getElementById("notaIngreso").value.trim(),
+      activo: true
+    };
+
+    if (tipo === "extra") {
+      ingresoNuevo.fecha = fecha;
+    } else {
+      ingresoNuevo.reglaDeFecha = document.getElementById("reglaPrimerDiaHabilIngreso").checked ? "primerDiaHabil" : "finDeMes";
+      ingresoNuevo.ajustes = [];
+      if (tipo === "bimestral") {
+        ingresoNuevo.fechaInicio = fechaInicio;
+      }
+    }
 
     const datos = leerDatos();
-    datos.ingresos.push({
-      id: generarId("ing"),
-      cicloId: cicloDelIngreso.id,
-      fecha: fechaTexto,
-      monto: Number(document.getElementById("montoIngreso").value),
-      tipo: document.getElementById("tipoIngreso").value,
-      nota: document.getElementById("notaIngreso").value.trim()
-    });
+    datos.ingresos.push(ingresoNuevo);
     guardarDatos(datos);
 
     document.getElementById("formIngreso").reset();
-    establecerFechaDeHoyEnFormularioIngreso();
+    ajustarCamposDelFormularioDeIngreso();
     renderizarTodo();
   }
 
-  function establecerFechaDeHoyEnFormularioIngreso() {
-    document.getElementById("fechaIngreso").value = formatearFechaISO(new Date());
+  // Texto corto que describe la regla de un ingreso, para leerla de un golpe
+  // en la lista sin tener que abrir la edición.
+  function describirReglaDeIngreso(ingreso) {
+    if (ingreso.tipo === "extra") {
+      return "una sola vez, el " + ingreso.fecha;
+    }
+
+    const cadaCuando = ingreso.tipo === "bimestral" ? "cada 2 meses" : "cada mes";
+    const cuandoCae = obtenerReglaDeFechaDeIngreso(ingreso) === "primerDiaHabil"
+      ? "el primer día hábil"
+      : "el día hábil antes de fin de mes";
+
+    return cadaCuando + ", " + cuandoCae;
   }
 
   function renderizarIngresos() {
@@ -2846,25 +3616,31 @@
       return;
     }
 
-    const ingresosOrdenados = datos.ingresos.slice().sort(function (a, b) {
-      return a.fecha < b.fecha ? 1 : -1;
-    });
-
-    lista.innerHTML = ingresosOrdenados.map(function (ingreso) {
+    lista.innerHTML = datos.ingresos.map(function (ingreso) {
       const notaTexto = ingreso.nota ? ", " + escaparHTML(ingreso.nota) : "";
+      const etiquetaActivo = ingreso.activo === false ? " (inactivo)" : "";
+      const cantidadDeAjustes = (ingreso.ajustes || []).length;
+      const etiquetaAjustes = cantidadDeAjustes > 0
+        ? " <span class=\"detalle\">" + cantidadDeAjustes + " mes(es) ajustado(s)</span>"
+        : "";
+
       return "<li data-ingreso-id=\"" + ingreso.id + "\">" +
-        "<div>" + ingreso.fecha + " — " + formatearMoneda(ingreso.monto) +
-        " <span class=\"detalle\">(" + ingreso.tipo + notaTexto + ")</span></div>" +
+        "<div><strong>" + escaparHTML(ingreso.nombre || "(sin nombre)") + "</strong> — " + formatearMoneda(ingreso.monto) +
+        " <span class=\"detalle\">(" + describirReglaDeIngreso(ingreso) + notaTexto + etiquetaActivo + ")</span>" + etiquetaAjustes + "</div>" +
         "<button type=\"button\" class=\"boton-editar-ingreso\">Editar</button>" +
         "<div class=\"edicion-ingreso\" id=\"edicionIngreso_" + ingreso.id + "\" style=\"display: none;\">" +
-          "<label>Fecha<input type=\"date\" class=\"fecha-editada\" value=\"" + ingreso.fecha + "\"></label>" +
+          "<label>Nombre<input type=\"text\" class=\"nombre-editado\" value=\"" + escaparHTML(ingreso.nombre || "") + "\"></label>" +
           "<label>Monto<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-editado\" value=\"" + ingreso.monto + "\"></label>" +
-          "<label>Tipo<select class=\"tipo-editado\">" +
-            "<option value=\"mensual\"" + (ingreso.tipo === "mensual" ? " selected" : "") + ">Mensual</option>" +
-            "<option value=\"extra\"" + (ingreso.tipo === "extra" ? " selected" : "") + ">Extra</option>" +
-          "</select></label>" +
+          (ingreso.tipo === "extra"
+            ? "<label>Fecha<input type=\"date\" class=\"fecha-editada\" value=\"" + (ingreso.fecha || "") + "\"></label>"
+            : "<label><input type=\"checkbox\" class=\"regla-editada\"" + (obtenerReglaDeFechaDeIngreso(ingreso) === "primerDiaHabil" ? " checked" : "") + "> Cae el primer día hábil del mes</label>") +
+          (ingreso.tipo === "bimestral"
+            ? "<label>Primer mes en que cae<input type=\"date\" class=\"fecha-inicio-editada\" value=\"" + (ingreso.fechaInicio || "") + "\"></label>"
+            : "") +
           "<label>Nota (opcional)<input type=\"text\" class=\"nota-editada\" value=\"" + escaparHTML(ingreso.nota || "") + "\"></label>" +
+          "<label><input type=\"checkbox\" class=\"activo-editado\"" + (ingreso.activo === false ? "" : " checked") + "> Activo</label>" +
           "<button type=\"button\" class=\"boton-guardar-ingreso\">Guardar cambios</button>" +
+          "<button type=\"button\" class=\"boton-borrar-ingreso\">Borrar</button>" +
         "</div>" +
       "</li>";
     }).join("");
@@ -2880,16 +3656,147 @@
       filaLi.querySelector(".boton-guardar-ingreso").addEventListener("click", function () {
         guardarEdicionDeIngreso(ingresoId, filaLi);
       });
+
+      filaLi.querySelector(".boton-borrar-ingreso").addEventListener("click", function () {
+        borrarIngreso(ingresoId);
+      });
     });
   }
 
-  // Nada más referencia un ingreso por id, así que no hay compromisos que
-  // actualizar aquí. La única cascada necesaria: si la fecha cambia de
-  // ciclo, cicloId tiene que recalcularse — si no, el ingreso se quedaría
-  // contando para el ciclo viejo aunque su fecha diga otra cosa.
+  // El tipo no se edita: cambiarlo dejaría los ajustes por mes apuntando a
+  // ocurrencias que ya no existen (un extra no tiene ocurrencias mensuales,
+  // un bimestral tiene la mitad). Si el tipo estuvo mal, se borra la regla y
+  // se captura de nuevo — no hay nada que se pierda, porque ningún gasto ni
+  // compromiso referencia un ingreso por id.
   function guardarEdicionDeIngreso(ingresoId, filaLi) {
-    const fecha = filaLi.querySelector(".fecha-editada").value;
+    const nombre = filaLi.querySelector(".nombre-editado").value.trim();
     const monto = Number(filaLi.querySelector(".monto-editado").value);
+
+    if (!nombre || !monto || monto <= 0) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const ingreso = datos.ingresos.find(function (i) { return i.id === ingresoId; });
+
+    ingreso.nombre = nombre;
+    ingreso.monto = monto;
+    ingreso.nota = filaLi.querySelector(".nota-editada").value.trim();
+    ingreso.activo = filaLi.querySelector(".activo-editado").checked;
+
+    if (ingreso.tipo === "extra") {
+      ingreso.fecha = filaLi.querySelector(".fecha-editada").value;
+    } else {
+      ingreso.reglaDeFecha = filaLi.querySelector(".regla-editada").checked ? "primerDiaHabil" : "finDeMes";
+    }
+
+    if (ingreso.tipo === "bimestral") {
+      ingreso.fechaInicio = filaLi.querySelector(".fecha-inicio-editada").value;
+    }
+
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  function borrarIngreso(ingresoId) {
+    const datos = leerDatos();
+    const ingreso = datos.ingresos.find(function (i) { return i.id === ingresoId; });
+
+    if (!confirm("¿Borrar el ingreso \"" + (ingreso ? ingreso.nombre : "") + "\"? Se van con él los ajustes por mes que le hayas hecho.")) {
+      return;
+    }
+
+    datos.ingresos = datos.ingresos.filter(function (i) { return i.id !== ingresoId; });
+    guardarDatos(datos);
+    renderizarTodo();
+  }
+
+  // ============================================================
+  // CONFIGURACIÓN — DEPÓSITOS DEL CICLO (ocurrencias)
+  // ============================================================
+  //
+  // Aquí no se captura nada nuevo: se muestra lo que las reglas producen para
+  // el ciclo en curso y se permite corregir un depósito suelto — la fecha
+  // (un festivo lo recorrió) o el monto (ese mes cayó distinto). El ajuste
+  // queda guardado dentro de su regla, indexado por mes, y no afecta a
+  // ninguna otra ocurrencia ni a ningún otro ingreso.
+  //
+  // Los ingresos "extra" no aparecen con opción de ajuste: son su propia
+  // ocurrencia, así que se corrigen editando la regla directamente arriba.
+
+  function renderizarOcurrenciasDelCiclo() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const contenedor = document.getElementById("contenedorOcurrenciasDelCiclo");
+    const ocurrencias = calcularOcurrenciasDeIngresosDelCiclo(ciclo, datos);
+
+    const encabezado = "<p class=\"pista\">Ciclo " + ciclo.id + ": del " + ciclo.fechaInicio + " al " + ciclo.fechaFin + ".</p>";
+
+    if (ocurrencias.length === 0) {
+      contenedor.innerHTML = encabezado + "<p class=\"vacio\">Ningún depósito cae en este ciclo.</p>";
+      return;
+    }
+
+    const total = ocurrencias.reduce(function (suma, o) { return suma + o.monto; }, 0);
+
+    contenedor.innerHTML = encabezado +
+      "<ul class=\"lista-items\">" +
+      ocurrencias.map(function (ocurrencia) {
+        const etiquetaAjustada = ocurrencia.fueAjustada ? " <span class=\"detalle\">(ajustado)</span>" : "";
+
+        if (ocurrencia.tipo === "extra") {
+          return "<li>" + ocurrencia.fecha + " — " + escaparHTML(ocurrencia.nombre) + " " +
+            formatearMoneda(ocurrencia.monto) + " <span class=\"detalle\">(extra)</span></li>";
+        }
+
+        const llave = ocurrencia.ingresoId + "__" + ocurrencia.mes;
+        return "<li data-ocurrencia=\"" + llave + "\">" +
+          "<div>" + ocurrencia.fecha + " — " + escaparHTML(ocurrencia.nombre) + " " +
+          formatearMoneda(ocurrencia.monto) + etiquetaAjustada + "</div>" +
+          "<button type=\"button\" class=\"boton-ajustar-ocurrencia\">Ajustar este depósito</button>" +
+          "<div class=\"ajuste-ocurrencia\" id=\"ajusteOcurrencia_" + llave + "\" style=\"display: none;\">" +
+            "<label>Fecha<input type=\"date\" class=\"fecha-ajustada\" value=\"" + ocurrencia.fecha + "\"></label>" +
+            "<label>Monto<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-ajustado\" value=\"" + ocurrencia.monto + "\"></label>" +
+            "<button type=\"button\" class=\"boton-guardar-ajuste\">Guardar ajuste</button>" +
+            (ocurrencia.fueAjustada
+              ? "<button type=\"button\" class=\"boton-quitar-ajuste\">Volver a la regla</button>"
+              : "") +
+          "</div>" +
+        "</li>";
+      }).join("") +
+      "</ul>" +
+      "<p><strong>Total del ciclo: " + formatearMoneda(total) + "</strong></p>";
+
+    contenedor.querySelectorAll("li[data-ocurrencia]").forEach(function (filaLi) {
+      const llave = filaLi.getAttribute("data-ocurrencia");
+      const ingresoId = llave.split("__")[0];
+      const mes = llave.split("__")[1];
+
+      filaLi.querySelector(".boton-ajustar-ocurrencia").addEventListener("click", function () {
+        const bloque = document.getElementById("ajusteOcurrencia_" + llave);
+        bloque.style.display = bloque.style.display === "none" ? "block" : "none";
+      });
+
+      filaLi.querySelector(".boton-guardar-ajuste").addEventListener("click", function () {
+        guardarAjusteDeOcurrencia(ingresoId, mes, filaLi);
+      });
+
+      const botonQuitar = filaLi.querySelector(".boton-quitar-ajuste");
+      if (botonQuitar) {
+        botonQuitar.addEventListener("click", function () {
+          quitarAjusteDeOcurrencia(ingresoId, mes);
+        });
+      }
+    });
+  }
+
+  // Guarda (o reemplaza) el ajuste de un mes concreto de un ingreso
+  // recurrente. Si los valores capturados coinciden con lo que ya dice la
+  // regla, el ajuste se quita en vez de guardarse: no tiene sentido conservar
+  // una excepción que no excepciona nada.
+  function guardarAjusteDeOcurrencia(ingresoId, mes, filaLi) {
+    const fecha = filaLi.querySelector(".fecha-ajustada").value;
+    const monto = Number(filaLi.querySelector(".monto-ajustado").value);
 
     if (!fecha || !monto || monto <= 0) {
       return;
@@ -2897,51 +3804,30 @@
 
     const datos = leerDatos();
     const ingreso = datos.ingresos.find(function (i) { return i.id === ingresoId; });
+    const partesDelMes = mes.split("-");
+    const fechaBase = formatearFechaISO(calcularFechaBaseDeOcurrencia(ingreso, Number(partesDelMes[0]), Number(partesDelMes[1]) - 1));
 
-    ingreso.fecha = fecha;
-    ingreso.monto = monto;
-    ingreso.tipo = filaLi.querySelector(".tipo-editado").value;
-    ingreso.nota = filaLi.querySelector(".nota-editada").value.trim();
-    ingreso.cicloId = obtenerOCrearCicloParaFecha(crearFechaLocal(fecha)).id;
+    ingreso.ajustes = (ingreso.ajustes || []).filter(function (ajuste) { return ajuste.mes !== mes; });
+
+    const coincideConLaRegla = fecha === fechaBase && monto === Number(ingreso.monto);
+    if (!coincideConLaRegla) {
+      ingreso.ajustes.push({ mes: mes, fecha: fecha, monto: monto });
+    }
 
     guardarDatos(datos);
     renderizarTodo();
   }
 
-  // ============================================================
-  // CONFIGURACIÓN — INGRESO RECURRENTE ESPERADO
-  // ============================================================
-  //
-  // Es un solo valor, no una lista: a diferencia de los recurrentes de
-  // gasto, no hay hoy más de una fuente de ingreso ni nada que la
-  // referencie por id. Sirve solo para proyectar ciclos futuros en
-  // Análisis — el ingreso real de cada ciclo se sigue capturando a mano en
-  // la sección de Ingresos, como siempre.
-
-  function renderizarIngresoRecurrenteEsperado() {
+  function quitarAjusteDeOcurrencia(ingresoId, mes) {
     const datos = leerDatos();
-    const ingresoEsperado = datos.config.ingresoRecurrenteEsperado || { monto: 0, activo: true };
-    const contenedor = document.getElementById("contenedorIngresoRecurrenteEsperado");
+    const ingreso = datos.ingresos.find(function (i) { return i.id === ingresoId; });
 
-    contenedor.innerHTML =
-      "<label>Monto mensual esperado" +
-      "<input type=\"number\" min=\"0\" step=\"0.01\" id=\"montoIngresoRecurrenteEsperado\" value=\"" + ingresoEsperado.monto + "\"></label>" +
-      "<label><input type=\"checkbox\" id=\"activoIngresoRecurrenteEsperado\"" + (ingresoEsperado.activo ? " checked" : "") + "> Usarlo para proyectar</label>" +
-      "<button type=\"button\" id=\"botonGuardarIngresoRecurrenteEsperado\">Guardar</button>" +
-      "<div id=\"mensajeIngresoRecurrenteEsperado\" class=\"pista\"></div>";
+    ingreso.ajustes = (ingreso.ajustes || []).filter(function (ajuste) { return ajuste.mes !== mes; });
 
-    document.getElementById("botonGuardarIngresoRecurrenteEsperado").addEventListener("click", guardarIngresoRecurrenteEsperado);
-  }
-
-  function guardarIngresoRecurrenteEsperado() {
-    const datos = leerDatos();
-    datos.config.ingresoRecurrenteEsperado = {
-      monto: Number(document.getElementById("montoIngresoRecurrenteEsperado").value) || 0,
-      activo: document.getElementById("activoIngresoRecurrenteEsperado").checked
-    };
     guardarDatos(datos);
-    document.getElementById("mensajeIngresoRecurrenteEsperado").textContent = "Ingreso esperado guardado.";
+    renderizarTodo();
   }
+
 
   // ============================================================
   // CONFIGURACIÓN — PRESUPUESTO SEMANAL
@@ -2962,8 +3848,9 @@
       return;
     }
 
+    const presupuestoVigente = obtenerPresupuestoSemanalVigente(cicloActual, datos);
     const camposHTML = categoriasVariables.map(function (categoria) {
-      const valorActual = cicloActual.presupuestoSemanal[categoria.id] || "";
+      const valorActual = presupuestoVigente[categoria.id] || "";
       return "<label>" + escaparHTML(categoria.nombre) +
         "<input type=\"number\" min=\"0\" step=\"0.01\" data-categoria-id=\"" + categoria.id + "\" value=\"" + valorActual + "\"></label>";
     }).join("");
@@ -2979,6 +3866,11 @@
     const cicloActual = asegurarCicloActual();
     const datos = leerDatos();
     const cicloEnDatos = datos.ciclos.find(function (c) { return c.id === cicloActual.id; });
+
+    // Un ciclo importado de una versión vieja puede no traer el campo.
+    if (!cicloEnDatos.presupuestoSemanal) {
+      cicloEnDatos.presupuestoSemanal = {};
+    }
 
     document.querySelectorAll("#contenedorPresupuestoSemanal input[data-categoria-id]").forEach(function (entrada) {
       const categoriaId = entrada.getAttribute("data-categoria-id");
@@ -3022,7 +3914,7 @@
     verde: "Vas bien",
     amarillo: "Al límite",
     rojo: "Te vas a pasar",
-    gris: "Falta capturar el ingreso"
+    gris: "Ningún ingreso cae en este ciclo"
   };
 
   function renderizarBalanceDelCiclo() {
@@ -3119,7 +4011,7 @@
     // Sin ingreso capturado no hay nada que graficar todavía — mismo
     // criterio "gris" que ya usa el semáforo de Balance del ciclo.
     if (ingresosDelCiclo <= 0) {
-      contenedor.innerHTML = "<div class=\"grafica-trayectoria\"><p class=\"pista\">Captura el ingreso del ciclo para ver la gráfica de trayectoria.</p></div>";
+      contenedor.innerHTML = "<div class=\"grafica-trayectoria\"><p class=\"pista\">Captura un ingreso que caiga en este ciclo para ver la gráfica de trayectoria.</p></div>";
       return;
     }
 
@@ -3429,10 +4321,10 @@
       "<div class=\"monto-grande\">" + formatearMoneda(resultado.balanceDelCiclo) + "</div>" +
       "<div class=\"semaforo semaforo-" + colorBalance + "\">" + (resultado.balanceDelCiclo >= 0 ? "Alcanza" : "No alcanza") + "</div>" +
       "<p class=\"detalle\">Remanente que trae del ciclo anterior: " + formatearMoneda(resultado.remanenteInicial) + "</p>" +
-      "<p class=\"detalle\">Ingreso considerado (real ya capturado, o esperado si aún no hay): " + formatearMoneda(resultado.montoIngresoEsperado) + "</p>" +
+      "<p class=\"detalle\">Ingreso del ciclo: " + formatearMoneda(resultado.ingresoDelCiclo) + "</p>" +
       "<p class=\"detalle\">Compromisos proyectados: " + formatearMoneda(resultado.totalCompromisos) + "</p>" +
       "<p class=\"detalle\">Gasto variable estimado: " + formatearMoneda(resultado.gastoVariableProyectado) + "</p>" +
-      "<p class=\"pista\">Estimado con el presupuesto semanal y el ingreso esperado configurados hoy — se recalcula cada vez que los cambies.</p>" +
+      "<p class=\"pista\">Estimado con el presupuesto semanal y las reglas de ingreso configuradas hoy — se recalcula cada vez que los cambies.</p>" +
     "</div>";
   }
 
@@ -3530,6 +4422,648 @@
         "<p class=\"pista\">Se liquida aprox. el " + formatearFechaISO(estado.fechaLiquidacion) + "</p>" +
       "</div>";
     }).join("");
+  }
+
+  // ============================================================
+  // SIMULACIÓN — pura, nunca escribe en localStorage
+  // ============================================================
+  //
+  // Vive en su propia pestaña, aislada de Análisis/Configuración. Todo lo
+  // que pasa aquí ocurre sobre datosSimulados, un clon profundo de
+  // leerDatos() hecho al entrar a la pestaña — ningún handler de esta
+  // sección llama jamás a guardarDatos. Recargar la página, cambiar de
+  // pestaña y volver, o pulsar "Reiniciar simulación" descartan el clon: es
+  // una variable JS normal, no algo persistido.
+  //
+  // El ciclo actual se trata igual que los 6 proyectados dentro de este
+  // motor (remanente inicial en cero, mismo cálculo encadenado) — no se
+  // reusa calcularProyeccionDeCierre/calcularColorDelSemaforo aquí. Si se
+  // mezclaran las dos fórmulas, mover un compromiso HACIA el ciclo actual
+  // desde uno proyectado se perdería en silencio (esa fórmula real solo lee
+  // datos.compromisos, nunca la lista materializada de esta pestaña).
+  // Análisis sigue mostrando exactamente lo mismo que siempre con las
+  // fórmulas reales, sin tocar.
+
+  let datosSimulados = null;
+  let compromisosMaterializadosSimulacion = null;
+  let indiceCicloEnfocadoSimulacion = 0;
+
+  // Ocho tonos validados (OKLab, separación CVD y contraste contra el fondo
+  // real de esta pestaña #0f172a en modo oscuro — los ocho pasan) para
+  // diferenciar categorías a simple vista. Orden fijo, nunca se reasignan:
+  // la categoría en la posición N del arreglo de config.categorias siempre
+  // usa el tono N. Una novena categoría no inventa un tono nuevo, cae en el
+  // gris neutro de "sin categoría".
+  const PALETA_CATEGORIAS_SIMULACION = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
+  const COLOR_NEUTRO_SIMULACION = "#64748b";
+
+  function obtenerColorDeCategoria(categoriaId, datosSim) {
+    if (!categoriaId) {
+      return COLOR_NEUTRO_SIMULACION;
+    }
+    const indice = datosSim.config.categorias.findIndex(function (c) { return c.id === categoriaId; });
+    if (indice === -1) {
+      return COLOR_NEUTRO_SIMULACION;
+    }
+    return PALETA_CATEGORIAS_SIMULACION[indice % PALETA_CATEGORIAS_SIMULACION.length];
+  }
+
+  function obtenerHorizonteDeCiclosSimulacion() {
+    const cicloActual = asegurarCicloActual();
+    return [cicloActual].concat(generarCiclosSimulados(cicloActual, CANTIDAD_DE_CICLOS_A_PROYECTAR));
+  }
+
+  // No existe hoy una función centralizada para esto — confirmarPagoDeCompromiso
+  // resuelve la categoría inline, y no se toca (ver "qué NO se toca" del
+  // plan: la simulación no paga nada real). Funciona igual sobre un
+  // compromiso real ya persistido que sobre un candidato recién derivado de
+  // una regla, porque ambos traen "origen" y, si aplica, "origenId".
+  function resolverCategoriaDeCompromiso(compromisoOCandidato, datos) {
+    if (compromisoOCandidato.origen === "recurrente") {
+      const recurrente = datos.recurrentes.find(function (r) { return r.id === compromisoOCandidato.origenId; });
+      return recurrente ? recurrente.categoriaId : null;
+    }
+    if (compromisoOCandidato.origen === "unico") {
+      return compromisoOCandidato.categoriaId || null;
+    }
+    return null; // "deuda" y "tarjeta" no tienen categoría de presupuesto
+  }
+
+  // Hermana de resolverCategoriaDeCompromiso, mismo criterio — para agrupar
+  // dentro de cada tarjeta de categoría por subcategoría (Servicios -> Luz,
+  // Agua, Internet...), sin inventar un campo nuevo: ya se captura al dar de
+  // alta el recurrente o el compromiso único.
+  function resolverSubcategoriaDeCompromiso(compromisoOCandidato, datos) {
+    if (compromisoOCandidato.origen === "recurrente") {
+      const recurrente = datos.recurrentes.find(function (r) { return r.id === compromisoOCandidato.origenId; });
+      return recurrente ? recurrente.subcategoria : null;
+    }
+    if (compromisoOCandidato.origen === "unico") {
+      return compromisoOCandidato.subcategoria || null;
+    }
+    return null;
+  }
+
+  // Un compromiso pagado cuenta con su montoReal, no con montoEstimado —
+  // mismo criterio que calcularMontoComprometidoTotalDelCiclo ya usa para el
+  // ciclo actual real.
+  function montoEfectivoDeSimulado(item) {
+    return Number(item.pagado ? item.montoReal : item.montoEstimado);
+  }
+
+  // Problema que resuelve esto: los compromisos de recurrentes/deudas en
+  // ciclos proyectados no viven en datos.compromisos — calcularCandidatosDelCiclo
+  // los re-deriva en cada llamada. Si el usuario "mueve" uno a otro ciclo o
+  // lo marca a crédito diferido, no hay dónde recordar esa edición sin que
+  // la siguiente recomputación la descarte. Por eso se materializa una sola
+  // vez, al entrar a la pestaña, y de ahí en adelante se edita esa copia.
+  function materializarCompromisosDelHorizonte(datosSim) {
+    const horizonte = obtenerHorizonteDeCiclosSimulacion();
+    const materializados = [];
+
+    horizonte.forEach(function (ciclo, indice) {
+      if (indice === 0) {
+        // Ciclo actual real: son los mismos objetos de datosSim.compromisos,
+        // decorados en el lugar (así "mover un compromiso HACIA el ciclo
+        // actual desde uno proyectado" y "mover uno DEL ciclo actual hacia
+        // otro" quedan simétricos, ambos operando sobre la misma lista
+        // plana en vez de dos representaciones distintas).
+        datosSim.compromisos
+          .filter(function (c) { return c.cicloId === ciclo.id; })
+          .forEach(function (compromiso) {
+            compromiso.idSimulado = compromiso.idSimulado || generarId("sim");
+            compromiso.categoriaId = resolverCategoriaDeCompromiso(compromiso, datosSim);
+            compromiso.subcategoria = resolverSubcategoriaDeCompromiso(compromiso, datosSim);
+            compromiso.estadoCredito = compromiso.estadoCredito || null;
+            compromiso.modificadoEnSimulacion = compromiso.modificadoEnSimulacion || false;
+            materializados.push(compromiso);
+          });
+      } else {
+        const candidatos = calcularCandidatosDelCiclo(ciclo, datosSim);
+        const unicosFuturos = datosSim.compromisos.filter(function (c) { return c.cicloId === ciclo.id && c.origen === "unico"; });
+        candidatos.concat(unicosFuturos).forEach(function (candidato) {
+          materializados.push({
+            idSimulado: generarId("sim"),
+            cicloId: ciclo.id,
+            origen: candidato.origen,
+            origenId: candidato.origenId || null,
+            nombre: candidato.nombre,
+            // La fecha se arrastra porque el reparto de un diferimiento a
+            // crédito depende de ella: es lo que decide qué corte de la
+            // tarjeta captura la compra. Sin fecha no se puede saber en qué
+            // ciclo cae la primera mensualidad.
+            fechaProgramada: candidato.fechaProgramada,
+            categoriaId: resolverCategoriaDeCompromiso(candidato, datosSim),
+            subcategoria: resolverSubcategoriaDeCompromiso(candidato, datosSim),
+            montoEstimado: Number(candidato.montoEstimado),
+            montoReal: null,
+            pagado: false,
+            estadoCredito: null,
+            modificadoEnSimulacion: false
+          });
+        });
+      }
+    });
+
+    return materializados;
+  }
+
+  // Aislada a propósito (Pieza 3, pedido explícito): división exacta
+  // monto/N. Punto único donde se agregarían intereses después, sin tocar
+  // el resto del motor.
+  function calcularDiferimientoSimulado(monto, mesesDiferidos) {
+    return monto / mesesDiferidos;
+  }
+
+  // Reparte cada compromiso marcado con estadoCredito en sus N
+  // mensualidades, como aporte a un bucket sintético por (tarjeta, ciclo)
+  // — no hay una "línea genérica de crédito" aparte: este bucket ES la
+  // representación del pago proyectado de esa tarjeta. Lo que no cabe
+  // dentro de los 7 ciclos del horizonte se reporta aparte, nunca se
+  // descarta en silencio.
+  //
+  // Cada mensualidad se coloca en el ciclo que contiene su FECHA REAL de
+  // cargo, calculada desde el corte de la tarjeta. Antes se repartían por
+  // aritmética de índices ("el ciclo siguiente al de la compra"), lo que
+  // era incorrecto de dos formas: ignoraba que una compra posterior al
+  // corte se va al pago siguiente (con corte 25 y pago 12, comprar el 5 o
+  // el 26 de agosto separa el primer cargo un mes entero), e ignoraba que
+  // el primer cargo puede caer en el MISMO ciclo de la compra cuando el
+  // día de pago es posterior al de corte.
+  function calcularContribucionesDeTarjetaSimulada(materializados, horizonte, datosSim) {
+    const contribucionesPorCiclo = {};
+    const advertenciasFueraDeHorizonte = [];
+
+    horizonte.forEach(function (ciclo) { contribucionesPorCiclo[ciclo.id] = {}; });
+
+    materializados.forEach(function (item) {
+      if (!item.estadoCredito || !item.fechaProgramada) {
+        return;
+      }
+      const tarjeta = datosSim.config.tarjetas.find(function (t) { return t.id === item.estadoCredito.tarjetaId; });
+      if (!tarjeta) {
+        return;
+      }
+
+      const montoPorMes = calcularDiferimientoSimulado(montoEfectivoDeSimulado(item), item.estadoCredito.mesesDiferidos);
+      const primerPago = calcularFechaDePrimerPagoDeTarjeta(tarjeta, crearFechaLocal(item.fechaProgramada));
+
+      let mesesDentro = 0;
+      for (let mes = 0; mes < item.estadoCredito.mesesDiferidos; mes++) {
+        const fechaDelCargo = sumarMeses(primerPago, mes);
+        const cicloDestino = horizonte.find(function (ciclo) {
+          return fechaDelCargo >= crearFechaLocal(ciclo.fechaInicio) && fechaDelCargo <= crearFechaLocal(ciclo.fechaFin);
+        });
+        if (!cicloDestino) {
+          continue; // cae fuera del horizonte; se reporta abajo
+        }
+        contribucionesPorCiclo[cicloDestino.id][tarjeta.id] = (contribucionesPorCiclo[cicloDestino.id][tarjeta.id] || 0) + montoPorMes;
+        mesesDentro++;
+      }
+
+      const mesesFuera = item.estadoCredito.mesesDiferidos - mesesDentro;
+      if (mesesFuera > 0) {
+        advertenciasFueraDeHorizonte.push({
+          idSimulado: item.idSimulado,
+          nombre: item.nombre,
+          montoFuera: montoPorMes * mesesFuera,
+          mesesFuera: mesesFuera
+        });
+      }
+    });
+
+    return { contribucionesPorCiclo: contribucionesPorCiclo, advertenciasFueraDeHorizonte: advertenciasFueraDeHorizonte };
+  }
+
+  // Punto B del plan: cuánto de la línea de una tarjeta ocuparía un
+  // diferimiento simulado en el punto de un ciclo dado — un MSI bloquea la
+  // línea completa desde el momento de la compra, no solo lo que falta
+  // pagar hacia adelante. Informativo, nunca bloqueante.
+  // Cuenta por fechas reales, igual que el reparto de arriba: cuántas
+  // mensualidades ya se cobraron para cuando termina el ciclo enfocado, y
+  // cuántas siguen pendientes ocupando la línea.
+  function calcularSaldoOcupadoDeTarjetaSimulada(tarjeta, indiceCicloEnfocado, materializados, horizonte) {
+    const cicloEnfocado = horizonte[indiceCicloEnfocado];
+    if (!cicloEnfocado) {
+      return 0;
+    }
+    const finDelCicloEnfocado = crearFechaLocal(cicloEnfocado.fechaFin);
+    let saldoOcupado = 0;
+
+    materializados.forEach(function (item) {
+      if (!item.estadoCredito || item.estadoCredito.tarjetaId !== tarjeta.id || !item.fechaProgramada) {
+        return;
+      }
+      if (crearFechaLocal(item.fechaProgramada) > finDelCicloEnfocado) {
+        return; // en ese punto de la simulación, esta compra todavía no existe
+      }
+
+      const totalDeMeses = item.estadoCredito.mesesDiferidos;
+      const montoPorMes = calcularDiferimientoSimulado(montoEfectivoDeSimulado(item), totalDeMeses);
+      const primerPago = calcularFechaDePrimerPagoDeTarjeta(tarjeta, crearFechaLocal(item.fechaProgramada));
+
+      let mensualidadesYaCobradas = 0;
+      for (let mes = 0; mes < totalDeMeses; mes++) {
+        if (sumarMeses(primerPago, mes) <= finDelCicloEnfocado) {
+          mensualidadesYaCobradas++;
+        }
+      }
+      saldoOcupado += Math.max(0, (totalDeMeses - mensualidadesYaCobradas) * montoPorMes);
+    });
+
+    return saldoOcupado;
+  }
+
+  // Encadena los 7 ciclos del horizonte (actual + 6 proyectados) igual que
+  // calcularProyeccionMultiCiclo, pero leyendo la lista materializada (ya
+  // editable) en vez de re-derivar candidatos en cada paso.
+  function calcularProyeccionSimuladaCompleta(datosSim, materializados) {
+    const horizonte = obtenerHorizonteDeCiclosSimulacion();
+    const categoriasVariables = datosSim.config.categorias.filter(function (c) { return c.esVariableSemanal; });
+    const presupuestoSemanalBase = obtenerPresupuestoSemanalVigente(horizonte[0], datosSim);
+
+    const contribuciones = calcularContribucionesDeTarjetaSimulada(materializados, horizonte, datosSim);
+
+    let remanente = 0;
+    const resultadosPorCiclo = horizonte.map(function (ciclo) {
+      const compromisosNormales = materializados.filter(function (m) { return m.cicloId === ciclo.id && !m.estadoCredito; });
+      const totalNormal = compromisosNormales.reduce(function (s, m) { return s + montoEfectivoDeSimulado(m); }, 0);
+      const contribucionesTarjeta = contribuciones.contribucionesPorCiclo[ciclo.id] || {};
+      const totalTarjetaSimulada = Object.keys(contribucionesTarjeta).reduce(function (s, tarjetaId) { return s + contribucionesTarjeta[tarjetaId]; }, 0);
+      const totalComprometido = totalNormal + totalTarjetaSimulada;
+
+      const ingresoDelCiclo = calcularIngresosDelCiclo(ciclo, datosSim);
+      const gastoVariableProyectado = calcularGastoVariableProyectado(ciclo, categoriasVariables, presupuestoSemanalBase);
+      const remanenteInicial = remanente;
+      const balanceDelCiclo = remanenteInicial + ingresoDelCiclo - totalComprometido - gastoVariableProyectado;
+      remanente = balanceDelCiclo;
+
+      return {
+        ciclo: ciclo,
+        remanenteInicial: remanenteInicial,
+        ingresoDelCiclo: ingresoDelCiclo,
+        totalComprometido: totalComprometido,
+        totalTarjetaSimulada: totalTarjetaSimulada,
+        contribucionesTarjeta: contribucionesTarjeta,
+        gastoVariableProyectado: gastoVariableProyectado,
+        balanceDelCiclo: balanceDelCiclo
+      };
+    });
+
+    return { horizonte: horizonte, resultadosPorCiclo: resultadosPorCiclo, advertenciasFueraDeHorizonte: contribuciones.advertenciasFueraDeHorizonte };
+  }
+
+  function reiniciarSimulacion() {
+    datosSimulados = JSON.parse(JSON.stringify(leerDatos()));
+    compromisosMaterializadosSimulacion = materializarCompromisosDelHorizonte(datosSimulados);
+    indiceCicloEnfocadoSimulacion = 0;
+    renderizarSimulacion();
+  }
+
+  function cambiarCicloEnfocadoSimulacion(delta) {
+    indiceCicloEnfocadoSimulacion = Math.min(Math.max(indiceCicloEnfocadoSimulacion + delta, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
+    renderizarSimulacion();
+  }
+
+  function renderizarSimulacion() {
+    if (!datosSimulados) {
+      reiniciarSimulacion();
+      return;
+    }
+
+    const proyeccion = calcularProyeccionSimuladaCompleta(datosSimulados, compromisosMaterializadosSimulacion);
+    const resultadoEnfocado = proyeccion.resultadosPorCiclo[indiceCicloEnfocadoSimulacion];
+
+    renderizarFranjaBalanceSimulacion(resultadoEnfocado);
+    renderizarPanelCategoriasSimulacion(resultadoEnfocado, proyeccion);
+    renderizarPanelDeudasTarjetasSimulacion(resultadoEnfocado, proyeccion);
+  }
+
+  function renderizarFranjaBalanceSimulacion(resultado) {
+    const contenedor = document.getElementById("franjaBalanceSimulacion");
+    const claseBalance = resultado.balanceDelCiclo >= 0 ? "balance-positivo-simulacion" : "balance-negativo-simulacion";
+
+    contenedor.innerHTML =
+      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Ciclo enfocado</span><span class=\"monto-tile\">" + resultado.ciclo.id + "</span></div>" +
+      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Ingreso</span><span class=\"monto-tile\">" + formatearMoneda(resultado.ingresoDelCiclo) + "</span></div>" +
+      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Comprometido</span><span class=\"monto-tile\">" + formatearMoneda(resultado.totalComprometido) + "</span></div>" +
+      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Gasto variable proyectado</span><span class=\"monto-tile\">" + formatearMoneda(resultado.gastoVariableProyectado) + "</span></div>" +
+      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Balance</span><span class=\"monto-tile " + claseBalance + "\">" + formatearMoneda(resultado.balanceDelCiclo) + "</span></div>";
+  }
+
+  // Fila de un compromiso editable dentro del panel. Si ya está marcado a
+  // crédito diferido, sigue apareciendo aquí (no solo en el bucket
+  // sintético) para poder revertirlo o cambiarle tarjeta/meses — su monto
+  // ya no cuenta en el subtotal de su categoría mientras lo esté.
+  function construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) {
+    const deshabilitado = item.pagado ? " disabled" : "";
+    const marcaModificado = item.modificadoEnSimulacion ? "<span class=\"marca-modificado\">modificado</span>" : "";
+    const etiquetaPagado = item.pagado ? " <span class=\"detalle\">(pagado)</span>" : "";
+    const etiquetaCredito = item.estadoCredito ? " <span class=\"detalle\">(diferido a crédito, no cuenta en este subtotal)</span>" : "";
+    const permiteFuente = item.origen !== "tarjeta"; // pagar una tarjeta con "crédito" no tiene sentido
+
+    const opcionesTarjeta = tarjetasQuePermitenDiferir.length > 0
+      ? tarjetasQuePermitenDiferir.map(function (t) { return "<option value=\"" + t.id + "\">" + escaparHTML(t.nombre) + "</option>"; }).join("")
+      : "<option value=\"\">Ninguna tarjeta permite MSI</option>";
+
+    const controlesFuenteHTML = permiteFuente
+      ? "<select class=\"fuente-simulada-editada\"" + deshabilitado + ">" +
+          "<option value=\"debito\">Débito</option>" +
+          "<option value=\"credito\">Crédito</option>" +
+        "</select>" +
+        "<span class=\"controles-credito-simulado\" style=\"display: none;\">" +
+          "<select class=\"tarjeta-simulada-editada\">" + opcionesTarjeta + "</select>" +
+          "<select class=\"meses-simulados-editada\">" +
+            "<option value=\"1\">1 mes</option><option value=\"3\">3 meses</option><option value=\"6\">6 meses</option>" +
+            "<option value=\"9\">9 meses</option><option value=\"12\">12 meses</option>" +
+          "</select>" +
+        "</span>"
+      : "";
+
+    return "<div class=\"fila-compromiso-simulado\" data-id-simulado=\"" + item.idSimulado + "\">" +
+      "<span class=\"nombre-compromiso-simulado\">" + escaparHTML(item.nombre) + etiquetaPagado + etiquetaCredito + marcaModificado + "</span>" +
+      "<input type=\"number\" class=\"monto-simulado-editado\" min=\"0\" step=\"0.01\" value=\"" + montoEfectivoDeSimulado(item) + "\"" + deshabilitado + ">" +
+      "<select class=\"ciclo-destino-simulado\"" + deshabilitado + ">" + horizonteOpcionesHTML + "</select>" +
+      controlesFuenteHTML +
+    "</div>";
+  }
+
+  // Arma una tarjeta compacta (barra de progreso simple, no dona) para una
+  // deuda o una tarjeta de crédito dentro del recuadro dedicado. filaEditableHTML
+  // es opcional: el compromiso de pago de este ciclo si existe, con los
+  // mismos controles de siempre (monto/mover de ciclo/crédito).
+  function construirTarjetaDeDeudaOTarjeta(nombre, porcentaje, etiquetaDerecha, detalleHTML, filaEditableHTML, excede) {
+    const porcentajeAcotado = Math.max(0, Math.min(1, porcentaje));
+    return "<div class=\"tarjeta-deuda-simulada" + (excede ? " excede-linea" : "") + "\">" +
+      "<div class=\"encabezado-tarjeta-deuda\"><span>" + escaparHTML(nombre) + "</span><span>" + etiquetaDerecha + "</span></div>" +
+      "<div class=\"barra-progreso\"><div class=\"barra-progreso-relleno" + (excede ? " excede" : "") + "\" style=\"width:" + (porcentajeAcotado * 100).toFixed(1) + "%;\"></div></div>" +
+      detalleHTML +
+      (filaEditableHTML || "") +
+    "</div>";
+  }
+
+  // Tarjeta compacta que resume los 7 ciclos del horizonte con su balance —
+  // ahora es una tarjeta más dentro de la grilla de la izquierda (antes vivía
+  // en un panel aparte a la derecha, que ahora es de Deudas y Tarjetas).
+  function construirTarjetaDeCiclosDelHorizonte(proyeccion) {
+    const filasHTML = proyeccion.resultadosPorCiclo.map(function (resultado, indice) {
+      const claseBalance = resultado.balanceDelCiclo >= 0 ? "balance-positivo-simulacion" : "balance-negativo-simulacion";
+      const claseEnfocado = indice === indiceCicloEnfocadoSimulacion ? " ciclo-enfocado" : "";
+      return "<div class=\"fila-horizonte-simulacion" + claseEnfocado + "\" data-indice-ciclo=\"" + indice + "\">" +
+        "<span>" + resultado.ciclo.id + (indice === 0 ? " (actual)" : "") + "</span>" +
+        "<span class=\"" + claseBalance + "\">" + formatearMoneda(resultado.balanceDelCiclo) + "</span>" +
+      "</div>";
+    }).join("");
+
+    return "<div class=\"categoria-simulada tarjeta-horizonte-simulacion\">" +
+      "<div class=\"encabezado-categoria-simulada\"><span>Ciclos del horizonte</span></div>" +
+      "<div class=\"items-categoria-simulada\">" + filasHTML + "</div>" +
+    "</div>";
+  }
+
+  function renderizarPanelCategoriasSimulacion(resultado, proyeccion) {
+    const contenedor = document.getElementById("panelCategoriasSimulacion");
+    const cicloEnfocado = resultado.ciclo;
+    const itemsDelCiclo = compromisosMaterializadosSimulacion.filter(function (m) { return m.cicloId === cicloEnfocado.id; });
+    const itemsDeCategoria = itemsDelCiclo.filter(function (m) { return m.origen !== "deuda" && m.origen !== "tarjeta"; });
+
+    // Agrupación categoría -> subcategoría (ej. Servicios -> Luz, Agua...).
+    // La subcategoría ya se captura en cada recurrente/único, no se inventa
+    // nada nuevo. Todo se muestra siempre desplegado — nada de acordeones —
+    // para que las categorías completas quepan de un vistazo.
+    const categorias = {};
+    const ordenCategorias = [];
+
+    itemsDeCategoria.forEach(function (item) {
+      let key = "sin-categoria";
+      let nombreCategoria = "Sin categoría";
+      if (item.categoriaId) {
+        const categoria = datosSimulados.config.categorias.find(function (c) { return c.id === item.categoriaId; });
+        key = item.categoriaId;
+        nombreCategoria = categoria ? categoria.nombre : "Categoría eliminada";
+      }
+      if (!categorias[key]) {
+        categorias[key] = { nombre: nombreCategoria, subtotal: 0, subgrupos: {}, ordenSubgrupos: [], color: obtenerColorDeCategoria(item.categoriaId, datosSimulados) };
+        ordenCategorias.push(key);
+      }
+      const cat = categorias[key];
+      const subKey = item.subcategoria || "General";
+      if (!cat.subgrupos[subKey]) {
+        cat.subgrupos[subKey] = { nombre: subKey, items: [], subtotal: 0 };
+        cat.ordenSubgrupos.push(subKey);
+      }
+      cat.subgrupos[subKey].items.push(item);
+      if (!item.estadoCredito) {
+        cat.subgrupos[subKey].subtotal += montoEfectivoDeSimulado(item);
+        cat.subtotal += montoEfectivoDeSimulado(item);
+      }
+    });
+
+    const horizonteOpcionesHTML = proyeccion.horizonte.map(function (c) {
+      return "<option value=\"" + c.id + "\">" + c.id + "</option>";
+    }).join("");
+    const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) { return t.permiteDiferirAMeses; });
+
+    let html = "<div class=\"cabecera-panel-simulacion\">" +
+      "<button type=\"button\" id=\"botonCicloAnteriorSimulacion\"" + (indiceCicloEnfocadoSimulacion === 0 ? " disabled" : "") + ">&larr; Anterior</button>" +
+      " <strong>" + cicloEnfocado.id + "</strong> " +
+      "<button type=\"button\" id=\"botonCicloSiguienteSimulacion\"" + (indiceCicloEnfocadoSimulacion === CANTIDAD_DE_CICLOS_A_PROYECTAR ? " disabled" : "") + ">Siguiente &rarr;</button>" +
+    "</div>";
+
+    if (ordenCategorias.length === 0) {
+      html += "<p class=\"pista\">Sin compromisos en este ciclo.</p>";
+    }
+
+    html += "<div class=\"grilla-categorias-simulacion\">";
+
+    html += ordenCategorias.map(function (key) {
+      const categoria = categorias[key];
+
+      // Cada subcategoría es un "globo" (píldora) teñido con el mismo color
+      // de su categoría, a baja opacidad — así se agrupan visualmente por
+      // familia de color sin recurrir a un tono nuevo por subcategoría.
+      const subgruposHTML = categoria.ordenSubgrupos.map(function (subKey) {
+        const sub = categoria.subgrupos[subKey];
+        const filasHTML = sub.items.map(function (item) {
+          return construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQuePermitenDiferir);
+        }).join("");
+        return "<div class=\"subgrupo-categoria-simulada\">" +
+          "<div class=\"encabezado-subgrupo-simulada\" style=\"background-color:" + categoria.color + "22; color:" + categoria.color + ";\"><span>" + escaparHTML(sub.nombre) + "</span><span>" + formatearMoneda(sub.subtotal) + "</span></div>" +
+          filasHTML +
+        "</div>";
+      }).join("");
+
+      return "<div class=\"categoria-simulada\" style=\"border-left-color:" + categoria.color + ";\">" +
+        "<div class=\"encabezado-categoria-simulada\"><span><span class=\"punto-categoria\" style=\"background-color:" + categoria.color + ";\"></span>" + escaparHTML(categoria.nombre) + "</span><span>" + formatearMoneda(categoria.subtotal) + "</span></div>" +
+        "<div class=\"items-categoria-simulada\">" + subgruposHTML + "</div>" +
+      "</div>";
+    }).join("");
+
+    html += construirTarjetaDeCiclosDelHorizonte(proyeccion);
+    html += "</div>";
+
+    contenedor.innerHTML = html;
+
+    document.getElementById("botonCicloAnteriorSimulacion").addEventListener("click", function () { cambiarCicloEnfocadoSimulacion(-1); });
+    document.getElementById("botonCicloSiguienteSimulacion").addEventListener("click", function () { cambiarCicloEnfocadoSimulacion(1); });
+
+    contenedor.querySelectorAll(".fila-horizonte-simulacion").forEach(function (fila) {
+      fila.addEventListener("click", function () {
+        indiceCicloEnfocadoSimulacion = Number(fila.getAttribute("data-indice-ciclo"));
+        renderizarSimulacion();
+      });
+    });
+
+    conectarEventosDeFilaCompromisoSimulado(contenedor);
+  }
+
+  function conectarEventosDeFilaCompromisoSimulado(contenedor) {
+    contenedor.querySelectorAll(".fila-compromiso-simulado").forEach(function (fila) {
+      const idSimulado = fila.getAttribute("data-id-simulado");
+      const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
+      if (!item || item.pagado) {
+        return;
+      }
+
+      const selectCiclo = fila.querySelector(".ciclo-destino-simulado");
+      selectCiclo.value = item.cicloId;
+      selectCiclo.addEventListener("change", function (evento) {
+        item.cicloId = evento.target.value;
+        item.modificadoEnSimulacion = true;
+        renderizarSimulacion();
+      });
+
+      fila.querySelector(".monto-simulado-editado").addEventListener("change", function (evento) {
+        const monto = Number(evento.target.value);
+        if (!monto || monto <= 0) {
+          return;
+        }
+        item.montoEstimado = monto;
+        item.modificadoEnSimulacion = true;
+        renderizarSimulacion();
+      });
+
+      const selectFuente = fila.querySelector(".fuente-simulada-editada");
+      if (!selectFuente) {
+        return; // origen "tarjeta": no tiene selector de fuente
+      }
+      const controlesCredito = fila.querySelector(".controles-credito-simulado");
+      const selectTarjeta = fila.querySelector(".tarjeta-simulada-editada");
+      const selectMeses = fila.querySelector(".meses-simulados-editada");
+
+      if (item.estadoCredito) {
+        selectFuente.value = "credito";
+        controlesCredito.style.display = "inline-flex";
+        if (selectTarjeta.querySelector("option[value='" + item.estadoCredito.tarjetaId + "']")) {
+          selectTarjeta.value = item.estadoCredito.tarjetaId;
+        }
+        selectMeses.value = String(item.estadoCredito.mesesDiferidos);
+      }
+
+      selectFuente.addEventListener("change", function (evento) {
+        if (evento.target.value === "credito") {
+          // El pago de una tarjeta no se puede pagar con una tarjeta: sería
+          // un ciclo sin fondo (el cargo alimentaría el mismo pago que lo
+          // origina) y no representa nada real.
+          if (item.origen === "tarjeta") {
+            alert("El pago de una tarjeta no se puede diferir a otra tarjeta.");
+            evento.target.value = "debito";
+            return;
+          }
+          const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) { return t.permiteDiferirAMeses; });
+          if (tarjetasQuePermitenDiferir.length === 0) {
+            alert("Ninguna tarjeta permite diferir a meses todavía. Márcalo en Configuración → Tarjetas.");
+            evento.target.value = "debito";
+            return;
+          }
+          item.estadoCredito = { tarjetaId: tarjetasQuePermitenDiferir[0].id, mesesDiferidos: 1 };
+        } else {
+          item.estadoCredito = null;
+        }
+        item.modificadoEnSimulacion = true;
+        renderizarSimulacion();
+      });
+
+      selectTarjeta.addEventListener("change", function (evento) {
+        if (item.estadoCredito) {
+          item.estadoCredito.tarjetaId = evento.target.value;
+          item.modificadoEnSimulacion = true;
+          renderizarSimulacion();
+        }
+      });
+
+      selectMeses.addEventListener("change", function (evento) {
+        if (item.estadoCredito) {
+          item.estadoCredito.mesesDiferidos = Number(evento.target.value);
+          item.modificadoEnSimulacion = true;
+          renderizarSimulacion();
+        }
+      });
+    });
+  }
+
+  // Panel dedicado de Deudas y Tarjetas — antes era una tarjeta más entre las
+  // categorías, ahora tiene su propio panel a la derecha (a cambio, "Ciclos
+  // del horizonte" pasó a ser una tarjeta dentro de la grilla de la
+  // izquierda). Separado de las categorías de presupuesto a propósito: son
+  // gasto fijo ya comprometido, no una categoría de consumo. Cada deuda
+  // activa y CADA tarjeta dada de alta aparece siempre, aunque no tenga
+  // ningún movimiento este ciclo.
+  function renderizarPanelDeudasTarjetasSimulacion(resultado, proyeccion) {
+    const contenedor = document.getElementById("panelDeudasTarjetasSimulacion");
+    const cicloEnfocado = resultado.ciclo;
+    const itemsDelCiclo = compromisosMaterializadosSimulacion.filter(function (m) { return m.cicloId === cicloEnfocado.id; });
+    const itemsDeDeuda = itemsDelCiclo.filter(function (m) { return m.origen === "deuda"; });
+    const itemsDeTarjetaReal = itemsDelCiclo.filter(function (m) { return m.origen === "tarjeta"; });
+
+    const horizonteOpcionesHTML = proyeccion.horizonte.map(function (c) {
+      return "<option value=\"" + c.id + "\">" + c.id + "</option>";
+    }).join("");
+    const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) { return t.permiteDiferirAMeses; });
+
+    const deudasActivas = datosSimulados.deudas.filter(function (d) { return d.activa; });
+    const tarjetas = datosSimulados.config.tarjetas;
+
+    const subtotalDeudas = itemsDeDeuda.reduce(function (s, item) { return s + (item.estadoCredito ? 0 : montoEfectivoDeSimulado(item)); }, 0);
+    const subtotalTarjetas = Object.keys(resultado.contribucionesTarjeta || {}).reduce(function (s, id) { return s + resultado.contribucionesTarjeta[id]; }, 0);
+
+    let html = "<h3 style=\"margin-top: 0;\">Deudas y Tarjetas</h3>" +
+      "<p class=\"detalle\">Comprometido este ciclo: " + formatearMoneda(subtotalDeudas + subtotalTarjetas) + "</p>";
+
+    if (deudasActivas.length === 0 && tarjetas.length === 0) {
+      html += "<p class=\"pista\">No hay deudas activas ni tarjetas dadas de alta.</p>";
+    }
+
+    html += deudasActivas.map(function (deuda) {
+      const estado = calcularEstadoDeDeuda(deuda);
+      const itemDeEstaDeuda = itemsDeDeuda.find(function (i) { return i.origenId === deuda.id; });
+      const filaEditable = itemDeEstaDeuda ? construirFilaCompromisoSimulado(itemDeEstaDeuda, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) : "";
+      const detalle = "<p class=\"detalle\">Saldo restante: " + formatearMoneda(estado.saldoRestante) + " — se liquida " + formatearFechaISO(estado.fechaLiquidacion) + "</p>";
+      return construirTarjetaDeDeudaOTarjeta(deuda.nombre, estado.porcentajePagado, (estado.porcentajePagado * 100).toFixed(0) + "% pagado", detalle, filaEditable, false);
+    }).join("");
+
+    html += tarjetas.map(function (tarjeta) {
+      const saldoOcupado = calcularSaldoOcupadoDeTarjetaSimulada(tarjeta, indiceCicloEnfocadoSimulacion, compromisosMaterializadosSimulacion, proyeccion.horizonte);
+      const porcentajeOcupado = tarjeta.lineaTotal > 0 ? saldoOcupado / tarjeta.lineaTotal : 0;
+      const excede = saldoOcupado > tarjeta.lineaTotal;
+      const pagoDelCiclo = (resultado.contribucionesTarjeta && resultado.contribucionesTarjeta[tarjeta.id]) || 0;
+      const itemTarjetaReal = itemsDeTarjetaReal.find(function (i) { return i.origenId === tarjeta.id; });
+      const filaEditable = itemTarjetaReal ? construirFilaCompromisoSimulado(itemTarjetaReal, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) : "";
+      const detalle = "<p class=\"detalle\">Pago proyectado este ciclo: " + formatearMoneda(pagoDelCiclo) + "</p>";
+      return construirTarjetaDeDeudaOTarjeta(tarjeta.nombre, porcentajeOcupado, formatearMoneda(saldoOcupado) + " de " + formatearMoneda(tarjeta.lineaTotal), detalle, filaEditable, excede);
+    }).join("");
+
+    if (proyeccion.advertenciasFueraDeHorizonte.length > 0) {
+      html += "<div class=\"aviso\">" + proyeccion.advertenciasFueraDeHorizonte.map(function (advertencia) {
+        return escaparHTML(advertencia.nombre) + ": " + formatearMoneda(advertencia.montoFuera) + " de " +
+          advertencia.mesesFuera + (advertencia.mesesFuera === 1 ? " mes" : " meses") +
+          " no se reflejan en ningún ciclo proyectado — cae fuera del horizonte de 7 ciclos.";
+      }).join("<br>") + "</div>";
+    }
+
+    contenedor.innerHTML = html;
+
+    conectarEventosDeFilaCompromisoSimulado(contenedor);
   }
 
   // ============================================================
@@ -4054,8 +5588,9 @@
       return;
     }
 
+    const presupuestoVigente = obtenerPresupuestoSemanalVigente(cicloActual, datos);
     contenedor.innerHTML = categoriasVariables.map(function (categoria) {
-      const presupuesto = cicloActual.presupuestoSemanal[categoria.id] || 0;
+      const presupuesto = presupuestoVigente[categoria.id] || 0;
       const proyeccion = calcularProyeccionDeCierreSemanal(categoria, cicloActual, datos, semanaActual);
       const color = calcularColorDelSemaforo(proyeccion.proyeccionCierreSemanal, presupuesto);
       const margen = presupuesto > 0 ? calcularMargenAntesDeUmbrales(proyeccion.proyeccionCierreSemanal, presupuesto) : null;
@@ -4118,6 +5653,8 @@
     pestanaAnchaActiva = nombre;
     document.getElementById("vistaAnalisis").style.display = nombre === "analisis" ? "block" : "none";
     document.getElementById("vistaConfiguracion").style.display = nombre === "configuracion" ? "block" : "none";
+    document.getElementById("vistaSimulacion").style.display = nombre === "simulacion" ? "block" : "none";
+    document.body.classList.toggle("modo-simulacion-ancho", nombre === "simulacion");
     document.querySelectorAll("[data-pestana]").forEach(function (boton) {
       boton.classList.toggle("seleccionado", boton.getAttribute("data-pestana") === nombre);
     });
@@ -4135,7 +5672,7 @@
     actualizarSelectsDelFormularioCompromisoUnico();
     renderizarCompromisosUnicos();
     renderizarIngresos();
-    renderizarIngresoRecurrenteEsperado();
+    renderizarOcurrenciasDelCiclo();
     renderizarPresupuestoSemanal();
     renderizarCompromisos();
     renderizarBotonesCategoriaGasto();
@@ -4153,8 +5690,20 @@
   }
 
   document.querySelectorAll("[data-pestana]").forEach(function (boton) {
-    boton.addEventListener("click", function () { mostrarPestanaAncha(boton.getAttribute("data-pestana")); });
+    boton.addEventListener("click", function () {
+      const nombre = boton.getAttribute("data-pestana");
+      mostrarPestanaAncha(nombre);
+      // Solo aquí, en el clic real de "entrar a la pestaña" — nunca en la
+      // reaplicación de mostrarPestanaAncha(pestanaAnchaActiva) dentro de
+      // renderizarTodo(), que corre en cada guardado de toda la app y
+      // borraría la simulación en curso sin que el usuario lo pidiera.
+      if (nombre === "simulacion") {
+        reiniciarSimulacion();
+      }
+    });
   });
+
+  document.getElementById("botonReiniciarSimulacion").addEventListener("click", reiniciarSimulacion);
 
   document.getElementById("formCategoria").addEventListener("submit", manejarEnvioCategoria);
   document.getElementById("formTarjeta").addEventListener("submit", manejarEnvioTarjeta);
@@ -4170,6 +5719,12 @@
   document.getElementById("formCompromisoUnico").addEventListener("submit", manejarEnvioCompromisoUnico);
   document.getElementById("categoriaIdCompromisoUnico").addEventListener("change", actualizarSubcategoriaCompromisoUnico);
   document.getElementById("formIngreso").addEventListener("submit", manejarEnvioIngreso);
+  document.getElementById("tipoIngreso").addEventListener("change", ajustarCamposDelFormularioDeIngreso);
+  // La vista previa se recalcula con cualquier campo que pueda mover la fecha
+  // del depósito, para que nunca muestre algo que ya no corresponde.
+  ["reglaPrimerDiaHabilIngreso", "fechaInicioIngreso", "fechaIngreso"].forEach(function (id) {
+    document.getElementById(id).addEventListener("change", renderizarVistaPreviaDeIngreso);
+  });
   document.getElementById("botonGuardar").addEventListener("click", guardarDesdeElCuadroDeTexto);
   document.getElementById("botonExportar").addEventListener("click", exportarJSON);
   document.getElementById("botonImportar").addEventListener("click", function () {
@@ -4187,7 +5742,7 @@
   function inicializar() {
     const cicloActual = asegurarCicloActual();
     generarCompromisosDelCiclo(cicloActual);
-    establecerFechaDeHoyEnFormularioIngreso();
+    ajustarCamposDelFormularioDeIngreso();
     renderizarTodo();
   }
 
