@@ -2391,6 +2391,11 @@
   // vencido debe seguir viéndose urgente, no dejar de estarlo.
   const DIAS_PARA_PENDIENTE_URGENTE = 3;
 
+  // Cuántos días del ciclo tienen que haber pasado para que el ritmo de gasto
+  // variable se tome en serio al proyectar. Una semana: menos que eso, un solo
+  // súper grande distorsiona la proyección de todo el mes.
+  const DIAS_MINIMOS_PARA_RITMO_REAL = 7;
+
   // Cuántos pendientes se muestran siempre completos, en orden de fecha
   // real (sin importar categoría), antes de colapsar el resto bajo
   // "Otros". Es un límite de cuántas filas se ven de entrada, no cambia
@@ -3616,9 +3621,13 @@
       .reduce(function (suma, ocurrencia) { return suma + ocurrencia.monto; }, 0);
   }
 
+  // Un compromiso diferido a crédito dentro de una simulación deja de salir de
+  // este ciclo: se vuelve mensualidades de la tarjeta, que se cuentan aparte.
+  // Sobre datos reales esto nunca aplica — estadoCredito solo existe en una
+  // simulación — así que Captura y Análisis se comportan igual que siempre.
   function calcularCompromisosPendientesDelCiclo(ciclo, datos) {
     return datos.compromisos
-      .filter(function (c) { return c.cicloId === ciclo.id && !c.pagado; })
+      .filter(function (c) { return c.cicloId === ciclo.id && !c.pagado && !c.estadoCredito; })
       .reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
   }
 
@@ -3651,7 +3660,17 @@
   // ese mínimo semanal está tan comprometido como un recibo. Sin descontarlo,
   // la cifra grande de la pantalla prometía $9,839 disponibles cuando $10,771
   // ya estaban destinados a comer y a cargar gasolina.
-  function calcularDisponibleReal(ciclo, datos) {
+  // mensualidadesDeTarjetaDelCiclo es opcional y solo lo pasa la primera
+  // pantalla: lo que las tarjetas cobran en este ciclo por lo diferido en la
+  // simulación. Es dinero que sí sale de la cuenta, así que resta igual que un
+  // compromiso.
+  //
+  // Este es el único número: "Libre para gastar" y el balance al cerrar del
+  // resumen salen los dos de aquí. Antes se calculaban por separado y diferían
+  // en un día de presupuesto variable, porque uno contaba los días que faltan y
+  // el otro el ciclo completo. Lo que sobra al cerrar ES lo que se puede gastar
+  // de más: no son dos preguntas, es una.
+  function calcularDisponibleReal(ciclo, datos, mensualidadesDeTarjetaDelCiclo) {
     const gastosDebitoDelCiclo = datos.gastos
       .filter(function (g) { return g.cicloId === ciclo.id && g.fuente === "debito"; })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
@@ -3659,7 +3678,8 @@
     return calcularIngresosDelCiclo(ciclo, datos)
       - gastosDebitoDelCiclo
       - calcularCompromisosPendientesDelCiclo(ciclo, datos)
-      - calcularPresupuestoVariablePendiente(ciclo, datos);
+      - calcularGastoVariablePorVenir(ciclo, datos)
+      - Number(mensualidadesDeTarjetaDelCiclo || 0);
   }
 
   // Todos los compromisos del ciclo cuentan siempre, se hayan pagado o no
@@ -3678,14 +3698,47 @@
   // cual. Lo desconocido (gasto variable del resto del ciclo) se proyecta
   // al ritmo diario que ya se lleva. "Variable" es todo gasto sin
   // compromisoId — los fijos ya se cuentan aparte, en los compromisos.
-  function calcularProyeccionDeCierre(ciclo, datos) {
+  // Cuánto se va a gastar en variables de aquí al cierre del ciclo.
+  //
+  // Se toma el mayor entre el presupuesto de los días que faltan y lo que se
+  // gastaría siguiendo el ritmo real. Decisión del usuario (30 jul 2026):
+  //
+  // - Solo el ritmo real mentía al principio del ciclo: sin gastos
+  //   registrados el ritmo es cero, y la app concluía que no se gastaría nada
+  //   más en 28 días, prometiendo un cierre con $9,839 que no existía.
+  // - Solo el presupuesto perdería la señal de "vas más rápido de lo que
+  //   planeaste", que es justo para lo que sirve el semáforo.
+  //
+  // Con el mayor de los dos, nunca promete gastar menos de lo presupuestado y
+  // sigue avisando cuando el ritmo real se pasa.
+  function calcularGastoVariablePorVenir(ciclo, datos) {
     const rango = calcularRangoDeDiasDelCiclo(ciclo);
+    const segunPresupuesto = calcularPresupuestoVariablePendiente(ciclo, datos);
+
+    // Con muy pocos días transcurridos el ritmo no significa nada: un gasto de
+    // $500 el primer día se leería como "$500 diarios" y proyectaría $14,000
+    // donde el presupuesto son $10,400, haciendo saltar el número por un solo
+    // súper. Hasta completar una semana manda el presupuesto, que es lo que el
+    // usuario planeó.
+    if (rango.diasTranscurridos < DIAS_MINIMOS_PARA_RITMO_REAL) {
+      return segunPresupuesto;
+    }
+
     const gastoVariableAcumulado = datos.gastos
       .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
-    const ritmoDiario = gastoVariableAcumulado / rango.diasTranscurridos;
-    const proyeccionVariable = gastoVariableAcumulado + (ritmoDiario * rango.diasRestantes);
+    const alRitmoReal = (gastoVariableAcumulado / rango.diasTranscurridos) * rango.diasRestantes;
+
+    return Math.max(alRitmoReal, segunPresupuesto);
+  }
+
+  function calcularProyeccionDeCierre(ciclo, datos) {
+    const gastoVariableAcumulado = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    const proyeccionVariable = gastoVariableAcumulado + calcularGastoVariablePorVenir(ciclo, datos);
     return proyeccionVariable + calcularMontoComprometidoTotalDelCiclo(ciclo, datos);
   }
 
@@ -3773,7 +3826,14 @@
       .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; });
     const gastoVariableHastaHoy = gastosVariablesDelCiclo
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
-    const ritmoDiario = gastoVariableHastaHoy / rango.diasTranscurridos;
+
+    // El tramo futuro de la curva se reparte a un ritmo diario que nunca baja
+    // del presupuesto (ver calcularGastoVariablePorVenir): con el ritmo real a
+    // secas, un ciclo sin gastos registrados dibujaba una curva plana y
+    // anunciaba un cierre que ignoraba el presupuesto completo.
+    const ritmoDiario = rango.diasRestantes > 0
+      ? calcularGastoVariablePorVenir(ciclo, datos) / rango.diasRestantes
+      : 0;
 
     // Un compromiso ya pagado cuenta desde la fecha real en que se pagó (la
     // del gasto que lo liga vía compromisoId), no desde su fechaProgramada
@@ -6816,31 +6876,63 @@
     // movía este recuadro ni un peso, que era justo lo que había que arreglar.
     const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
     const items = obtenerItemsSimuladosDelCicloEnfocado();
+    const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
 
     // Lo ya pagado son hechos: solo cuentan los pagos de verdad marcados, y
     // nunca uno diferido (si se difirió, no se pagó de esta cuenta).
-    //
-    // El gasto variable ya hecho NO se suma aquí, aunque sea dinero que ya
-    // salió: "Variable previsto" es el presupuesto del ciclo completo y ya lo
-    // incluye. Sumarlo en las dos filas lo contaba doble y las cuatro filas
-    // dejaban de explicar el balance — con este respaldo, por 860 pesos
-    // exactos. Las filas de un resumen tienen que dar el número que encabezan.
     const comprometidoPagado = items
       .filter(function (item) { return item.pagado && !item.estadoCredito; })
       .reduce(function (suma, item) { return suma + Number(item.montoReal); }, 0);
 
     const faltaPagar = Math.max(resultado.totalComprometido - comprometidoPagado, 0);
 
+    // En el ciclo en curso, el balance y "Libre para gastar" son el mismo
+    // número y se calculan igual: lo que sobra al cerrar ES lo que se puede
+    // gastar de más. Antes diferían en un día de presupuesto variable, porque
+    // uno contaba los días que faltan y el otro el ciclo completo.
+    //
+    // En un ciclo futuro no hay días transcurridos ni gasto real que medir, así
+    // que ahí manda el presupuesto del ciclo entero, que es lo que calcula el
+    // motor de simulación.
+    const variableGastado = datos.gastos
+      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+    const variablePorVenir = esCicloActual
+      ? calcularGastoVariablePorVenir(ciclo, datos)
+      : resultado.gastoVariableProyectado;
+
+    // El mismo número y la misma función que la cifra grande de arriba, para
+    // que no puedan separarse nunca.
+    const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
+      .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+
+    const balance = esCicloActual
+      ? calcularDisponibleReal(ciclo, datos, mensualidadesDeTarjeta)
+      : resultado.balanceDelCiclo;
+
+    const filas = [
+      { etiqueta: "Ingreso del ciclo", monto: resultado.ingresoDelCiclo },
+      { etiqueta: "Ya pagado", monto: comprometidoPagado },
+      { etiqueta: "Falta pagar", monto: faltaPagar }
+    ];
+
+    // El gasto variable ya hecho solo se muestra si existe, y aparte de lo que
+    // falta por gastar: son dos cosas distintas y sumarlas en una sola fila
+    // impedía ver de dónde sale el balance.
+    if (esCicloActual && variableGastado > 0) {
+      filas.push({ etiqueta: "Variable ya gastado", monto: variableGastado });
+    }
+    filas.push({
+      etiqueta: esCicloActual ? "Variable por gastar" : "Variable previsto",
+      monto: variablePorVenir
+    });
+
     return {
       tipo: "resumen",
       nombre: "Resumen del ciclo",
-      balance: resultado.balanceDelCiclo,
-      filas: [
-        { etiqueta: "Ingreso del ciclo", monto: resultado.ingresoDelCiclo },
-        { etiqueta: "Ya pagado", monto: comprometidoPagado },
-        { etiqueta: "Falta pagar", monto: faltaPagar },
-        { etiqueta: "Variable previsto", monto: resultado.gastoVariableProyectado }
-      ]
+      balance: balance,
+      filas: filas
     };
   }
 
@@ -7316,9 +7408,12 @@
     // cerraría, así que esa pasa a ser la cifra principal.
     document.getElementById("etiquetaCifraPrincipal").textContent =
       esCicloActual ? "Libre para gastar" : "Balance proyectado";
+    const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
+      .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+
     document.getElementById("cifraDisponibleAncha").textContent = formatearMoneda(
       esCicloActual
-        ? calcularDisponibleReal(ciclo, obtenerDatosVisibles())
+        ? calcularDisponibleReal(ciclo, obtenerDatosVisibles(), mensualidadesDeTarjeta)
         : resultado.balanceDelCiclo
     );
 
