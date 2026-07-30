@@ -2686,18 +2686,78 @@
     }
 
     const lector = new FileReader();
+
     lector.onload = function () {
+      let datosImportados;
+
       try {
-        const datosImportados = JSON.parse(lector.result);
-        guardarDatos(datosImportados);
-        renderizarTodo();
-        mostrarMensaje("Datos importados correctamente.");
+        datosImportados = JSON.parse(lector.result);
       } catch (error) {
-        mostrarMensaje("Ese archivo no es un JSON válido. No se importó nada.");
+        avisarResultadoDeImportacion("Ese archivo no es un JSON válido. No se importó nada.");
+        return;
       }
+
+      // Un JSON válido puede no ser un respaldo de esta app (otro archivo
+      // cualquiera, o uno a medio escribir). Sin esta comprobación se
+      // guardaba igual y la app quedaba sin datos, que es peor que no
+      // importar nada.
+      if (!esRespaldoDeLaApp(datosImportados)) {
+        avisarResultadoDeImportacion(
+          "Ese archivo no parece un respaldo de esta app. No se importó nada."
+        );
+        return;
+      }
+
+      guardarDatos(datosImportados);
+
+      // Importar reemplaza todo, así que la simulación que estuviera en curso
+      // ya no corresponde a nada: se descarta para que la pantalla se rearme
+      // desde los datos nuevos. Sin esto, una simulación con cambios sin
+      // guardar sobrevivía al import y la pantalla seguía mostrando lo viejo.
+      datosSimulados = null;
+      compromisosMaterializadosSimulacion = null;
+      indiceCicloEnfocadoSimulacion = 0;
+
+      renderizarTodo();
+
+      const ciclo = asegurarCicloActual();
+      avisarResultadoDeImportacion(
+        "Datos importados." +
+        "\n\nIngresos capturados: " + (datosImportados.ingresos || []).length +
+        "\nIngreso del ciclo: " + formatearMoneda(calcularIngresosDelCiclo(ciclo, leerDatos())) +
+        "\nPagos del ciclo: " + datosImportados.compromisos.filter(function (c) {
+          return c.cicloId === ciclo.id;
+        }).length
+      );
     };
+
+    lector.onerror = function () {
+      avisarResultadoDeImportacion("No se pudo leer el archivo. No se importó nada.");
+    };
+
     lector.readAsText(archivoElegido);
     evento.target.value = "";
+  }
+
+  // Comprobación mínima de que el archivo es un respaldo de esta app: los
+  // arreglos que el resto del código da por hechos.
+  function esRespaldoDeLaApp(datos) {
+    return datos !== null && typeof datos === "object" &&
+      datos.config && Array.isArray(datos.config.categorias) &&
+      Array.isArray(datos.ciclos) &&
+      Array.isArray(datos.ingresos) &&
+      Array.isArray(datos.gastos) &&
+      Array.isArray(datos.compromisos);
+  }
+
+  // El resultado se dice en un aviso del navegador y no solo en el bloque de
+  // depuración: ese bloque vive colapsado al fondo de la página, así que en el
+  // teléfono uno importaba y no se enteraba de si había funcionado. Se
+  // resumen los datos importados para poder confirmar de un vistazo que
+  // entró el archivo correcto.
+  function avisarResultadoDeImportacion(texto) {
+    mostrarMensaje(texto.split("\n")[0]);
+    alert(texto);
   }
 
   // Cuántos días completos han pasado desde una fecha ("YYYY-MM-DD") hasta
