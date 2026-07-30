@@ -985,6 +985,31 @@
   }
   #vistaAncha .identidad-ciclo .cifra-a { color: var(--texto-a); }
 
+  #vistaAncha .navegacion-ciclos {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .navegacion-ciclos button {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 6px;
+    width: 24px;
+    height: 22px;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #vistaAncha .navegacion-ciclos button:hover:not(:disabled) { color: var(--texto-a); }
+  #vistaAncha .navegacion-ciclos button:disabled { opacity: 0.35; cursor: default; }
+
+  #bandaTrayectoria[hidden] { display: none; }
+
   #vistaAncha .resumen-ciclo {
     margin-left: auto;
     display: flex;
@@ -1929,10 +1954,17 @@
 
       <header id="encabezadoCiclo">
         <div class="veredicto-ciclo">
-          <span class="etiqueta-ancha">Disponible del ciclo</span>
+          <span class="etiqueta-ancha" id="etiquetaCifraPrincipal">Disponible del ciclo</span>
           <span class="cifra-protagonista" id="cifraDisponibleAncha">$0</span>
         </div>
         <div class="identidad-ciclo" id="identidadCiclo"></div>
+        <!-- Navegación por el horizonte: el mismo muro sirve para ver un ciclo
+             futuro, que es donde caen las mensualidades de lo que se difiere. -->
+        <div class="navegacion-ciclos">
+          <button type="button" id="cicloAnterior" title="Ciclo anterior">‹</button>
+          <span id="posicionEnHorizonte"></span>
+          <button type="button" id="cicloSiguiente" title="Ciclo siguiente">›</button>
+        </div>
         <div class="resumen-ciclo" id="resumenCiclo"></div>
       </header>
 
@@ -3664,7 +3696,11 @@
   // ya usa calcularProyeccionDeCierre. Por construcción, el último día del
   // ciclo da el mismo número que calcularProyeccionDeCierre: es el mismo
   // destino, visto como recorrido en vez de como punto final.
-  function calcularTrayectoriaDelSemaforo(ciclo, datos) {
+  // mensualidadesDeTarjetaDelCiclo es opcional y solo lo pasa la primera
+  // pantalla: es lo que las tarjetas cobran en este ciclo por lo que se difirió
+  // en la simulación. Análisis la llama sin ese argumento y se comporta igual
+  // que siempre.
+  function calcularTrayectoriaDelSemaforo(ciclo, datos, mensualidadesDeTarjetaDelCiclo) {
     const ingresosDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
     const hoyISO = formatearFechaISO(new Date());
     const rango = calcularRangoDeDiasDelCiclo(ciclo);
@@ -3681,8 +3717,12 @@
     // vencido), el escalón de la curva tiene que aparecer ese día real, no
     // en la fecha nominal. Uno que sigue pendiente no tiene fecha real
     // todavía, así que usa fechaProgramada como mejor estimado.
+    // Un compromiso diferido a crédito en la simulación deja de salir de este
+    // ciclo: se convierte en mensualidades de la tarjeta, que se suman aparte
+    // (ver mensualidadesDeTarjetaDelCiclo). Sobre datos reales esto nunca
+    // aplica, porque estadoCredito solo existe dentro de una simulación.
     const compromisosDelCiclo = datos.compromisos
-      .filter(function (c) { return c.cicloId === ciclo.id; })
+      .filter(function (c) { return c.cicloId === ciclo.id && !c.estadoCredito; })
       .map(function (c) {
         const gastoDelPago = c.pagado ? datos.gastos.find(function (g) { return g.compromisoId === c.id; }) : null;
         return {
@@ -3690,6 +3730,17 @@
           fechaEfectiva: gastoDelPago ? gastoDelPago.fecha : c.fechaProgramada
         };
       });
+
+    // Las mensualidades de lo diferido cuentan desde el primer día del ciclo:
+    // son un cargo del periodo, no de una fecha concreta que la curva pueda
+    // escalonar. Sin ellas, diferir haría bajar la curva sin que ese dinero
+    // apareciera en ninguna parte.
+    if (mensualidadesDeTarjetaDelCiclo > 0) {
+      compromisosDelCiclo.push({
+        monto: mensualidadesDeTarjetaDelCiclo,
+        fechaEfectiva: ciclo.fechaInicio
+      });
+    }
 
     return generarDiasDelCiclo(ciclo).map(function (fechaISO, indice) {
       const numeroDeDia = indice + 1;
@@ -6678,7 +6729,7 @@
       });
     }
 
-    recuadros.push(construirResumenDelCiclo(ciclo, datos, categoriasVariables, presupuestoVigente));
+    recuadros.push(construirResumenDelCiclo(ciclo, datos));
 
     return recuadros;
   }
@@ -6691,41 +6742,35 @@
   // el ciclo aún no tiene gasto variable, ese ritmo es cero, así que en ese
   // caso se cae al presupuesto configurado para no prometer un cierre
   // demasiado optimista el día uno.
-  function construirResumenDelCiclo(ciclo, datos, categoriasVariables, presupuestoVigente) {
-    const ingresos = calcularIngresosDelCiclo(ciclo, datos);
+  function construirResumenDelCiclo(ciclo, datos) {
+    // Del motor de simulación, no de las fórmulas reales: es el único que
+    // descuenta lo diferido a crédito de este ciclo y suma en su lugar las
+    // mensualidades que caen aquí. Con las fórmulas reales, diferir un pago no
+    // movía este recuadro ni un peso, que era justo lo que había que arreglar.
+    const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
+    const items = obtenerItemsSimuladosDelCicloEnfocado();
 
-    const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
-    const comprometidoPagado = compromisosDelCiclo
-      .filter(function (c) { return c.pagado; })
-      .reduce(function (suma, c) { return suma + Number(c.montoReal); }, 0);
-    const comprometidoPendiente = compromisosDelCiclo
-      .filter(function (c) { return !c.pagado; })
-      .reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
+    // Lo ya pagado son hechos: solo cuentan los pagos de verdad marcados, y
+    // nunca uno diferido (si se difirió, no se pagó de esta cuenta).
+    const comprometidoPagado = items
+      .filter(function (item) { return item.pagado && !item.estadoCredito; })
+      .reduce(function (suma, item) { return suma + Number(item.montoReal); }, 0);
 
     const variableGastado = datos.gastos
       .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
-    const proyeccionCierre = calcularProyeccionDeCierre(ciclo, datos);
-    const variableProyectadoTotal = proyeccionCierre - calcularMontoComprometidoTotalDelCiclo(ciclo, datos);
-
-    // Sin gasto variable todavía, el ritmo diario es cero y la proyección
-    // diría que no se va a gastar nada más en todo el ciclo.
-    const variablePorVenir = variableGastado > 0
-      ? Math.max(variableProyectadoTotal - variableGastado, 0)
-      : calcularGastoVariableProyectado(ciclo, categoriasVariables, presupuestoVigente);
-
-    const balanceAlCerrar = ingresos - comprometidoPagado - comprometidoPendiente - variableGastado - variablePorVenir;
+    const faltaPagar = Math.max(resultado.totalComprometido - comprometidoPagado, 0);
 
     return {
       tipo: "resumen",
       nombre: "Resumen del ciclo",
-      balance: balanceAlCerrar,
+      balance: resultado.balanceDelCiclo,
       filas: [
-        { etiqueta: "Ingreso del ciclo", monto: ingresos },
+        { etiqueta: "Ingreso del ciclo", monto: resultado.ingresoDelCiclo },
         { etiqueta: "Ya pagado", monto: comprometidoPagado + variableGastado },
-        { etiqueta: "Falta pagar", monto: comprometidoPendiente },
-        { etiqueta: "Variable por venir", monto: variablePorVenir }
+        { etiqueta: "Falta pagar", monto: faltaPagar },
+        { etiqueta: "Variable previsto", monto: resultado.gastoVariableProyectado }
       ]
     };
   }
@@ -7191,33 +7236,48 @@
   // ciclos, porque no son meses de calendario.
 
   function renderizarEncabezadoDelCiclo() {
-    const datos = obtenerDatosVisibles();
-    const ciclo = asegurarCicloActual();
+    const ciclo = obtenerCicloEnfocado();
+    const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
+    const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
+    const items = obtenerItemsSimuladosDelCicloEnfocado();
+    const pagados = items.filter(function (item) { return item.pagado; }).length;
 
-    const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
-    const pagados = compromisosDelCiclo.filter(function (c) { return c.pagado; }).length;
-
-    document.getElementById("cifraDisponibleAncha").textContent =
-      formatearMoneda(calcularDisponibleReal(ciclo, datos));
+    // En el ciclo actual la cifra que manda es el disponible de hoy. En un
+    // ciclo futuro no existe "disponible": lo que se puede saber es con cuánto
+    // cerraría, así que esa pasa a ser la cifra principal.
+    document.getElementById("etiquetaCifraPrincipal").textContent =
+      esCicloActual ? "Disponible del ciclo" : "Balance proyectado";
+    document.getElementById("cifraDisponibleAncha").textContent = formatearMoneda(
+      esCicloActual
+        ? calcularDisponibleReal(ciclo, obtenerDatosVisibles())
+        : resultado.balanceDelCiclo
+    );
 
     document.getElementById("identidadCiclo").innerHTML =
-      "<span class=\"etiqueta-ancha\">Ciclo " + ciclo.id + "</span>" +
+      "<span class=\"etiqueta-ancha\">Ciclo " + ciclo.id +
+        (esCicloActual ? "" : " · proyectado") + "</span>" +
       "<span>del <span class=\"cifra-a\">" + ciclo.fechaInicio + "</span>" +
       " al <span class=\"cifra-a\">" + ciclo.fechaFin + "</span>" +
       " · <span class=\"cifra-a\">" + calcularDiasTotalesDelCiclo(ciclo) + "</span> días</span>";
 
+    document.getElementById("posicionEnHorizonte").textContent =
+      esCicloActual ? "actual" : "+" + indiceCicloEnfocadoSimulacion;
+    document.getElementById("cicloAnterior").disabled = indiceCicloEnfocadoSimulacion === 0;
+    document.getElementById("cicloSiguiente").disabled =
+      indiceCicloEnfocadoSimulacion === CANTIDAD_DE_CICLOS_A_PROYECTAR;
+
     document.getElementById("resumenCiclo").innerHTML =
       "<div class=\"dato-secundario\">" +
         "<span class=\"etiqueta-ancha\">Ingresos</span>" +
-        "<span class=\"valor-a\">" + formatearMoneda(calcularIngresosDelCiclo(ciclo, datos)) + "</span>" +
+        "<span class=\"valor-a\">" + formatearMoneda(resultado.ingresoDelCiclo) + "</span>" +
       "</div>" +
       "<div class=\"dato-secundario\">" +
         "<span class=\"etiqueta-ancha\">Comprometido</span>" +
-        "<span class=\"valor-a\">" + formatearMoneda(calcularMontoComprometidoTotalDelCiclo(ciclo, datos)) + "</span>" +
+        "<span class=\"valor-a\">" + formatearMoneda(resultado.totalComprometido) + "</span>" +
       "</div>" +
       "<div class=\"dato-secundario\">" +
         "<span class=\"etiqueta-ancha\">Pagado</span>" +
-        "<span class=\"valor-a\">" + pagados + " / " + compromisosDelCiclo.length + "</span>" +
+        "<span class=\"valor-a\">" + pagados + " / " + items.length + "</span>" +
       "</div>";
   }
 
@@ -7276,6 +7336,30 @@
 
   function obtenerCicloEnfocado() {
     return obtenerHorizonteDeCiclosSimulacion()[indiceCicloEnfocadoSimulacion];
+  }
+
+  // El balance del ciclo enfocado según el motor de simulación — el único que
+  // entiende los diferimientos a crédito: un pago diferido deja de salir de su
+  // ciclo y reaparece como mensualidades en los ciclos que les toca.
+  //
+  // Se calcula una vez por dibujado y se reparte a quien lo necesite, en vez de
+  // que cada parte de la pantalla vuelva a proyectar los siete ciclos.
+  let proyeccionSimuladaDelDibujado = null;
+
+  function recalcularProyeccionSimulada() {
+    asegurarSimulacionAbierta();
+    proyeccionSimuladaDelDibujado = calcularProyeccionSimuladaCompleta(
+      datosSimulados,
+      compromisosMaterializadosSimulacion
+    );
+    return proyeccionSimuladaDelDibujado;
+  }
+
+  function obtenerResultadoSimuladoDelCicloEnfocado() {
+    if (proyeccionSimuladaDelDibujado === null) {
+      recalcularProyeccionSimulada();
+    }
+    return proyeccionSimuladaDelDibujado.resultadosPorCiclo[indiceCicloEnfocadoSimulacion];
   }
 
   // Los compromisos del ciclo que se está viendo, ya materializados: incluye
@@ -7493,7 +7577,17 @@
 
   function renderizarTrayectoriaDeLaPrimeraPantalla() {
     const datos = obtenerDatosVisibles();
-    const ciclo = asegurarCicloActual();
+    // La curva día por día solo tiene sentido en el ciclo en curso: en uno
+    // futuro no hay "hoy" dentro, ni gasto variable real con el que medir un
+    // ritmo. Ahí el veredicto es el balance proyectado, que ya está arriba.
+    const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
+    const banda = document.getElementById("bandaTrayectoria");
+    banda.hidden = !esCicloActual;
+    if (!esCicloActual) {
+      return;
+    }
+
+    const ciclo = obtenerCicloEnfocado();
     const ingresos = calcularIngresosDelCiclo(ciclo, datos);
     const veredicto = document.getElementById("veredictoTrayectoria");
     const contenedor = document.getElementById("graficaTrayectoria");
@@ -7507,7 +7601,11 @@
       return;
     }
 
-    const trayectoria = calcularTrayectoriaDelSemaforo(ciclo, datos);
+    const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
+    const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
+      .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+
+    const trayectoria = calcularTrayectoriaDelSemaforo(ciclo, datos, mensualidadesDeTarjeta);
     const diaSinDinero = calcularDiaEnQueSeAcabaElDinero(trayectoria, ingresos);
     const restanteAlCerrar = ingresos - trayectoria[trayectoria.length - 1].acumulado;
 
@@ -7920,6 +8018,9 @@
     // La primera pantalla siempre trabaja sobre la simulación, así que se
     // asegura antes de dibujar cualquier parte de ella.
     asegurarSimulacionAbierta();
+    // Los siete ciclos se proyectan una sola vez por dibujado y de ahí leen el
+    // encabezado, la trayectoria y el resumen del muro.
+    recalcularProyeccionSimulada();
     renderizarEncabezadoDelCiclo();
     // El muro va al final: su acomodo mide la altura que le queda libre, así
     // que todo lo que comparte la primera pantalla con él (barra, trayectoria
@@ -7939,6 +8040,13 @@
 
   document.getElementById("botonAgregarYAjustar").addEventListener("click", abrirAjustes);
   document.getElementById("botonCerrarAjustes").addEventListener("click", cerrarAjustes);
+
+  document.getElementById("cicloAnterior").addEventListener("click", function () {
+    cambiarCicloEnfocadoSimulacion(-1);
+  });
+  document.getElementById("cicloSiguiente").addEventListener("click", function () {
+    cambiarCicloEnfocadoSimulacion(1);
+  });
 
   document.getElementById("asaCajon").addEventListener("click", alternarCajonDeCalendario);
   document.getElementById("mesAnteriorCajon").addEventListener("click", function () {
