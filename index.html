@@ -1024,6 +1024,11 @@
     font-size: 13px;
     color: #fde047;
   }
+  #vistaAncha .nota-simulacion {
+    flex: 0 1 auto;
+    font-size: 12px;
+    color: var(--texto-3a);
+  }
   #barraSimulacion button {
     border: 1px solid var(--borde-a);
     background-color: var(--superficie-a);
@@ -1662,6 +1667,111 @@
   #botonAgregarYAjustar:hover { background-color: #ffffff; }
   #botonAgregarYAjustar:active { transform: translateY(1px); }
 
+  /* ---------- Marca de crédito y botón de opciones ---------- */
+  #vistaAncha .marca-credito {
+    font-family: var(--mono-a);
+    font-size: 0.85em;
+    color: var(--texto-3a);
+    border: 1px solid var(--borde-a);
+    border-radius: 4px;
+    padding: 0 0.3em;
+  }
+  /* Un pago diferido ya no sale de este ciclo: se atenúa, como los pagados. */
+  #vistaAncha .fila-muro.es-credito .nombre-fila-muro,
+  #vistaAncha .fila-muro.es-credito .monto-editable-muro { color: var(--texto-3a); }
+
+  #vistaAncha .boton-opciones-pago {
+    flex: 0 0 auto;
+    border: 0;
+    background: transparent;
+    color: var(--texto-3a);
+    font-family: inherit;
+    font-size: 1em;
+    line-height: 1;
+    padding: 0 0.15em;
+    cursor: pointer;
+    /* Discreto hasta que se busca: el muro es para leer, no para operar. */
+    opacity: 0;
+  }
+  #vistaAncha .fila-muro:hover .boton-opciones-pago,
+  #vistaAncha .boton-opciones-pago:focus-visible { opacity: 1; }
+  #vistaAncha .fila-muro.es-credito .boton-opciones-pago { opacity: 1; }
+  #vistaAncha .boton-opciones-pago:hover { color: var(--texto-a); }
+
+  /* ---------- Ventana de opciones de pago ---------- */
+  #capaOpcionesPago {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(12, 10, 15, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    z-index: 60;
+  }
+  #capaOpcionesPago[hidden] { display: none; }
+  #panelOpcionesPago {
+    background-color: var(--fondo-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 10px;
+    width: min(520px, 100%);
+  }
+  #encabezadoOpcionesPago {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--borde-sutil-a);
+  }
+  #encabezadoOpcionesPago h2 { margin: 0; font-size: 15px; }
+  #botonCerrarOpcionesPago {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #cuerpoOpcionesPago { padding: 14px 16px 18px; }
+  #cuerpoOpcionesPago .pista { margin-top: 0; }
+  /* La fila de controles viene del motor de simulación; aquí solo se le da
+     aire y se la hace envolver en pantallas angostas. */
+  #cuerpoOpcionesPago .fila-compromiso-simulado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  #cuerpoOpcionesPago input,
+  #cuerpoOpcionesPago select {
+    background-color: var(--superficie-alta-a);
+    border: 1px solid var(--borde-a);
+    border-radius: 6px;
+    color: var(--texto-a);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 5px 7px;
+  }
+  #cuerpoOpcionesPago input {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    width: 7em;
+    text-align: right;
+  }
+  #cuerpoOpcionesPago .nombre-compromiso-simulado { display: none; }
+  #cuerpoOpcionesPago .controles-credito-simulado {
+    display: none;
+    gap: 8px;
+  }
+  #cuerpoOpcionesPago .marca-modificado {
+    font-size: 11px;
+    color: var(--texto-3a);
+  }
+
   /* ---------- Modal de Ajustes ---------- */
   /* Ventana flotante de tamaño contenido, nunca a pantalla completa. */
   #capaModal {
@@ -1919,6 +2029,13 @@
         <h2>Deuda</h2>
         <div id="contenedorDeuda"></div>
       </section>
+    </div>
+
+    <!-- OPCIONES DE PAGO ------------------------------------------ -->
+    <!-- Ventana flotante para decidir cómo se paga algo: débito, o crédito a
+         meses con una tarjeta, y a qué ciclo mandarlo. -->
+    <div id="capaOpcionesPago" hidden>
+      <div id="panelOpcionesPago" role="dialog" aria-modal="true"></div>
     </div>
 
     <!-- MODAL DE AJUSTES ------------------------------------------ -->
@@ -5435,30 +5552,17 @@
     return { horizonte: horizonte, resultadosPorCiclo: resultadosPorCiclo, advertenciasFueraDeHorizonte: contribuciones.advertenciasFueraDeHorizonte };
   }
 
+  // Descarta la simulación y vuelve a partir de los datos reales.
   function reiniciarSimulacion() {
     datosSimulados = JSON.parse(JSON.stringify(leerDatos()));
     compromisosMaterializadosSimulacion = materializarCompromisosDelHorizonte(datosSimulados);
     indiceCicloEnfocadoSimulacion = 0;
-    renderizarSimulacion();
+    renderizarTodo();
   }
 
   function cambiarCicloEnfocadoSimulacion(delta) {
     indiceCicloEnfocadoSimulacion = Math.min(Math.max(indiceCicloEnfocadoSimulacion + delta, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
-    renderizarSimulacion();
-  }
-
-  function renderizarSimulacion() {
-    if (!datosSimulados) {
-      reiniciarSimulacion();
-      return;
-    }
-
-    const proyeccion = calcularProyeccionSimuladaCompleta(datosSimulados, compromisosMaterializadosSimulacion);
-    const resultadoEnfocado = proyeccion.resultadosPorCiclo[indiceCicloEnfocadoSimulacion];
-
-    renderizarFranjaBalanceSimulacion(resultadoEnfocado);
-    renderizarPanelCategoriasSimulacion(resultadoEnfocado, proyeccion);
-    renderizarPanelDeudasTarjetasSimulacion(resultadoEnfocado, proyeccion);
+    renderizarTodo();
   }
 
   function renderizarFranjaBalanceSimulacion(resultado) {
@@ -5632,7 +5736,7 @@
     contenedor.querySelectorAll(".fila-horizonte-simulacion").forEach(function (fila) {
       fila.addEventListener("click", function () {
         indiceCicloEnfocadoSimulacion = Number(fila.getAttribute("data-indice-ciclo"));
-        renderizarSimulacion();
+        renderizarTodo();
       });
     });
 
@@ -5652,7 +5756,7 @@
       selectCiclo.addEventListener("change", function (evento) {
         item.cicloId = evento.target.value;
         item.modificadoEnSimulacion = true;
-        renderizarSimulacion();
+        renderizarTodo();
       });
 
       fila.querySelector(".monto-simulado-editado").addEventListener("change", function (evento) {
@@ -5662,7 +5766,7 @@
         }
         item.montoEstimado = monto;
         item.modificadoEnSimulacion = true;
-        renderizarSimulacion();
+        renderizarTodo();
       });
 
       const selectFuente = fila.querySelector(".fuente-simulada-editada");
@@ -5703,14 +5807,14 @@
           item.estadoCredito = null;
         }
         item.modificadoEnSimulacion = true;
-        renderizarSimulacion();
+        renderizarTodo();
       });
 
       selectTarjeta.addEventListener("change", function (evento) {
         if (item.estadoCredito) {
           item.estadoCredito.tarjetaId = evento.target.value;
           item.modificadoEnSimulacion = true;
-          renderizarSimulacion();
+          renderizarTodo();
         }
       });
 
@@ -5718,7 +5822,7 @@
         if (item.estadoCredito) {
           item.estadoCredito.mesesDiferidos = Number(evento.target.value);
           item.modificadoEnSimulacion = true;
-          renderizarSimulacion();
+          renderizarTodo();
         }
       });
     });
@@ -6466,7 +6570,10 @@
   // Las categorías variables no traen pagos con fecha: traen su tope semanal,
   // editable desde aquí.
   function construirRecuadrosDelMuro(ciclo, datos) {
-    const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
+    // Los pagos vienen de la lista materializada de la simulación, no de
+    // datos.compromisos: es la única que incluye los ciclos proyectados y la
+    // que recuerda los diferimientos a crédito.
+    const compromisosDelCiclo = obtenerItemsSimuladosDelCicloEnfocado();
     const presupuestoVigente = obtenerPresupuestoSemanalVigente(ciclo, datos);
 
     // Se recorre config.categorias, no los compromisos, para que el orden de
@@ -6478,8 +6585,9 @@
         return; // van al final, con su tope semanal
       }
 
+      // Los materializados ya traen categoriaId resuelta por el motor.
       const suyos = compromisosDelCiclo.filter(function (compromiso) {
-        return resolverCategoriaDeCompromiso(compromiso, datos) === categoria.id;
+        return compromiso.categoriaId === categoria.id;
       });
       if (suyos.length === 0) {
         return;
@@ -6498,7 +6606,7 @@
       const sinSubcategoria = [];
 
       suyos.forEach(function (compromiso) {
-        const subcategoria = resolverSubcategoriaDeCompromiso(compromiso, datos);
+        const subcategoria = compromiso.subcategoria;
         const esConocida = subcategoria && (categoria.subcategorias || []).indexOf(subcategoria) !== -1;
 
         if (!esConocida) {
@@ -6685,6 +6793,13 @@
           const monto = Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
           const etiquetaPago = pago.pagoNde ? " <span class=\"dia-fila-muro\">(pago " + pago.pagoNde + ")</span>" : "";
 
+          // Un pago diferido a crédito deja de salir de este ciclo: se convierte
+          // en mensualidades que alimentan el pago de la tarjeta. Se marca en la
+          // fila y su monto ya no suma al total de la categoría.
+          const etiquetaCredito = pago.estadoCredito
+            ? " <span class=\"marca-credito\">" + pago.estadoCredito.mesesDiferidos + " MSI</span>"
+            : "";
+
           // Un pago pendiente lleva su monto como campo editable; uno ya
           // pagado, como texto: su monto real ya ocurrió y no es negociable.
           // El campo se ve igual que el texto hasta que se enfoca, así que
@@ -6693,14 +6808,24 @@
           const montoHTML = pago.pagado
             ? "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>"
             : "<input type=\"number\" min=\"0\" step=\"1\" class=\"monto-editable-muro\"" +
-              " data-monto-de=\"" + pago.id + "\" value=\"" + monto + "\"" +
+              " data-monto-de=\"" + pago.idSimulado + "\" value=\"" + monto + "\"" +
               " aria-label=\"Monto de " + escaparHTML(pago.nombre) + "\">";
 
-          const fila = "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") + "\">" +
+          // Botón para abrir las opciones de pago (débito o crédito a meses, y
+          // a qué ciclo mandarlo). No van desplegadas en la fila: llenarían el
+          // muro de selects y dejaría de leerse de un golpe.
+          const botonOpciones = pago.pagado
+            ? ""
+            : "<button type=\"button\" class=\"boton-opciones-pago\" data-opciones-de=\"" + pago.idSimulado + "\"" +
+              " title=\"Cómo pagarlo\" aria-label=\"Opciones de pago de " + escaparHTML(pago.nombre) + "\">···</button>";
+
+          const fila = "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") +
+              (pago.estadoCredito ? " es-credito" : "") + "\">" +
             "<span class=\"punto-estado " + estado + "\"></span>" +
-            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + "</span>" +
+            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + etiquetaCredito + "</span>" +
             "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
             montoHTML +
+            botonOpciones +
           "</div>";
 
           if (!conAccionDePago || pago.pagado) {
@@ -6861,13 +6986,83 @@
         cambiarMontoSimulado(campo.getAttribute("data-monto-de"), campo.value);
       });
     });
+
+    document.querySelectorAll("#muroPagos [data-opciones-de]").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        abrirOpcionesDePago(boton.getAttribute("data-opciones-de"));
+      });
+    });
+  }
+
+  // ============================================================
+  // OPCIONES DE PAGO — débito, crédito a meses, y a qué ciclo
+  // ============================================================
+  //
+  // Ventana flotante de tamaño contenido, la misma idea que Ajustes. Aquí es
+  // donde se decide pagar algo con tarjeta de crédito y a cuántos meses: el
+  // motor reparte entonces las mensualidades en los ciclos que les toca según
+  // la fecha real de corte de esa tarjeta, y el pago deja de salir de este
+  // ciclo para convertirse en pago de tarjeta.
+  //
+  // Los controles son los de construirFilaCompromisoSimulado, sin cambios: ya
+  // están probados, incluidos los dos avisos (no se puede diferir el pago de
+  // una tarjeta a otra tarjeta, y no se puede diferir si ninguna tarjeta tiene
+  // marcado que permite meses sin intereses).
+
+  function abrirOpcionesDePago(idSimulado) {
+    const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
+    if (!item) { return; }
+
+    const horizonte = obtenerHorizonteDeCiclosSimulacion();
+    const horizonteOpcionesHTML = horizonte.map(function (c) {
+      return "<option value=\"" + c.id + "\">" + c.id + "</option>";
+    }).join("");
+    const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) {
+      return t.permiteDiferirAMeses;
+    });
+
+    const panel = document.getElementById("panelOpcionesPago");
+    panel.innerHTML =
+      "<header id=\"encabezadoOpcionesPago\">" +
+        "<h2>" + escaparHTML(item.nombre) + "</h2>" +
+        "<button type=\"button\" id=\"botonCerrarOpcionesPago\">Cerrar</button>" +
+      "</header>" +
+      "<div id=\"cuerpoOpcionesPago\">" +
+        "<p class=\"pista\">Cambia el monto, mándalo a otro ciclo, o difiérelo a " +
+          "meses con una tarjeta. Nada de esto se guarda hasta que lo confirmes " +
+          "en la barra de arriba.</p>" +
+        construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) +
+      "</div>";
+
+    document.getElementById("capaOpcionesPago").hidden = false;
+    document.getElementById("botonCerrarOpcionesPago").addEventListener("click", cerrarOpcionesDePago);
+
+    // Los mismos manejadores del motor: cada cambio marca el item y redibuja
+    // toda la pantalla, así que el balance y la trayectoria responden en vivo.
+    conectarEventosDeFilaCompromisoSimulado(panel);
+
+    // Al redibujar, la ventana se queda abierta sobre el mismo pago para poder
+    // probar varias combinaciones sin volver a buscarlo.
+    idDePagoConOpcionesAbiertas = idSimulado;
+  }
+
+  let idDePagoConOpcionesAbiertas = null;
+
+  function cerrarOpcionesDePago() {
+    document.getElementById("capaOpcionesPago").hidden = true;
+    document.getElementById("panelOpcionesPago").innerHTML = "";
+    idDePagoConOpcionesAbiertas = null;
+  }
+
+  function opcionesDePagoEstanAbiertas() {
+    return document.getElementById("capaOpcionesPago").hidden === false;
   }
 
   // El tope semanal se edita dentro de la simulación, como los montos: mover
   // el presupuesto variable es justo una de las cosas con las que se juega
   // para ver si el ciclo cierra, y no debe escribirse hasta guardar.
   function cambiarTopeSemanalSimulado(categoriaId, valor) {
-    const trabajo = asegurarDatosDeTrabajo();
+    const trabajo = asegurarSimulacionAbierta();
     const ciclo = asegurarCicloActual();
     const cicloDeTrabajo = trabajo.ciclos.find(function (c) { return c.id === ciclo.id; });
 
@@ -7044,44 +7239,90 @@
   // escribir la copia completa encima: si algo más cambió en los datos
   // mientras se simulaba, sobreescribir el objeto entero lo perdería.
 
-  let datosDeTrabajo = null;
+  // La simulación NO tiene una copia propia: usa datosSimulados y
+  // compromisosMaterializadosSimulacion, el motor que ya existía para la
+  // pestaña de Simulación. Eso es a propósito y no debe deshacerse: ese motor
+  // es el que sabe repartir un diferimiento a crédito en mensualidades por la
+  // fecha real de corte de la tarjeta, contar el saldo ocupado de la línea, y
+  // recordar ediciones sobre compromisos de ciclos proyectados que no existen
+  // en datos.compromisos.
+  //
+  // Hubo un momento en que la primera pantalla llevaba su propia copia de
+  // trabajo, más simple, que solo entendía monto y fecha. El resultado fue dos
+  // simulaciones distintas en el mismo archivo y el diferimiento a crédito
+  // desconectado de la pantalla. Una sola.
 
   // De aquí leen todos los render de la primera pantalla.
   function obtenerDatosVisibles() {
-    return datosDeTrabajo || leerDatos();
+    return datosSimulados || leerDatos();
   }
 
   function haySimulacionEnCurso() {
-    return datosDeTrabajo !== null;
+    return datosSimulados !== null;
   }
 
-  function asegurarDatosDeTrabajo() {
-    if (datosDeTrabajo === null) {
-      datosDeTrabajo = JSON.parse(JSON.stringify(leerDatos()));
+  // Arranca la simulación desde los datos reales si no estaba abierta. Se
+  // llama al dibujar la primera pantalla, así que siempre hay simulación viva:
+  // no hay un "modo consulta" y un "modo simulación", hay una pantalla donde se
+  // prueba y una barra que aparece cuando algo se movió.
+  function asegurarSimulacionAbierta() {
+    if (datosSimulados === null) {
+      datosSimulados = JSON.parse(JSON.stringify(leerDatos()));
+      compromisosMaterializadosSimulacion = materializarCompromisosDelHorizonte(datosSimulados);
+      indiceCicloEnfocadoSimulacion = 0;
     }
-    return datosDeTrabajo;
+    return datosSimulados;
   }
 
-  // Qué se movió respecto a los datos reales. Se recalcula comparando, no
-  // llevando una lista aparte: así nunca puede desincronizarse de la copia.
+  function obtenerCicloEnfocado() {
+    return obtenerHorizonteDeCiclosSimulacion()[indiceCicloEnfocadoSimulacion];
+  }
+
+  // Los compromisos del ciclo que se está viendo, ya materializados: incluye
+  // los de ciclos proyectados, que no existen en datos.compromisos.
+  function obtenerItemsSimuladosDelCicloEnfocado() {
+    asegurarSimulacionAbierta();
+    const cicloEnfocado = obtenerCicloEnfocado();
+    return compromisosMaterializadosSimulacion.filter(function (item) {
+      return item.cicloId === cicloEnfocado.id;
+    });
+  }
+
+  // Qué se movió respecto a los datos reales.
+  //
+  // Los compromisos del ciclo actual se comparan contra los reales, uno por
+  // uno. Los de ciclos proyectados no existen en los datos, así que ahí lo
+  // único que se puede consultar es la marca que el motor pone al editarlos
+  // (modificadoEnSimulacion): son cambios reales de la simulación, pero no
+  // guardables — no hay compromiso con id sobre el que escribir.
   function calcularCambiosDeLaSimulacion() {
     if (!haySimulacionEnCurso()) {
-      return { montos: 0, fechas: 0, topes: 0, total: 0 };
+      return { montos: 0, fechas: 0, credito: 0, topes: 0, proyectados: 0, guardables: 0, total: 0 };
     }
 
     const reales = leerDatos();
     const ciclo = asegurarCicloActual();
     let montos = 0;
     let fechas = 0;
+    let credito = 0;
+    let proyectados = 0;
 
-    datosDeTrabajo.compromisos.forEach(function (simulado) {
-      const real = reales.compromisos.find(function (c) { return c.id === simulado.id; });
-      if (!real) { return; }
-      if (Number(simulado.montoEstimado) !== Number(real.montoEstimado)) { montos++; }
-      if (simulado.fechaProgramada !== real.fechaProgramada) { fechas++; }
+    (compromisosMaterializadosSimulacion || []).forEach(function (item) {
+      const real = item.id ? reales.compromisos.find(function (c) { return c.id === item.id; }) : null;
+
+      if (!real) {
+        if (item.modificadoEnSimulacion) { proyectados++; }
+        return;
+      }
+
+      if (Number(item.montoEstimado) !== Number(real.montoEstimado)) { montos++; }
+      if (item.fechaProgramada !== real.fechaProgramada || item.cicloId !== real.cicloId) { fechas++; }
+      // El diferimiento a crédito no existe en los datos reales: cualquier
+      // estadoCredito puesto en la simulación es un cambio.
+      if (item.estadoCredito) { credito++; }
     });
 
-    const cicloSimulado = datosDeTrabajo.ciclos.find(function (c) { return c.id === ciclo.id; });
+    const cicloSimulado = datosSimulados.ciclos.find(function (c) { return c.id === ciclo.id; });
     const cicloReal = reales.ciclos.find(function (c) { return c.id === ciclo.id; });
     let topes = 0;
     if (cicloSimulado && cicloReal) {
@@ -7094,7 +7335,16 @@
       });
     }
 
-    return { montos: montos, fechas: fechas, topes: topes, total: montos + fechas + topes };
+    const guardables = montos + fechas + topes;
+    return {
+      montos: montos,
+      fechas: fechas,
+      credito: credito,
+      topes: topes,
+      proyectados: proyectados,
+      guardables: guardables,
+      total: guardables + credito + proyectados
+    };
   }
 
   function renderizarBarraDeSimulacion() {
@@ -7111,23 +7361,30 @@
 
     const partes = [];
     if (cambios.montos > 0) { partes.push(cambios.montos + " monto" + (cambios.montos === 1 ? "" : "s")); }
-    if (cambios.fechas > 0) { partes.push(cambios.fechas + " fecha" + (cambios.fechas === 1 ? "" : "s")); }
+    if (cambios.fechas > 0) { partes.push(cambios.fechas + " movido" + (cambios.fechas === 1 ? "" : "s") + " de fecha"); }
+    if (cambios.credito > 0) { partes.push(cambios.credito + " a crédito"); }
     if (cambios.topes > 0) { partes.push(cambios.topes + " presupuesto" + (cambios.topes === 1 ? "" : "s")); }
+    if (cambios.proyectados > 0) { partes.push(cambios.proyectados + " en ciclos futuros"); }
+
+    // Lo que se puede escribir sobre los datos reales es solo lo del ciclo
+    // actual. Un diferimiento a crédito y los cambios en ciclos proyectados
+    // sirven para decidir, pero no hay compromiso real sobre el que guardarlos
+    // — decirlo aquí evita que Guardar prometa más de lo que hace.
+    const notaNoGuardable = (cambios.credito > 0 || cambios.proyectados > 0)
+      ? "<span class=\"nota-simulacion\">El crédito y los ciclos futuros solo se " +
+        "usan para proyectar: no se guardan.</span>"
+      : "";
 
     barra.hidden = false;
     barra.innerHTML =
-      "<span class=\"aviso-simulacion\">Estás probando cambios · " + partes.join(", ") +
-        " sin guardar</span>" +
+      "<span class=\"aviso-simulacion\">Probando: " + partes.join(", ") + "</span>" +
+      notaNoGuardable +
       "<button type=\"button\" id=\"botonDescartarSimulacion\">Reiniciar</button>" +
-      "<button type=\"button\" id=\"botonGuardarSimulacion\">Guardar</button>";
+      "<button type=\"button\" id=\"botonGuardarSimulacion\"" +
+        (cambios.guardables === 0 ? " disabled" : "") + ">Guardar</button>";
 
-    document.getElementById("botonDescartarSimulacion").addEventListener("click", descartarSimulacion);
+    document.getElementById("botonDescartarSimulacion").addEventListener("click", reiniciarSimulacion);
     document.getElementById("botonGuardarSimulacion").addEventListener("click", guardarSimulacion);
-  }
-
-  function descartarSimulacion() {
-    datosDeTrabajo = null;
-    renderizarTodo();
   }
 
   // Escribe los cambios de la simulación sobre los datos reales. Es el único
@@ -7135,73 +7392,82 @@
   // confirmación.
   function guardarSimulacion() {
     const cambios = calcularCambiosDeLaSimulacion();
-    if (cambios.total === 0) {
+    if (cambios.guardables === 0) {
       return;
     }
 
-    if (!confirm("Vas a guardar " + cambios.total + " cambio(s) sobre tus pagos reales. ¿Continuar?")) {
+    if (!confirm("Vas a guardar " + cambios.guardables + " cambio(s) sobre tus pagos reales. ¿Continuar?")) {
       return;
     }
 
     const datos = leerDatos();
     const ciclo = asegurarCicloActual();
 
-    datosDeTrabajo.compromisos.forEach(function (simulado) {
-      const real = datos.compromisos.find(function (c) { return c.id === simulado.id; });
+    // Solo los compromisos que existen de verdad (los que traen id). Los de
+    // ciclos proyectados no tienen dónde guardarse.
+    compromisosMaterializadosSimulacion.forEach(function (item) {
+      if (!item.id) { return; }
+      const real = datos.compromisos.find(function (c) { return c.id === item.id; });
       if (!real) { return; }
 
-      real.montoEstimado = Number(simulado.montoEstimado);
+      real.montoEstimado = Number(item.montoEstimado);
 
-      if (simulado.fechaProgramada !== real.fechaProgramada) {
-        real.fechaProgramada = simulado.fechaProgramada;
+      if (item.fechaProgramada !== real.fechaProgramada) {
+        real.fechaProgramada = item.fechaProgramada;
         // Mover la fecha puede sacar el pago de su ciclo. Si el cicloId no se
         // recalcula, el pago sigue contando en el ciclo viejo aunque su fecha
         // diga otra cosa — el mismo error que ya se corrigió en ingresos.
-        real.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(simulado.fechaProgramada));
+        real.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(item.fechaProgramada));
+      } else if (item.cicloId !== real.cicloId) {
+        // Se movió de ciclo con el selector, sin tocar la fecha.
+        real.cicloId = item.cicloId;
       }
     });
 
-    const cicloSimulado = datosDeTrabajo.ciclos.find(function (c) { return c.id === ciclo.id; });
+    const cicloSimulado = datosSimulados.ciclos.find(function (c) { return c.id === ciclo.id; });
     const cicloReal = datos.ciclos.find(function (c) { return c.id === ciclo.id; });
     if (cicloSimulado && cicloReal) {
       cicloReal.presupuestoSemanal = Object.assign({}, cicloSimulado.presupuestoSemanal);
     }
 
     guardarDatos(datos);
-    datosDeTrabajo = null;
-    renderizarTodo();
+    // La simulación se rearma desde los datos ya guardados, así que lo que
+    // queda en pantalla es exactamente lo que se grabó.
+    reiniciarSimulacion();
     mostrarMensaje("Cambios guardados.");
   }
 
-  // Editar el monto de un pago dentro de la simulación.
-  function cambiarMontoSimulado(compromisoId, nuevoMonto) {
+  // Editar el monto de un pago. Opera sobre el item materializado, que puede
+  // ser un compromiso real o uno de un ciclo proyectado.
+  function cambiarMontoSimulado(idSimulado, nuevoMonto) {
     const monto = Number(nuevoMonto);
     if (!monto || monto <= 0) {
       renderizarTodo();
       return;
     }
 
-    const trabajo = asegurarDatosDeTrabajo();
-    const compromiso = trabajo.compromisos.find(function (c) { return c.id === compromisoId; });
-    if (!compromiso) { return; }
+    asegurarSimulacionAbierta();
+    const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
+    if (!item) { return; }
 
-    compromiso.montoEstimado = monto;
+    item.montoEstimado = monto;
+    item.modificadoEnSimulacion = true;
     renderizarTodo();
   }
 
-  // Mover un pago a otra fecha (posponerlo o adelantarlo) dentro de la
-  // simulación.
-  function cambiarFechaSimulada(compromisoId, nuevaFecha) {
+  // Mover un pago a otra fecha (posponerlo o adelantarlo).
+  function cambiarFechaSimulada(idSimulado, nuevaFecha) {
     if (!nuevaFecha) {
       return;
     }
 
-    const trabajo = asegurarDatosDeTrabajo();
-    const compromiso = trabajo.compromisos.find(function (c) { return c.id === compromisoId; });
-    if (!compromiso) { return; }
+    asegurarSimulacionAbierta();
+    const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
+    if (!item) { return; }
 
-    compromiso.fechaProgramada = nuevaFecha;
-    compromiso.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(nuevaFecha));
+    item.fechaProgramada = nuevaFecha;
+    item.cicloId = calcularIdDeCicloParaFecha(crearFechaLocal(nuevaFecha));
+    item.modificadoEnSimulacion = true;
     renderizarTodo();
   }
 
@@ -7651,6 +7917,9 @@
     renderizarProximosPagosAnalisis();
     renderizarMovimientosDelCiclo();
     renderizarEstadoDeDeudaAnalisis();
+    // La primera pantalla siempre trabaja sobre la simulación, así que se
+    // asegura antes de dibujar cualquier parte de ella.
+    asegurarSimulacionAbierta();
     renderizarEncabezadoDelCiclo();
     // El muro va al final: su acomodo mide la altura que le queda libre, así
     // que todo lo que comparte la primera pantalla con él (barra, trayectoria
@@ -7659,6 +7928,12 @@
     renderizarTrayectoriaDeLaPrimeraPantalla();
     renderizarCajonDeCalendario();
     renderizarMuroDePagos();
+    // Si la ventana de opciones estaba abierta, se vuelve a armar sobre el
+    // mismo pago: así se prueban varias combinaciones (débito, 3 meses, 6
+    // meses) viendo el efecto en el balance sin tener que reabrirla cada vez.
+    if (idDePagoConOpcionesAbiertas !== null) {
+      abrirOpcionesDePago(idDePagoConOpcionesAbiertas);
+    }
     mostrarDatosEnPantalla();
   }
 
@@ -7681,8 +7956,20 @@
   });
 
   document.addEventListener("keydown", function (evento) {
-    if (evento.key === "Escape" && ajustesEstanAbiertos()) {
+    if (evento.key !== "Escape") { return; }
+    // Se cierra primero lo que esté más encima.
+    if (opcionesDePagoEstanAbiertas()) {
+      cerrarOpcionesDePago();
+      return;
+    }
+    if (ajustesEstanAbiertos()) {
       cerrarAjustes();
+    }
+  });
+
+  document.getElementById("capaOpcionesPago").addEventListener("click", function (evento) {
+    if (evento.target === this) {
+      cerrarOpcionesDePago();
     }
   });
 
