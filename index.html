@@ -1150,6 +1150,9 @@
   }
 
   /* ---------- Cajón de calendario ---------- */
+  /* Cerrado es una tira; abierto crece hacia arriba tapando el muro. No se
+     usa una ventana flotante a propósito: el cajón nunca deja de estar
+     anclado al fondo, así que el asa se queda donde el dedo ya la buscó. */
   #cajonCalendario {
     flex: 0 0 auto;
     border-top: 1px solid var(--borde-a);
@@ -1159,12 +1162,185 @@
     align-items: center;
     gap: 18px;
   }
-  #vistaAncha .asa-cajon {
+  #cajonCalendario.abierto {
+    /* Al abrirse deja de ser una fila y pasa a ser una columna. Ocupa todo lo
+       que queda bajo el encabezado (flex: 1) en vez de una altura fija en vh:
+       una altura fija dejaba una banda muerta contra el borde inferior. */
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-bottom: 16px;
+  }
+  #cajonCalendario.abierto .proximos-dias { display: none; }
+
+  /* Con el cajón desplegado el muro queda tapado, así que se retira en vez de
+     dejarlo pelear por la altura sobrante: si se queda, su acomodo se
+     recalcula contra cuarenta pixeles y asoma roto por encima del cajón. */
+  #primeraPantalla.con-cajon-abierto .zona-muro { display: none; }
+
+  #asaCajon {
     flex: 0 0 auto;
+    align-self: center;
+    border: 0;
+    background: transparent;
+    /* Área de toque generosa alrededor de una barra pequeña. */
+    padding: 6px 16px;
+    cursor: pointer;
+    line-height: 0;
+  }
+  #vistaAncha .barra-asa {
+    display: block;
     width: 34px;
     height: 3px;
     border-radius: 2px;
     background-color: var(--borde-a);
+  }
+  #asaCajon:hover .barra-asa { background-color: var(--texto-3a); }
+  #cajonCalendario.abierto .barra-asa { width: 44px; }
+
+  /* Dos zonas: el mes a la izquierda, el día elegido a la derecha. */
+  #cuerpoCajon {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(300px, 1fr) minmax(0, 1.15fr);
+    gap: 22px;
+  }
+  #cuerpoCajon[hidden] { display: none; }
+
+  #ladoMes {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #encabezadoMesCajon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--texto-2a);
+  }
+  #nombreMesCajon {
+    flex: 1 1 auto;
+    color: var(--texto-a);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  #encabezadoMesCajon button {
+    border: 1px solid var(--borde-a);
+    background-color: var(--superficie-alta-a);
+    color: var(--texto-2a);
+    border-radius: 7px;
+    width: 28px;
+    height: 26px;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #encabezadoMesCajon button:hover { color: var(--texto-a); }
+
+  #rejillaMesCajon {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 4px;
+  }
+  #vistaAncha .encabezado-dia-semana {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--texto-3a);
+    text-align: center;
+    padding-bottom: 2px;
+  }
+  #vistaAncha .celda-dia {
+    border: 1px solid var(--borde-sutil-a);
+    background-color: var(--fondo-a);
+    border-radius: 7px;
+    padding: 4px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #vistaAncha .celda-dia.fuera-del-mes { visibility: hidden; }
+  #vistaAncha .celda-dia:hover { border-color: var(--borde-a); }
+  #vistaAncha .celda-dia.elegida {
+    border-color: var(--texto-2a);
+    background-color: var(--superficie-alta-a);
+  }
+  /* Hoy se marca con el número en pleno, sin color: el color es estado. */
+  #vistaAncha .celda-dia.es-hoy .numero-dia {
+    color: var(--texto-a);
+    font-weight: 600;
+  }
+  #vistaAncha .numero-dia {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    color: var(--texto-3a);
+  }
+  #vistaAncha .puntos-del-dia {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  #vistaAncha .puntos-del-dia .punto-estado {
+    width: 5px;
+    height: 5px;
+    margin: 0;
+  }
+  #vistaAncha .celda-dia.fuera-del-ciclo { opacity: 0.45; }
+
+  /* Panel del día elegido: las mismas filas del muro. */
+  #ladoDia {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-left: 1px solid var(--borde-sutil-a);
+    padding-left: 22px;
+  }
+  #encabezadoDiaCajon {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  #vistaAncha .fecha-dia-elegido {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  #vistaAncha .total-dia-elegido {
+    font-family: var(--mono-a);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    color: var(--texto-2a);
+  }
+  #contenidoDiaCajon {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  /* Dentro del cajón las filas no se reescalan con el muro: aquí hay espacio
+     y el detalle se lee de cerca. */
+  #contenidoDiaCajon .recuadro {
+    font-size: 1em;
+    margin-bottom: 8px;
+  }
+  #vistaAncha .dia-sin-nada {
+    font-size: 13px;
+    color: var(--texto-3a);
+    padding: 6px 0;
   }
   #vistaAncha .proximos-dias {
     display: flex;
@@ -1197,40 +1373,51 @@
     max-width: 1100px;
   }
 
-  /* ---------- Acciones flotantes ---------- */
+  /* ---------- Acción flotante ---------- */
   #accionesFlotantes {
     position: fixed;
     right: 22px;
     bottom: 74px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
     z-index: 40;
   }
-  /* El "+" destaca por diferente, no por grande: es el único elemento de la
-     app con fondo claro sólido (inversión neutra, el mismo recurso que ya
-     usa Captura). */
-  #botonNuevoRegistro {
-    width: 46px;
-    height: 46px;
-    border-radius: 23px;
+  /* Con el calendario desplegado, el botón flotaría justo encima del panel del
+     día. Se retira mientras dure: para dar de alta algo en una fecha concreta
+     el lugar natural es el propio día, no un botón que lo tapa (pendiente,
+     va con los modales de registro). */
+  /* #accionesFlotantes es hermano posterior de #primeraPantalla, así que el
+     combinador ~ alcanza. */
+  #primeraPantalla.con-cajon-abierto ~ #accionesFlotantes {
+    display: none;
+  }
+  /* Inversión neutra: el único elemento de la app con fondo claro sólido, que
+     es lo que lo hace resaltar sin necesidad de color ni de tamaño. Radio 10,
+     como todo el sistema — no un pill, para que no se lea como una insignia. */
+  #botonAgregarYAjustar {
+    display: flex;
+    align-items: center;
+    gap: 9px;
     border: 0;
+    border-radius: 10px;
+    padding: 11px 16px 11px 13px;
     background-color: var(--texto-a);
     color: var(--fondo-a);
-    font-size: 24px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+  }
+  #botonAgregarYAjustar .signo-mas {
+    font-size: 20px;
+    font-weight: 400;
     line-height: 1;
-    cursor: pointer;
+    /* El signo carga el peso visual, así que se le da su propio espacio
+       separado del texto por una línea, no por aire. */
+    padding-right: 9px;
+    border-right: 1px solid rgba(24, 22, 28, 0.22);
   }
-  #botonAjustes {
-    border: 1px solid var(--borde-a);
-    background-color: var(--superficie-a);
-    color: var(--texto-2a);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  #botonAjustes:hover { color: var(--texto-a); }
+  #botonAgregarYAjustar:hover { background-color: #ffffff; }
+  #botonAgregarYAjustar:active { transform: translateY(1px); }
 
   /* ---------- Modal de Ajustes ---------- */
   /* Ventana flotante de tamaño contenido, nunca a pantalla completa. */
@@ -1403,11 +1590,34 @@
         <div class="muro" id="muroPagos"></div>
       </div>
 
-      <!-- Cajón de calendario, anclado al fondo. Cerrado muestra los
-           próximos días; el despliegue se construye por separado. -->
+      <!-- Cajón de calendario, anclado al fondo.
+           Cerrado: la tira de próximos días. Al tocarla se despliega hacia
+           arriba tapando el muro, con el mes completo a la izquierda y el día
+           elegido a la derecha. Volver a tocar el asa lo minimiza. -->
       <div id="cajonCalendario">
-        <div class="asa-cajon" id="asaCajon"></div>
+        <button type="button" id="asaCajon" aria-expanded="false" aria-controls="cuerpoCajon"
+                title="Abrir el calendario">
+          <span class="barra-asa" aria-hidden="true"></span>
+        </button>
+
+        <!-- Cerrado -->
         <div class="proximos-dias" id="proximosDiasCajon"></div>
+
+        <!-- Desplegado -->
+        <div id="cuerpoCajon" hidden>
+          <div id="ladoMes">
+            <div id="encabezadoMesCajon">
+              <button type="button" id="mesAnteriorCajon" title="Mes anterior">‹</button>
+              <span id="nombreMesCajon"></span>
+              <button type="button" id="mesSiguienteCajon" title="Mes siguiente">›</button>
+            </div>
+            <div id="rejillaMesCajon"></div>
+          </div>
+          <div id="ladoDia">
+            <div id="encabezadoDiaCajon"></div>
+            <div id="contenidoDiaCajon"></div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1441,12 +1651,16 @@
       </section>
     </div>
 
-    <!-- ACCIONES FLOTANTES ---------------------------------------- -->
-    <!-- El "+" destaca por diferente, no por grande: es el único
-         elemento de la app con fondo claro sólido. -->
+    <!-- ACCIÓN FLOTANTE ------------------------------------------- -->
+    <!-- Un solo control: agregar y ajustar llevan al mismo lugar, así que
+         dos botones separados solo hacían dudar cuál tocar. Destaca por
+         diferente, no por grande: es el único elemento de la app con fondo
+         claro sólido, y lleva su nombre escrito para que se vea de qué es. -->
     <div id="accionesFlotantes">
-      <button type="button" id="botonAjustes" title="Ajustes">Ajustes</button>
-      <button type="button" id="botonNuevoRegistro" title="Nuevo registro">+</button>
+      <button type="button" id="botonAgregarYAjustar">
+        <span class="signo-mas" aria-hidden="true">+</span>
+        <span>Agregar o ajustar</span>
+      </button>
     </div>
 
     <!-- MODAL DE AJUSTES ------------------------------------------ -->
@@ -1456,7 +1670,7 @@
     <div id="capaModal" hidden>
       <div id="panelAjustes" role="dialog" aria-modal="true" aria-labelledby="tituloAjustes">
         <header id="encabezadoAjustes">
-          <h2 id="tituloAjustes">Ajustes</h2>
+          <h2 id="tituloAjustes">Agregar o ajustar</h2>
           <button type="button" id="botonCerrarAjustes" title="Cerrar">Cerrar</button>
         </header>
         <div id="contenidoAjustes">
@@ -5492,6 +5706,14 @@
   const MESES_ABREVIADOS = ["ene", "feb", "mar", "abr", "may", "jun",
                             "jul", "ago", "sep", "oct", "nov", "dic"];
 
+  // Para el encabezado del calendario y del día elegido, donde sí hay espacio
+  // para el nombre completo.
+  const NOMBRES_DE_MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+  const DIAS_SEMANA_COMPLETOS = ["Domingo", "Lunes", "Martes", "Miércoles",
+                                 "Jueves", "Viernes", "Sábado"];
+
   function renderizarResumenSuperior() {
     const datos = leerDatos();
     const ciclo = asegurarCicloActual();
@@ -6495,6 +6717,16 @@
   }
 
   function renderizarMuroDePagos() {
+    const zona = document.getElementById("zonaMuro");
+
+    // Acomodar el muro exige medir la altura que tiene libre. Si no está en
+    // pantalla —porque el cajón lo tapa, o porque es un celular y la vista
+    // ancha está oculta— esa altura es cero y el acomodo elegiría cualquier
+    // cosa. Se deja para cuando vuelva a verse: quien lo muestre lo pide.
+    if (zona.offsetParent === null || zona.clientHeight === 0) {
+      return null;
+    }
+
     const datos = leerDatos();
     const ciclo = asegurarCicloActual();
     const recuadros = construirRecuadrosDelMuro(ciclo, datos);
@@ -6572,10 +6804,199 @@
 
   const DIAS_A_MOSTRAR_EN_EL_CAJON = 7;
 
+  // Qué día está elegido en el calendario y qué mes se está viendo. Viven en
+  // variables de módulo, no en los datos: son estado de la pantalla en este
+  // momento, no algo que deba sobrevivir a un respaldo.
+  let diaElegidoDelCajon = null;   // "AAAA-MM-DD"
+  let mesVisibleDelCajon = null;   // Date con día 1 del mes que se muestra
+
+  function cajonEstaAbierto() {
+    return document.getElementById("cajonCalendario").classList.contains("abierto");
+  }
+
+  function abrirCajonDeCalendario() {
+    const cajon = document.getElementById("cajonCalendario");
+    const asa = document.getElementById("asaCajon");
+
+    // Se abre en el día de hoy si no había nada elegido antes.
+    if (diaElegidoDelCajon === null) {
+      diaElegidoDelCajon = formatearFechaISO(truncarAMedianoche(new Date()));
+    }
+    const elegido = crearFechaLocal(diaElegidoDelCajon);
+    mesVisibleDelCajon = new Date(elegido.getFullYear(), elegido.getMonth(), 1);
+
+    cajon.classList.add("abierto");
+    document.getElementById("primeraPantalla").classList.add("con-cajon-abierto");
+    document.getElementById("cuerpoCajon").hidden = false;
+    asa.setAttribute("aria-expanded", "true");
+    asa.setAttribute("title", "Minimizar el calendario");
+
+    renderizarMesDelCajon();
+    renderizarDiaElegidoDelCajon();
+  }
+
+  function cerrarCajonDeCalendario() {
+    const cajon = document.getElementById("cajonCalendario");
+    const asa = document.getElementById("asaCajon");
+
+    cajon.classList.remove("abierto");
+    document.getElementById("primeraPantalla").classList.remove("con-cajon-abierto");
+    document.getElementById("cuerpoCajon").hidden = true;
+    asa.setAttribute("aria-expanded", "false");
+    asa.setAttribute("title", "Abrir el calendario");
+
+    // El muro vuelve a la pantalla con toda la altura disponible, así que su
+    // acomodo se rehace desde cero para ese espacio.
+    renderizarMuroDePagos();
+  }
+
+  function alternarCajonDeCalendario() {
+    if (cajonEstaAbierto()) {
+      cerrarCajonDeCalendario();
+      return;
+    }
+    // Al abrir no se reacomoda el muro: queda oculto detrás del cajón, así
+    // que medirlo contra la altura sobrante sería trabajo tirado.
+    abrirCajonDeCalendario();
+  }
+
+  function cambiarMesDelCajon(cuantosMeses) {
+    mesVisibleDelCajon = new Date(
+      mesVisibleDelCajon.getFullYear(),
+      mesVisibleDelCajon.getMonth() + cuantosMeses,
+      1
+    );
+    renderizarMesDelCajon();
+  }
+
+  // Todos los compromisos de una fecha, sin importar de qué ciclo sean: el
+  // calendario se mueve por meses y un mes cruza dos ciclos.
+  function obtenerCompromisosDeLaFecha(fechaISO, datos) {
+    return datos.compromisos
+      .filter(function (compromiso) { return compromiso.fechaProgramada === fechaISO; })
+      .sort(function (a, b) { return a.nombre < b.nombre ? -1 : 1; });
+  }
+
+  function renderizarMesDelCajon() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const anio = mesVisibleDelCajon.getFullYear();
+    const mes = mesVisibleDelCajon.getMonth();
+
+    document.getElementById("nombreMesCajon").textContent =
+      NOMBRES_DE_MESES[mes] + " " + anio;
+
+    // La rejilla arranca en domingo, como el calendario de Análisis, para que
+    // las dos vistas se lean igual.
+    const primerDiaDelMes = new Date(anio, mes, 1);
+    const huecosIniciales = primerDiaDelMes.getDay();
+    const diasDelMes = diasEnElMes(anio, mes);
+    const hoyISO = formatearFechaISO(truncarAMedianoche(new Date()));
+
+    let html = DIAS_SEMANA_ABREVIADOS.map(function (dia) {
+      return "<div class=\"encabezado-dia-semana\">" + dia + "</div>";
+    }).join("");
+
+    for (let i = 0; i < huecosIniciales; i++) {
+      html += "<div class=\"celda-dia fuera-del-mes\"></div>";
+    }
+
+    for (let dia = 1; dia <= diasDelMes; dia++) {
+      const fechaISO = formatearFechaISO(new Date(anio, mes, dia));
+      const compromisos = obtenerCompromisosDeLaFecha(fechaISO, datos);
+
+      // Un punto por compromiso, con su estado. Es la misma lectura que en el
+      // muro, así que no hace falta leyenda.
+      const puntos = compromisos.map(function (compromiso) {
+        return "<span class=\"punto-estado " + calcularEstadoDePago(compromiso) + "\"></span>";
+      }).join("");
+
+      const dentroDelCiclo = fechaISO >= ciclo.fechaInicio && fechaISO <= ciclo.fechaFin;
+      const clases = ["celda-dia"];
+      if (fechaISO === diaElegidoDelCajon) { clases.push("elegida"); }
+      if (fechaISO === hoyISO) { clases.push("es-hoy"); }
+      if (!dentroDelCiclo) { clases.push("fuera-del-ciclo"); }
+
+      html += "<button type=\"button\" class=\"" + clases.join(" ") + "\" data-fecha=\"" + fechaISO + "\">" +
+        "<span class=\"numero-dia\">" + dia + "</span>" +
+        "<span class=\"puntos-del-dia\">" + puntos + "</span>" +
+      "</button>";
+    }
+
+    const rejilla = document.getElementById("rejillaMesCajon");
+    rejilla.innerHTML = html;
+
+    rejilla.querySelectorAll("[data-fecha]").forEach(function (celda) {
+      celda.addEventListener("click", function () {
+        diaElegidoDelCajon = celda.getAttribute("data-fecha");
+        renderizarMesDelCajon();
+        renderizarDiaElegidoDelCajon();
+      });
+    });
+  }
+
+  // El día elegido muestra sus pagos con las mismas filas del muro: mismo
+  // punto de estado, mismo nombre, mismo monto alineado. Así lo que se aprende
+  // a leer en el muro sirve igual aquí.
+  function renderizarDiaElegidoDelCajon() {
+    const datos = leerDatos();
+    const compromisos = obtenerCompromisosDeLaFecha(diaElegidoDelCajon, datos);
+    const fecha = crearFechaLocal(diaElegidoDelCajon);
+
+    const total = compromisos.reduce(function (suma, compromiso) {
+      return suma + Number(compromiso.pagado ? compromiso.montoReal : compromiso.montoEstimado);
+    }, 0);
+
+    document.getElementById("encabezadoDiaCajon").innerHTML =
+      "<span class=\"fecha-dia-elegido\">" +
+        DIAS_SEMANA_COMPLETOS[fecha.getDay()] + " " + fecha.getDate() + " de " +
+        NOMBRES_DE_MESES[fecha.getMonth()].toLowerCase() +
+      "</span>" +
+      (compromisos.length > 0
+        ? "<span class=\"total-dia-elegido\">" + formatearMoneda(total) + "</span>"
+        : "");
+
+    const contenedor = document.getElementById("contenidoDiaCajon");
+
+    if (compromisos.length === 0) {
+      contenedor.innerHTML = "<p class=\"dia-sin-nada\">Nada programado este día.</p>";
+      return;
+    }
+
+    // Se agrupan por categoría para que el día se lea con la misma estructura
+    // del muro, no como una lista plana.
+    const porCategoria = {};
+    compromisos.forEach(function (compromiso) {
+      const categoriaId = resolverCategoriaDeCompromiso(compromiso, datos);
+      const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaId; });
+      const nombre = categoria
+        ? categoria.nombre
+        : (compromiso.origen === "tarjeta" ? "Tarjetas" : compromiso.origen === "deuda" ? "Deudas" : "Sin categoría");
+
+      if (!porCategoria[nombre]) { porCategoria[nombre] = []; }
+      porCategoria[nombre].push(compromiso);
+    });
+
+    contenedor.innerHTML = Object.keys(porCategoria).map(function (nombre) {
+      return htmlDeRecuadroDelMuro({
+        tipo: "pagos",
+        nombre: nombre,
+        grupos: [{ titulo: null, pagos: porCategoria[nombre] }]
+      }, false);
+    }).join("");
+  }
+
   function renderizarCajonDeCalendario() {
     const datos = leerDatos();
     const ciclo = asegurarCicloActual();
     const contenedor = document.getElementById("proximosDiasCajon");
+
+    // Si está desplegado, lo que hay que refrescar es el mes y el día, no la
+    // tira cerrada: un pago marcado desde el cajón tiene que verse ahí mismo.
+    if (cajonEstaAbierto()) {
+      renderizarMesDelCajon();
+      renderizarDiaElegidoDelCajon();
+    }
 
     // Se agrupan por fecha para que un día con tres pagos sea una sola
     // columna del cajón, no tres.
@@ -6624,7 +7045,7 @@
 
   function cerrarAjustes() {
     document.getElementById("capaModal").hidden = true;
-    document.getElementById("botonAjustes").focus();
+    document.getElementById("botonAgregarYAjustar").focus();
   }
 
   function ajustesEstanAbiertos() {
@@ -6665,8 +7086,23 @@
     mostrarDatosEnPantalla();
   }
 
-  document.getElementById("botonAjustes").addEventListener("click", abrirAjustes);
+  document.getElementById("botonAgregarYAjustar").addEventListener("click", abrirAjustes);
   document.getElementById("botonCerrarAjustes").addEventListener("click", cerrarAjustes);
+
+  document.getElementById("asaCajon").addEventListener("click", alternarCajonDeCalendario);
+  document.getElementById("mesAnteriorCajon").addEventListener("click", function () {
+    cambiarMesDelCajon(-1);
+  });
+  document.getElementById("mesSiguienteCajon").addEventListener("click", function () {
+    cambiarMesDelCajon(1);
+  });
+  // La tira de próximos días también abre el cajón: es la superficie grande y
+  // es lo que uno intenta tocar cuando quiere ver más de un día.
+  document.getElementById("proximosDiasCajon").addEventListener("click", function () {
+    if (!cajonEstaAbierto()) {
+      alternarCajonDeCalendario();
+    }
+  });
 
   // Clic en el fondo oscuro cierra; clic dentro del panel, no.
   document.getElementById("capaModal").addEventListener("click", function (evento) {
@@ -6681,10 +7117,6 @@
     }
   });
 
-  // Provisional: todos los formularios de alta viven hoy dentro de Ajustes,
-  // así que el "+" abre ese mismo modal. Cuando exista el modal de registro
-  // con su desplegable de tipo de evento, el "+" apuntará ahí.
-  document.getElementById("botonNuevoRegistro").addEventListener("click", abrirAjustes);
 
   document.getElementById("formCategoria").addEventListener("submit", manejarEnvioCategoria);
   document.getElementById("formTarjeta").addEventListener("submit", manejarEnvioTarjeta);
