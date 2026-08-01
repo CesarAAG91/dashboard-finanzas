@@ -890,6 +890,17 @@
     color: var(--tinta-c);
     font-weight: 700;
   }
+  /* En qué se convierte una compra a meses. Vacío cuando es de contado, pero
+     el renglón se queda: si apareciera y desapareciera, la pantalla brincaría
+     cada vez que se toca un plazo. */
+  #vistaCaptura .renglon-reparto {
+    flex: 0 0 auto;
+    margin: 6px 0 0;
+    min-height: 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--tinta-sec-c);
+  }
 
   /* ---------- Descripción y "Para quién" ---------- */
   /* Se tocan para escribirlas y el campo ocupa el lugar del teclado numérico.
@@ -3744,17 +3755,40 @@
   // corte. Las deudas MSI quedan fuera a propósito: en este modelo son
   // compromisos independientes pagados por débito, igual que un préstamo
   // — no están ligadas a ninguna tarjeta (ver SPEC.md).
+  // Cuánto de una compra a crédito se cobra en un pago concreto de la tarjeta.
+  //
+  // Una compra de contado aporta su monto completo a un solo pago. Una a N
+  // meses aporta monto/N a N pagos consecutivos, empezando por el que le
+  // tocaría si fuera de contado. Sin esto, una compra de $12,000 a 12 meses
+  // caía entera en el primer corte: la app creía que se pagaban $12,000 de
+  // golpe y luego que no se debía nada durante un año.
+  //
+  // Las mensualidades se ubican por fechas reales (la del primer pago, más un
+  // mes cada vez), que es el mismo criterio que ya usa la simulación para
+  // repartir un compromiso diferido. No se cuentan ciclos: un ciclo no mide un
+  // mes exacto y el reparto se iría desfasando.
+  function calcularAporteDeGastoAlPagoDeTarjeta(gasto, tarjeta, fechaPago) {
+    // Sin campo, o con 1, es de contado. Así los gastos capturados antes de que
+    // existieran los meses siguen valiendo lo mismo, sin migrar nada.
+    const mensualidades = Number(gasto.mesesDiferidos) || 1;
+    const primerPago = calcularFechaDePrimerPagoDeTarjeta(tarjeta, crearFechaLocal(gasto.fecha));
+    const fechaPagoTexto = formatearFechaISO(fechaPago);
+
+    for (let mensualidad = 0; mensualidad < mensualidades; mensualidad++) {
+      if (formatearFechaISO(sumarMeses(primerPago, mensualidad)) === fechaPagoTexto) {
+        return Number(gasto.monto) / mensualidades;
+      }
+    }
+
+    return 0;
+  }
+
   function calcularPagoTarjeta(tarjeta, fechaPago, datos) {
-    const periodo = calcularPeriodoDeCorteParaPago(tarjeta, fechaPago);
     return datos.gastos
-      .filter(function (g) {
-        if (g.fuente !== "credito" || g.tarjetaId !== tarjeta.id) {
-          return false;
-        }
-        const fechaGasto = crearFechaLocal(g.fecha);
-        return fechaGasto >= periodo.inicio && fechaGasto <= periodo.fin;
-      })
-      .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+      .filter(function (g) { return g.fuente === "credito" && g.tarjetaId === tarjeta.id; })
+      .reduce(function (suma, g) {
+        return suma + calcularAporteDeGastoAlPagoDeTarjeta(g, tarjeta, fechaPago);
+      }, 0);
   }
 
   function generarCompromisosDesdeTarjetas(ciclo, datos) {
@@ -6781,6 +6815,9 @@
       destinatario: destinatario,
       fuente: fuente,
       tarjetaId: compromiso.origen === "tarjeta" ? compromiso.origenId : null,
+      // Cerrar un compromiso nunca difiere a meses: es un pago que ya se debía,
+      // no una compra nueva.
+      mesesDiferidos: null,
       compromisoId: compromiso.id,
       descripcion: categoriaId ? "" : compromiso.nombre
     });
@@ -7074,6 +7111,9 @@
   let subcategoriaSeleccionadaGasto = null;
   let fuenteSeleccionadaGasto = "debito";
   let tarjetaSeleccionadaGasto = null;
+  // A cuántos meses sin intereses va la compra. 1 es de contado, y es siempre
+  // el punto de partida: diferir es la excepción, no lo normal.
+  let mesesDiferidosDelTicket = 1;
   // El monto se guarda como el texto que se ha tecleado, no como número: es
   // lo que permite mostrar "12." mientras se escribe "12.50".
   let montoEscritoEnElTicket = "";
@@ -7106,6 +7146,7 @@
     subcategoriaSeleccionadaGasto = null;
     fuenteSeleccionadaGasto = "debito";
     tarjetaSeleccionadaGasto = null;
+    mesesDiferidosDelTicket = 1;
     montoEscritoEnElTicket = "";
     descripcionEscritaEnElTicket = "";
     destinatarioElegidoEnElTicket = "";
@@ -7211,6 +7252,13 @@
       destinatario: destinatarioElegidoEnElTicket || null,
       fuente: fuenteSeleccionadaGasto,
       tarjetaId: tarjetaSeleccionadaGasto,
+      // null es de contado. Se guarda el plazo, no las mensualidades: el monto
+      // sigue siendo lo que costó la compra, y quien reparte es el pago de la
+      // tarjeta. Así el análisis por categoría ve la compra del día que se
+      // hizo, y el flujo de efectivo ve la mensualidad.
+      mesesDiferidos: (fuenteSeleccionadaGasto === "credito" && mesesDiferidosDelTicket > 1)
+        ? mesesDiferidosDelTicket
+        : null,
       compromisoId: null,
       descripcion: descripcionEscritaEnElTicket.trim()
     });
@@ -7615,19 +7663,55 @@
         " data-accion=\"elegir-fuente\" data-fuente=\"credito\">Crédito</button>" +
     "</div>";
 
-    // Al cerrar un compromiso no se pregunta la tarjeta: el gasto que se crea
-    // hereda lo que ya sabe el compromiso, y preguntar aquí prometería
-    // guardar un dato que ese camino no guarda.
-    if (esPago || fuenteSeleccionadaGasto !== "credito" || datos.config.tarjetas.length < 2) {
+    // Al cerrar un compromiso no se pregunta la tarjeta ni los meses: el gasto
+    // que se crea hereda lo que ya sabe el compromiso, y preguntar aquí
+    // prometería guardar un dato que ese camino no guarda.
+    if (esPago || fuenteSeleccionadaGasto !== "credito" || datos.config.tarjetas.length === 0) {
       return pestanas;
     }
 
-    const chips = datos.config.tarjetas.map(function (tarjeta) {
-      return "<button type=\"button\" class=\"chip-tarjeta" + (tarjeta.id === tarjetaSeleccionadaGasto ? " activa" : "") + "\"" +
-        " data-accion=\"elegir-tarjeta\" data-tarjeta=\"" + tarjeta.id + "\">" + escaparHTML(tarjeta.nombre) + "</button>";
+    // Con una sola tarjeta no hay nada que elegir: ya se asignó sola.
+    const chipsTarjeta = datos.config.tarjetas.length < 2 ? "" :
+      "<div class=\"chips-tarjeta\">" + datos.config.tarjetas.map(function (tarjeta) {
+        return "<button type=\"button\" class=\"chip-tarjeta" + (tarjeta.id === tarjetaSeleccionadaGasto ? " activa" : "") + "\"" +
+          " data-accion=\"elegir-tarjeta\" data-tarjeta=\"" + tarjeta.id + "\">" + escaparHTML(tarjeta.nombre) + "</button>";
+      }).join("") + "</div>";
+
+    return pestanas + chipsTarjeta + htmlDeLosMeses(datos);
+  }
+
+  // Los plazos que ofrece el banco. Son los mismos que ya maneja la simulación
+  // de la vista ancha, para que las dos pantallas hablen del mismo catálogo.
+  const PLAZOS_DE_MESES = [1, 3, 6, 9, 12];
+
+  // El selector de meses solo aparece si la tarjeta elegida tiene marcado
+  // "permite diferir a meses" en Ajustes. Ofrecerlo en una tarjeta que no da
+  // MSI sería prometer un reparto que el banco no va a hacer.
+  function htmlDeLosMeses(datos) {
+    const tarjeta = datos.config.tarjetas.find(function (t) { return t.id === tarjetaSeleccionadaGasto; });
+
+    if (!tarjeta || !tarjeta.permiteDiferirAMeses) {
+      return "";
+    }
+
+    const chips = PLAZOS_DE_MESES.map(function (meses) {
+      return "<button type=\"button\" class=\"chip-tarjeta" + (meses === mesesDiferidosDelTicket ? " activa" : "") + "\"" +
+        " data-accion=\"elegir-meses\" data-meses=\"" + meses + "\">" +
+        (meses === 1 ? "De contado" : meses + " meses") +
+      "</button>";
     }).join("");
 
-    return pestanas + "<div class=\"chips-tarjeta\">" + chips + "</div>";
+    // Decir en voz alta en qué se convierte la compra: es la diferencia entre
+    // elegir "12 meses" a ciegas y ver que son $1,000 al mes durante un año.
+    const monto = montoDelTicketComoNumero();
+    const reparto = (mesesDiferidosDelTicket > 1 && monto > 0)
+      ? mesesDiferidosDelTicket + " pagos de " + formatearMoneda(monto / mesesDiferidosDelTicket) + " al mes"
+      : "";
+
+    // Lleva su propia clase, y no la del renglón de arriba del monto, porque
+    // los dos se refrescan con cada tecla y hay que poder distinguirlos.
+    return "<div class=\"chips-tarjeta\">" + chips + "</div>" +
+      "<p class=\"renglon-reparto\">" + reparto + "</p>";
   }
 
   // Descripción y "Para quién", debajo del monto. "Para quién" solo aparece
@@ -7764,6 +7848,16 @@
       montoDelTicketComoNumero(),
       esPago ? compromisoQueSeEstaPagando : null
     );
+    // El reparto a meses también se mueve con cada tecla: "12 pagos de $1,000"
+    // solo sirve si va cambiando mientras se escribe el monto.
+    const renglonReparto = ticket.querySelector(".renglon-reparto");
+    if (renglonReparto) {
+      renglonReparto.textContent = mesesDiferidosDelTicket > 1 && montoDelTicketComoNumero() > 0
+        ? mesesDiferidosDelTicket + " pagos de " +
+          formatearMoneda(montoDelTicketComoNumero() / mesesDiferidosDelTicket) + " al mes"
+        : "";
+    }
+
     ticket.querySelector(".boton-guardar-ticket").disabled = montoDelTicketComoNumero() <= 0;
   }
 
@@ -7886,6 +7980,15 @@
 
     if (accion === "elegir-tarjeta") {
       tarjetaSeleccionadaGasto = boton.getAttribute("data-tarjeta");
+      // Cambiar de tarjeta vuelve a "de contado": la tarjeta nueva puede no dar
+      // meses, y dejar un plazo puesto de la anterior guardaría una mentira.
+      mesesDiferidosDelTicket = 1;
+      renderizarTicket();
+      return;
+    }
+
+    if (accion === "elegir-meses") {
+      mesesDiferidosDelTicket = Number(boton.getAttribute("data-meses"));
       renderizarTicket();
       return;
     }
