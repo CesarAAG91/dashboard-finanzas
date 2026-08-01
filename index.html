@@ -180,7 +180,7 @@
     vista ancha es una sola página continua — ya no hay pestañas.
   */
   #vistaCaptura {
-    display: block;
+    display: flex;
   }
   #vistaAncha {
     display: none;
@@ -373,339 +373,613 @@
   }
 
   /* ============================================================
-     CAPTURA — REDISEÑO VISUAL (pantalla angosta)
+     CAPTURA — EL TICKET (pantalla angosta, iPhone)
      ============================================================
      Todo lo de aquí en adelante está anclado a #vistaCaptura a
-     propósito: Análisis y Configuración (pantalla ancha) todavía usan
-     la paleta anterior y no deben verse afectados por nada de esto.
-     El semáforo (verde/ámbar/rojo/gris, arriba en este mismo archivo)
-     no se toca — sigue siendo el único color con significado real en
-     toda la app; lo nuevo de aquí es deliberadamente neutro (blanco
-     cálido invertido, no un acento de color) para no competirle señal.
+     propósito: la vista ancha tiene su propio sistema visual y no debe
+     verse afectada por nada de esto.
+
+     La idea que ordena toda la pantalla: la app es una caja
+     registradora. El fondo casi negro es la máquina; el rectángulo
+     claro es el papel térmico que va saliendo, un paso por vez. Por eso
+     el texto del papel es tinta oscura sobre crema (legible bajo el sol,
+     caminando) y el monto va en monoespaciada grande, como un recibo
+     impreso.
+
+     Dos colores tienen significado y ninguno es decorativo:
+     - Los 8 tonos de categoría (PALETA_CATEGORIAS en el JavaScript) —
+       marcan a qué categoría pertenece cada cosa.
+     - El semáforo, y solo para vencimientos. Los valores verde/ámbar/
+       rojo de arriba en este archivo se calcularon contra un fondo
+       oscuro; sobre el papel claro no se leen, así que aquí van los
+       mismos tres tonos oscurecidos para que contrasten contra el crema.
+       Es la misma señal, adaptada al papel, no una paleta nueva.
   */
   #vistaCaptura {
-    --fondo-c: #18161c;
-    --superficie-c: #221f27;
-    --superficie-sel-c: #2c2833;
-    --texto-c: #f6f3ef;
-    --texto-sec-c: #948e9c;
-    /* Tercer nivel de texto del sistema aprobado, para etiquetas y apoyos que
-       no deben competir ni con el dato ni con su rótulo. */
-    --texto-ter-c: #6f6a78;
-    --borde-c: #35313c;
+    /* La máquina */
+    --fondo-c: #0c0b0e;
+    /* El papel */
+    --papel-c: #f7f4ec;
+    --papel-linea-c: #d9d3c4;
+    --papel-toque-c: #eae4d6;
+    /* La tinta, en tres niveles */
+    --tinta-c: #17161a;
+    --tinta-sec-c: #5b564d;
+    --tinta-ter-c: #8b8578;
+    /* Texto sobre la máquina (la cinta de arriba y la nota de mañana) */
+    --cinta-texto-c: #efece4;
+    --cinta-etiqueta-c: #837d8f;
+    --cinta-borde-c: #2a2730;
+    /* Semáforo sobre papel */
+    --verde-papel-c: #0f6b4f;
+    --ambar-papel-c: #8a5300;
+    --rojo-papel-c: #b3261e;
+
+    position: relative;
+    box-sizing: border-box;
+    height: 100vh;
+    height: 100dvh;
+    flex-direction: column;
+    overflow: hidden;
     background-color: var(--fondo-c);
-    color: var(--texto-c);
-    border-radius: 20px;
-    padding: 20px 16px 28px;
+    color: var(--cinta-texto-c);
+    padding: calc(env(safe-area-inset-top) + 10px)
+             calc(env(safe-area-inset-right) + 12px)
+             calc(env(safe-area-inset-bottom) + 10px)
+             calc(env(safe-area-inset-left) + 12px);
   }
   #vistaCaptura .mono {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-variant-numeric: tabular-nums;
   }
-  #vistaCaptura h2 {
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--texto-sec-c);
-    margin: 0 0 12px;
-  }
-  #vistaCaptura section {
-    background-color: var(--superficie-c);
-    border-bottom: none;
-    border-radius: 14px;
-    padding: 16px 14px;
-    margin-bottom: 16px;
-  }
-  #vistaCaptura section:last-child {
-    margin-bottom: 0;
-  }
-  #vistaCaptura label {
-    color: var(--texto-sec-c);
-  }
-  #vistaCaptura label input,
-  #vistaCaptura label select {
-    background-color: var(--fondo-c);
-    color: var(--texto-c);
-    border-color: var(--borde-c);
-  }
-  #vistaCaptura .pista {
-    color: var(--texto-sec-c);
-  }
-  #vistaCaptura .detalle {
-    color: var(--texto-sec-c);
-  }
-  #vistaCaptura button {
-    background-color: var(--texto-c);
-    color: var(--fondo-c);
-    font-weight: 600;
-  }
-  #vistaCaptura button:active {
-    background-color: var(--texto-sec-c);
-  }
-  #vistaCaptura .boton-grande {
-    background-color: var(--fondo-c);
-    color: var(--texto-c);
-    border-color: var(--borde-c);
-  }
-  #vistaCaptura .boton-grande.seleccionado {
-    background-color: var(--superficie-sel-c);
-    border-color: var(--texto-c);
-  }
-  #vistaCaptura .monto-grande {
-    background-color: var(--fondo-c);
-    border: 1.5px solid var(--borde-c);
-    border-radius: 10px;
-    padding: 12px;
-    color: var(--texto-c);
-  }
-  #vistaCaptura ul.lista-items li {
-    border-bottom-color: var(--borde-c);
-  }
-  #vistaCaptura ul.lista-items li.vacio {
-    color: var(--texto-sec-c);
-  }
-  #vistaCaptura .confirmacion-pendiente {
-    background-color: var(--superficie-sel-c);
-  }
-  #vistaCaptura .barra-fondo {
-    background-color: var(--fondo-c);
-  }
-  #vistaCaptura .barra-relleno {
-    background-color: var(--texto-c);
-  }
 
-  /* Anillo del ciclo — elemento de firma, arriba de Pendientes. Solo
-     existe en Captura: en pantalla ancha sigue el <h1>Ciclo</h1> plano. */
+  /* En el teléfono no hay nada arriba ni abajo del ticket: el título, la
+     descripción, el aviso de respaldo y el bloque de exportar/importar
+     viven en la laptop. Aquí romperían la promesa de que el flujo cabe en
+     pantalla sin scroll. */
   @media (max-width: 640px) {
+    body {
+      padding: 0;
+      max-width: none;
+    }
     body > h1,
-    body > p.descripcion {
+    body > p.descripcion,
+    body > details {
       display: none;
     }
-  }
-  #vistaCaptura .resumen-superior {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 18px;
-  }
-  #vistaCaptura .chip-calendario {
-    flex-shrink: 0;
-    width: 46px;
-    border-radius: 10px;
-    overflow: hidden;
-    text-align: center;
-    border: 1px solid var(--borde-c);
-  }
-  #vistaCaptura .chip-calendario-dia-semana {
-    display: block;
-    background-color: var(--texto-c);
-    color: var(--fondo-c);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding: 3px 0;
-  }
-  #vistaCaptura .chip-calendario-numero {
-    display: block;
-    padding: 4px 0 6px;
-    font-size: 20px;
-    font-weight: 600;
-  }
-  #vistaCaptura .resumen-pagos,
-  #vistaCaptura .resumen-disponible {
-    flex: 1;
-  }
-  #vistaCaptura .resumen-disponible {
-    text-align: right;
-  }
-  #vistaCaptura .resumen-numero {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-  }
-  #vistaCaptura .resumen-etiqueta {
-    margin: 2px 0 0;
-    font-size: 10px;
-    color: var(--texto-sec-c);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    body > #avisoRespaldo {
+      display: none !important;
+    }
   }
 
-  /* Pendientes: fila individual, tanto los 3 fijos como los de dentro
-     de "Otros". El borde rojo de urgente (.pendiente-urgente) ya existe
-     arriba en este archivo y no se toca — solo se le da color a la
-     etiqueta de "cuándo vence" para que combine con ese mismo rojo. */
-  #vistaCaptura .fila-pendiente {
+  /* ---------- La cinta: el único número que sobrevive del resumen ---------- */
+  /* Libre para gastar (calcularDisponibleReal) es el mismo número que manda
+     en la vista ancha. Va sobre la máquina, no sobre el papel: no es parte
+     del recibo que se está imprimiendo, es el estado del ciclo. */
+  #cintaCaptura {
+    flex: 0 0 auto;
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    align-items: flex-start;
     gap: 10px;
+    padding: 0 6px 10px;
   }
-  #vistaCaptura .nombre-pendiente {
-    font-size: 14px;
+  #cintaCaptura .cinta-etiqueta {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--cinta-etiqueta-c);
   }
-  #vistaCaptura .cuando-vence {
-    display: block;
-    font-size: 11px;
-    color: var(--texto-sec-c);
-    margin-top: 2px;
+  #cintaCaptura .cinta-monto {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--cinta-texto-c);
   }
-  #vistaCaptura .pendiente-urgente .cuando-vence {
+  #cintaCaptura .cinta-monto.en-numeros-rojos {
     color: #fca5a5;
   }
-  #vistaCaptura .monto-pendiente {
-    font-size: 15px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  #vistaCaptura ul.lista-items li.resto-pendientes {
-    border-bottom: none;
-    padding: 0;
-  }
-  #vistaCaptura .boton-resto-pendientes {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: none;
-    color: var(--texto-c);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 400;
-    border: none;
-    border-top: 1px solid var(--borde-c);
-    padding: 12px 0 4px;
-    cursor: pointer;
-  }
-  #vistaCaptura .boton-resto-pendientes .mono {
-    font-weight: 600;
-    font-size: 14px;
-  }
-  #vistaCaptura .lista-resto-pendientes {
-    display: none;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  #vistaCaptura .lista-resto-pendientes.abierta {
-    display: block;
-  }
-  #vistaCaptura .lista-resto-pendientes li {
-    padding: 8px 0;
-    border-bottom: 1px solid var(--borde-c);
-    font-size: 14px;
-  }
-  #vistaCaptura .lista-resto-pendientes li:last-child {
-    border-bottom: none;
-  }
 
-  /* Hoy: mismo patrón de fila de dos columnas que Pendientes, sin el
-     toque para expandir (un gasto de hoy es un hecho ya registrado,
-     no algo por confirmar). */
-  #vistaCaptura .fila-gasto-hoy {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
+  /* ---------- El carro: por donde sale el papel ---------- */
+  #carroCaptura {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
   }
-  #vistaCaptura .nombre-gasto-hoy {
-    font-size: 14px;
-  }
-  #vistaCaptura .detalle-gasto-hoy {
-    display: block;
-    font-size: 11px;
-    color: var(--texto-sec-c);
-    margin-top: 2px;
-  }
-  #vistaCaptura .monto-gasto-hoy {
-    font-size: 14px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  #vistaCaptura .avance-cabecera {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    margin-bottom: 6px;
-  }
-  #vistaCaptura .avance-categoria {
-    color: var(--texto-sec-c);
-  }
-
-  /* ---------- Atajos de gasto ---------- */
-  /* Lo que se registra a diario cabe en un toque. Dos columnas de superficies
-     táctiles grandes, con la subcategoría como titular y la categoría en
-     pequeño debajo: al elegir "Súper" uno sabe que va a Comida sin leerlo. */
-  #vistaCaptura .atajos-gasto {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  #vistaCaptura .atajo-gasto {
+  #ticketCaptura,
+  .ticket-fantasma {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    background-color: var(--papel-c);
+    color: var(--tinta-c);
+    border-radius: 3px;
+    padding: 18px 16px 16px;
+    overflow: hidden;
+  }
+  /* La perforación de arriba: por ahí se desprendió el ticket anterior. */
+  #ticketCaptura::before,
+  .ticket-fantasma::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 7px;
+    background-image: radial-gradient(circle at 50% 0, var(--fondo-c) 4.5px, transparent 5px);
+    background-size: 13px 7px;
+    background-repeat: repeat-x;
+  }
+
+  /* La firma del diseño: cada paso se imprime hacia abajo, y al guardar el
+     ticket se desprende con un corte limpio mientras el siguiente sube. */
+  @keyframes imprimirTicket {
+    from { transform: translateY(-101%); }
+    to   { transform: translateY(0); }
+  }
+  @keyframes cortarTicket {
+    from { transform: translateY(0);    opacity: 1; }
+    to   { transform: translateY(106%); opacity: 0; }
+  }
+  @keyframes imprimirLinea {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #ticketCaptura.entrando {
+    animation: imprimirTicket 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .ticket-fantasma {
+    z-index: 2;
+    animation: cortarTicket 340ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
+  }
+  #ticketCaptura.paso-avanza > * {
+    animation: imprimirLinea 220ms ease-out backwards;
+  }
+  #ticketCaptura.paso-avanza > *:nth-child(2) { animation-delay: 40ms; }
+  #ticketCaptura.paso-avanza > *:nth-child(3) { animation-delay: 80ms; }
+  #ticketCaptura.paso-avanza > *:nth-child(4) { animation-delay: 110ms; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #ticketCaptura.entrando,
+    #ticketCaptura.paso-avanza > *,
+    .ticket-fantasma,
+    #notaCaptura {
+      animation: none;
+    }
+    .ticket-fantasma { display: none; }
+  }
+
+  /* ---------- Cabecera del ticket ---------- */
+  #vistaCaptura .ticket-cabecera {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 9px;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed var(--papel-linea-c);
+  }
+  #vistaCaptura .boton-atras {
+    flex: 0 0 auto;
+    background: transparent;
+    border: 1px solid var(--papel-linea-c);
+    border-radius: 3px;
+    color: var(--tinta-c);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  #vistaCaptura .boton-atras:active { background-color: var(--papel-toque-c); }
+  #vistaCaptura .ticket-titulo {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--tinta-sec-c);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* La categoría elegida se reconoce por su tono antes de leer el nombre. */
+  #vistaCaptura .marca-categoria {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background-color: var(--color-categoria, var(--tinta-ter-c));
+  }
+  #vistaCaptura .ticket-fecha {
+    flex: 0 0 auto;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--tinta-ter-c);
+  }
+
+  /* ---------- Vencimientos al frente (pantalla 1) ---------- */
+  #vistaCaptura .vencimientos-ticket {
+    flex: 0 0 auto;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--papel-linea-c);
+  }
+  #vistaCaptura .fila-vencimiento {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 0;
+    border-left: 3px solid var(--ambar-papel-c);
+    border-radius: 0;
+    padding: 8px 0 8px 9px;
+    font-family: inherit;
+    text-align: left;
+    color: var(--tinta-c);
+    cursor: pointer;
+  }
+  #vistaCaptura .fila-vencimiento:active { background-color: var(--papel-toque-c); }
+  #vistaCaptura .fila-vencimiento.ya-vencido { border-left-color: var(--rojo-papel-c); }
+  #vistaCaptura .fila-vencimiento .nombre {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #vistaCaptura .fila-vencimiento .cuando {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--ambar-papel-c);
+  }
+  #vistaCaptura .fila-vencimiento.ya-vencido .cuando { color: var(--rojo-papel-c); }
+  #vistaCaptura .fila-vencimiento .monto {
+    flex: 0 0 auto;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  #vistaCaptura .vencimientos-de-mas {
+    margin: 4px 0 0 12px;
+    font-size: 11px;
+    color: var(--tinta-ter-c);
+  }
+
+  /* ---------- Rejilla de categorías y subcategorías ---------- */
+  /* Las filas se reparten el alto disponible, así que con 18 categorías la
+     pantalla se llena sin scroll: solo baja el alto de cada botón.
+     Pero con dos opciones no tiene sentido que cada botón mida media
+     pantalla, así que el JavaScript pone un tope de alto por renglón (sabe
+     cuántas filas hay, el CSS no) y el sobrante se va abajo. Cuando el tope
+     no cabe, manda el alto disponible y las filas se encogen — nunca al
+     revés, que es lo que garantiza que jamás aparezca scroll. */
+  #vistaCaptura .rejilla-ticket {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-bottom: auto;
+    display: grid;
+    grid-template-columns: repeat(var(--columnas-ticket, 2), minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 7px;
+  }
+  #vistaCaptura .boton-ticket {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     align-items: flex-start;
     gap: 2px;
-    border: 1px solid var(--borde-c);
-    background-color: var(--superficie-c);
-    border-radius: 10px;
-    padding: 12px 13px;
+    min-height: 0;
+    overflow: hidden;
+    background-color: transparent;
+    border: 1px solid var(--papel-linea-c);
+    border-left: 4px solid var(--color-categoria, var(--tinta-ter-c));
+    border-radius: 3px;
+    padding: 8px 10px;
+    color: var(--tinta-c);
     font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+    line-height: 1.15;
+    cursor: pointer;
+  }
+  #vistaCaptura .boton-ticket:active { background-color: var(--papel-toque-c); }
+  /* Una opción apagada no es un error: es que ahí no hay nada que pagar hoy.
+     Se sigue viendo, para que la pantalla no cambie de forma según el día. */
+  #vistaCaptura .boton-ticket:disabled {
+    color: var(--tinta-ter-c);
+    border-color: var(--papel-linea-c);
+    border-left-color: var(--papel-linea-c);
+    cursor: default;
+  }
+  /* El dato de apoyo: cuánto se debe, o por qué el botón está apagado. */
+  #vistaCaptura .apoyo-boton-ticket {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--tinta-ter-c);
+  }
+
+  /* ---------- Lo ya registrado hoy en esta categoría (pantalla 2) ---------- */
+  /* Nunca crece más de tres líneas: si hoy hubo diez compras, se corta. Es un
+     recordatorio de un vistazo, no una lista para leer. */
+  #vistaCaptura .hoy-en-categoria {
+    flex: 0 0 auto;
+    margin: 0 0 10px;
+    padding-bottom: 9px;
+    border-bottom: 1px dashed var(--papel-linea-c);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--tinta-sec-c);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  #vistaCaptura .hoy-en-categoria .hora { color: var(--tinta-ter-c); }
+  #vistaCaptura .hoy-en-categoria .importe { font-weight: 600; color: var(--tinta-c); }
+
+  /* ---------- Renglón informativo, arriba del monto ---------- */
+  #vistaCaptura .renglon-informativo {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 2px 0 0;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--tinta-sec-c);
+    min-height: 17px;
+  }
+  #vistaCaptura .renglon-informativo.excedido {
+    color: var(--rojo-papel-c);
+    font-weight: 600;
+  }
+
+  /* ---------- El monto ---------- */
+  #vistaCaptura .monto-ticket {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 5px;
+    padding: 4px 0 10px;
+  }
+  #vistaCaptura .monto-ticket .signo {
+    font-size: 20px;
+    color: var(--tinta-ter-c);
+  }
+  #vistaCaptura .monto-ticket .cifra {
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  #vistaCaptura .monto-ticket .cifra.en-espera { color: var(--tinta-ter-c); }
+
+  /* ---------- Débito / Crédito ---------- */
+  #vistaCaptura .pestanas-fuente {
+    flex: 0 0 auto;
+    display: flex;
+    border: 1px solid var(--papel-linea-c);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #vistaCaptura .pestana-fuente {
+    flex: 1 1 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 9px 0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tinta-sec-c);
+    cursor: pointer;
+  }
+  #vistaCaptura .pestana-fuente.activa {
+    background-color: var(--tinta-c);
+    color: var(--papel-c);
+  }
+  #vistaCaptura .chips-tarjeta {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  #vistaCaptura .chip-tarjeta {
+    background: transparent;
+    border: 1px solid var(--papel-linea-c);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--tinta-sec-c);
+    cursor: pointer;
+  }
+  #vistaCaptura .chip-tarjeta.activa {
+    border-color: var(--tinta-c);
+    color: var(--tinta-c);
+    font-weight: 700;
+  }
+
+  /* ---------- Descripción y "Para quién" ---------- */
+  /* Se tocan para escribirlas y el campo ocupa el lugar del teclado numérico.
+     Si se quedaran siempre abiertas, el teclado de letras del iPhone taparía
+     el botón Guardar, que es el único protagonista de esta pantalla. */
+  #vistaCaptura .detalles-ticket {
+    flex: 0 0 auto;
+    margin-top: 10px;
+    border-top: 1px dashed var(--papel-linea-c);
+  }
+  #vistaCaptura .fila-detalle {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 7px 0;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--tinta-sec-c);
     text-align: left;
     cursor: pointer;
   }
-  #vistaCaptura .atajo-gasto:active { transform: translateY(1px); }
-  #vistaCaptura .atajo-gasto.seleccionado {
-    border-color: var(--texto-c);
-    background-color: var(--superficie-sel-c);
+  #vistaCaptura .fila-detalle .valor {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    color: var(--tinta-c);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  #vistaCaptura .atajo-titulo {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--texto-c);
-  }
-  #vistaCaptura .atajo-categoria {
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--texto-ter-c);
-  }
-  /* "Otro" se distingue por trazo, no por color: no es una categoría más, es
-     la salida para lo que no encaja. */
-  #vistaCaptura .atajo-otro {
-    border-style: dashed;
-    background-color: transparent;
-  }
+  #vistaCaptura .fila-detalle .valor.sin-poner { color: var(--tinta-ter-c); }
 
-  #vistaCaptura .boton-mas-categorias {
-    width: 100%;
-    border: 0;
+  /* ---------- Teclado numérico propio ---------- */
+  /* Dibujado por la app, no el del sistema: así está visible desde el primer
+     instante, nunca tapa el botón Guardar y nunca provoca scroll. */
+  /* Mismo criterio que la rejilla: las teclas se reparten lo que quede, pero
+     con un tope para que no se conviertan en cuatro franjas gigantes. El
+     sobrante se va arriba, así el teclado queda pegado al botón Guardar,
+     donde cae el pulgar. */
+  #vistaCaptura .teclado-ticket {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 288px;
+    margin-top: auto;
+    padding-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 6px;
+  }
+  #vistaCaptura .tecla {
     background: transparent;
-    color: var(--texto-sec-c);
-    font-family: inherit;
-    font-size: 13px;
-    padding: 6px 0 10px;
+    border: 1px solid var(--papel-linea-c);
+    border-radius: 3px;
+    padding: 0;
+    color: var(--tinta-c);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 21px;
+    font-weight: 600;
     cursor: pointer;
   }
-  #vistaCaptura .boton-mas-categorias:active { color: var(--texto-c); }
+  #vistaCaptura .tecla:active { background-color: var(--papel-toque-c); }
+  #vistaCaptura .tecla.tecla-borrar { font-size: 17px; }
 
-  /* A dónde va el gasto que se está capturando, cuando se llegó por un atajo
-     y no se vieron los botones de categoría. */
-  #vistaCaptura .destino-del-gasto {
-    margin: 0 0 10px 0;
-    font-size: 12px;
-    letter-spacing: 0.06em;
+  /* El campo de texto ocupa el hueco del teclado mientras se escribe. */
+  #vistaCaptura .campo-escritura {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  #vistaCaptura .campo-escritura .rotulo {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--texto-ter-c);
+    color: var(--tinta-ter-c);
+  }
+  #vistaCaptura .campo-escritura input {
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--tinta-c);
+    border-radius: 0;
+    padding: 6px 2px;
+    color: var(--tinta-c);
+    font-family: inherit;
+    font-size: 18px;
+  }
+  #vistaCaptura .campo-escritura input:focus { outline: none; }
+  #vistaCaptura .boton-listo {
+    background-color: transparent;
+    border: 1px solid var(--tinta-c);
+    border-radius: 3px;
+    padding: 8px 18px;
+    color: var(--tinta-c);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
   }
 
-  #vistaCaptura .opcional {
-    font-size: 11px;
-    letter-spacing: 0.04em;
+  /* ---------- Guardar: el único protagonista ---------- */
+  #vistaCaptura .boton-guardar-ticket {
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: 10px;
+    background-color: var(--tinta-c);
+    color: var(--papel-c);
+    border: 0;
+    border-radius: 3px;
+    padding: 17px 0;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: var(--texto-ter-c);
+    cursor: pointer;
+  }
+  #vistaCaptura .boton-guardar-ticket:active { background-color: #33313a; }
+  #vistaCaptura .boton-guardar-ticket:disabled {
+    background-color: var(--papel-linea-c);
+    color: var(--tinta-ter-c);
+    cursor: default;
+  }
+
+  /* ---------- Pantalla vacía ---------- */
+  #vistaCaptura .ticket-vacio {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--tinta-sec-c);
+  }
+
+  /* ---------- La nota de "vence mañana" ---------- */
+  /* Se ve y se va sola. No pide ningún toque, no bloquea nada, y vuelve a
+     salir cada vez que se guarda un gasto ese día. */
+  #notaCaptura {
+    position: absolute;
+    left: calc(env(safe-area-inset-left) + 20px);
+    right: calc(env(safe-area-inset-right) + 20px);
+    bottom: calc(env(safe-area-inset-bottom) + 22px);
+    z-index: 3;
+    box-sizing: border-box;
+    background-color: #1c1a21;
+    border: 1px solid var(--cinta-borde-c);
+    border-left: 3px solid #fde047;
+    border-radius: 4px;
+    padding: 11px 13px;
+    font-size: 13px;
+    color: var(--cinta-texto-c);
+    pointer-events: none;
+    animation: notaEntraYSeVa 4200ms ease forwards;
+  }
+  @keyframes notaEntraYSeVa {
+    0%   { opacity: 0; transform: translateY(10px); }
+    7%   { opacity: 1; transform: translateY(0); }
+    88%  { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(10px); }
   }
 
   /* ============================================================ */
@@ -1230,12 +1504,22 @@
   #vistaAncha .punto-estado.pendiente { background-color: #fde047; }
   #vistaAncha .punto-estado.vencido { background-color: #f87171; }
 
+  /* Ningún nombre se corta con "...": si no cabe en una línea, pasa a la
+     siguiente. Truncar en una app de dinero es peor que ocupar un renglón
+     más — "Suscripción de..." no dice cuál. */
   #vistaAncha .nombre-fila-muro {
     flex: 1 1 auto;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
     color: var(--texto-2a);
+  }
+  /* Segunda línea: a quién corresponde este pago. Mismo tratamiento que los
+     títulos de subcategoría (chico, apagado), para que se lea como apoyo del
+     nombre y no como otro pago. */
+  #vistaAncha .destinatario-fila-muro {
+    display: block;
+    font-size: 0.82em;
+    line-height: 1.2;
+    color: var(--texto-3a);
   }
   #vistaAncha .fila-muro.es-pagado .nombre-fila-muro { color: var(--texto-3a); }
 
@@ -1891,86 +2175,31 @@
   <!-- ============================================================ -->
   <!-- CAPTURA (pantalla angosta)                                     -->
   <!-- ============================================================ -->
+  <!--
+       Captura es una caja registradora: los pasos se imprimen uno tras otro
+       en el mismo papel y, al guardar, el ticket se desprende para dejar
+       salir el siguiente en blanco.
+
+       Aquí casi no hay marcado, y es a propósito: el contenido de cada paso
+       cambia entero de una pantalla a la siguiente, así que lo dibuja
+       renderizarTicket() en el JavaScript. Lo único fijo es el armazón: la
+       cinta de arriba, el carro por donde sale el papel y el hueco de la
+       nota que aparece y se va sola.
+  -->
   <div id="vistaCaptura">
 
-    <!-- Resumen superior: reemplaza visualmente al <h1>Ciclo</h1> de   -->
-    <!-- arriba solo en pantalla angosta (ese h1 sigue tal cual en      -->
-    <!-- pantalla ancha). renderizarResumenSuperior() solo lee datos ya  -->
-    <!-- calculados (calcularDisponibleReal) o cuenta campos que ya      -->
-    <!-- existen (compromiso.pagado) — no agrega ninguna fórmula nueva. -->
-    <div id="resumenSuperiorCaptura" class="resumen-superior"></div>
+    <!-- La cinta: el único número del ciclo que sobrevive en el teléfono.
+         Es calcularDisponibleReal, el mismo que manda en la vista ancha. -->
+    <div id="cintaCaptura"></div>
 
-    <!-- PRÓXIMOS PAGOS -->
-    <!-- Lo primero al abrir el teléfono, y lo más usado: ver qué se debe,
-         tocarlo y pagarlo con el monto real. -->
-    <section id="seccionProximosPagos">
-      <h2>Próximos pagos</h2>
-      <ul class="lista-items" id="listaPendientes"></ul>
-    </section>
+    <!-- El carro: el papel vive aquí dentro, en posición absoluta, para que
+         el ticket que se corta y el que entra puedan cruzarse. -->
+    <div id="carroCaptura">
+      <div id="ticketCaptura"></div>
+    </div>
 
-    <!-- GASTO NUEVO -->
-    <section id="seccionGastoNuevo">
-      <h2>Gasto nuevo</h2>
-
-      <!-- Atajos: lo que se registra a diario no debería costar tres toques.
-           Se arman con lo que más se usa de verdad (ver renderizarAtajosDeGasto),
-           más "Otro" para lo que no encaja en nada. -->
-      <div class="atajos-gasto" id="atajosGasto"></div>
-
-      <button type="button" class="boton-mas-categorias" id="botonMasCategorias">
-        Otra categoría
-      </button>
-
-      <div id="pasoCategoriaGasto" style="display: none;">
-        <p class="pista">Categoría</p>
-        <div class="botones-grandes" id="botonesCategoriaGasto"></div>
-      </div>
-
-      <div id="pasoSubcategoriaGasto" style="display: none;">
-        <p class="pista">Subcategoría</p>
-        <div class="botones-grandes" id="botonesSubcategoriaGasto"></div>
-      </div>
-
-      <div id="pasoDetalleGasto" style="display: none;">
-        <p class="destino-del-gasto" id="destinoDelGasto"></p>
-
-        <label>Monto
-          <input type="number" inputmode="decimal" min="0" step="0.01" id="montoGastoNuevo" class="monto-grande">
-        </label>
-
-        <p class="pista">Fuente</p>
-        <div class="botones-grandes" id="botonesFuenteGasto">
-          <button type="button" class="boton-grande" data-fuente="debito">Débito</button>
-          <button type="button" class="boton-grande" data-fuente="credito">Crédito</button>
-        </div>
-
-        <div id="pasoTarjetaGasto" style="display: none;">
-          <p class="pista">Tarjeta</p>
-          <div class="botones-grandes" id="botonesTarjetaGasto"></div>
-        </div>
-
-        <label>Para quién <span class="opcional">opcional</span>
-          <input type="text" id="destinatarioGastoNuevo" list="destinatariosUsados"
-                 placeholder="Casa de mi abuela, celular de mi mamá...">
-        </label>
-        <datalist id="destinatariosUsados"></datalist>
-
-        <label>Descripción <span class="opcional">opcional</span>
-          <input type="text" id="descripcionGastoNuevo">
-        </label>
-
-        <button type="button" id="botonGuardarGastoNuevo">Guardar gasto</button>
-      </div>
-    </section>
-
-    <!-- HOY -->
-    <section>
-      <h2>Hoy</h2>
-      <ul class="lista-items" id="listaGastosDeHoy"></ul>
-
-      <h2>Avance de la semana</h2>
-      <div id="contenedorAvanceSemanal"></div>
-    </section>
+    <!-- Nota de "vence mañana": sale sola después de guardar y se va sola. -->
+    <div id="notaCaptura" hidden></div>
 
   </div>
 
@@ -2433,13 +2662,6 @@
   // variable se tome en serio al proyectar. Una semana: menos que eso, un solo
   // súper grande distorsiona la proyección de todo el mes.
   const DIAS_MINIMOS_PARA_RITMO_REAL = 7;
-
-  // Cuántos pendientes se muestran siempre completos, en orden de fecha
-  // real (sin importar categoría), antes de colapsar el resto bajo
-  // "Otros". Es un límite de cuántas filas se ven de entrada, no cambia
-  // cuáles cuentan como urgentes — eso lo sigue decidiendo solo
-  // DIAS_PARA_PENDIENTE_URGENTE.
-  const CANTIDAD_PENDIENTES_FIJOS = 3;
 
   // A partir de cuántos días sin exportar un respaldo (JSON) se muestra el
   // aviso en pantalla. localStorage en iOS puede borrarse tras periodos de
@@ -3729,21 +3951,58 @@
       .reduce(function (suma, c) { return suma + Number(c.montoEstimado); }, 0);
   }
 
-  // Lo que queda del presupuesto semanal para los días que faltan del ciclo.
+  // Cuánto del presupuesto variable sigue apartado de aquí al cierre del ciclo.
   //
-  // Se cuentan los días restantes y no el ciclo completo a propósito: el
-  // presupuesto de los días ya transcurridos se materializó (o no) en gastos
-  // reales, que se restan aparte. Descontar el ciclo entero contaría dos veces
-  // lo que ya se gastó.
+  // Se cuenta semana por semana, y a la semana en curso se le descuenta lo que
+  // ya se gastó en ella. Eso es lo que hace que "Libre para gastar" NO se mueva
+  // mientras se gasta dentro de lo presupuestado: la comida de hoy resta como
+  // gasto, pero el apartado de esta semana baja exactamente lo mismo, y los dos
+  // se cancelan. Cuando una categoría se pasa de su presupuesto semanal, su
+  // apartado llega a cero, y de ahí en adelante cada peso de más sí baja el
+  // disponible — que es justo lo que tiene que pasar.
+  //
+  // Antes esto era "tasa diaria × días que faltan", sin mirar lo gastado. El
+  // efecto era desconcertante y por eso se cambió (1 ago 2026): el número solo
+  // podía bajar durante el día y se recuperaba de golpe a medianoche, cuando
+  // caía un día del apartado. Nunca se descontaba de la bolsa semanal, así que
+  // gastar $200 de comida bajaba $200 el disponible aunque esos $200 ya
+  // estuvieran apartados para comer.
+  //
+  // Solo descuenta gastos a débito, porque solo esos los resta el disponible.
+  // Una comida a crédito no sale de la cuenta en este ciclo (sale cuando se
+  // paga la tarjeta, que ya cuenta como compromiso): si consumiera el apartado,
+  // el disponible SUBIRÍA por haber gastado, que sería absurdo.
   function calcularPresupuestoVariablePendiente(ciclo, datos) {
     const rango = calcularRangoDeDiasDelCiclo(ciclo);
     const presupuesto = obtenerPresupuestoSemanalVigente(ciclo, datos);
+    const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo.fechaInicio);
+    const semanasDelCiclo = Math.ceil(rango.diasTotales / 7);
 
     return datos.config.categorias
       .filter(function (categoria) { return categoria.esVariableSemanal; })
-      .reduce(function (suma, categoria) {
+      .reduce(function (total, categoria) {
         const tasaDiaria = (Number(presupuesto[categoria.id]) || 0) / 7;
-        return suma + (tasaDiaria * rango.diasRestantes);
+        let apartadoDeLaCategoria = 0;
+
+        // Las semanas que ya cerraron no apartan nada: lo que se gastó en ellas
+        // ya está restado como gasto, y lo que sobró se fue con la semana.
+        for (let semana = Math.max(semanaDeHoy, 1); semana <= semanasDelCiclo; semana++) {
+          // La última semana de un ciclo casi nunca dura 7 días (un ciclo de 32
+          // días son cuatro semanas y media), así que su presupuesto es
+          // proporcional a los días que de verdad caen dentro del ciclo.
+          const diasDeLaSemana = calcularRangoDeLaSemanaActual(ciclo, semana).diasTotales;
+
+          const gastadoEnLaSemana = datos.gastos
+            .filter(function (g) {
+              return g.categoriaId === categoria.id && g.cicloId === ciclo.id &&
+                g.semana === semana && g.fuente === "debito";
+            })
+            .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+          apartadoDeLaCategoria += Math.max(0, (tasaDiaria * diasDeLaSemana) - gastadoEnLaSemana);
+        }
+
+        return total + apartadoDeLaCategoria;
       }, 0);
   }
 
@@ -3773,10 +4032,16 @@
       .filter(function (g) { return g.cicloId === ciclo.id && g.fuente === "debito"; })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
+    // Aquí manda el presupuesto apartado, no el ritmo real (1 ago 2026). El
+    // ritmo dice "vas más rápido de lo que planeaste", y para eso sirve el
+    // semáforo y la trayectoria; metido en la cifra grande hacía que una comida
+    // de $200 la bajara $457, porque contaba el gasto y además proyectaba ese
+    // ritmo sobre todos los días que faltan. Un número que baja más de lo que
+    // gastaste no se puede leer.
     return calcularIngresosDelCiclo(ciclo, datos)
       - gastosDebitoDelCiclo
       - calcularCompromisosPendientesDelCiclo(ciclo, datos)
-      - calcularGastoVariablePorVenir(ciclo, datos)
+      - calcularPresupuestoVariablePendiente(ciclo, datos)
       - Number(mensualidadesDeTarjetaDelCiclo || 0);
   }
 
@@ -3822,8 +4087,24 @@
       return segunPresupuesto;
     }
 
+    // El ritmo solo puede medirse sobre las categorías que tienen presupuesto
+    // semanal. Antes contaba cualquier gasto sin compromiso detrás, así que una
+    // compra suelta en Servicios o en "Otros" se proyectaba como si fuera a
+    // repetirse todos los días que faltan del ciclo: $200 en Servicios movían
+    // el cierre $457. Un gasto de una sola vez no es un ritmo.
+    //
+    // Ojo: esto es solo la base del ritmo hacia adelante. El gasto que ya se
+    // hizo en categorías no variables sigue contando completo en
+    // calcularProyeccionDeCierre, porque ese dinero sí salió.
+    const idsDeCategoriasVariables = datos.config.categorias
+      .filter(function (categoria) { return categoria.esVariableSemanal; })
+      .map(function (categoria) { return categoria.id; });
+
     const gastoVariableAcumulado = datos.gastos
-      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .filter(function (g) {
+        return g.cicloId === ciclo.id && g.compromisoId === null &&
+          idsDeCategoriasVariables.indexOf(g.categoriaId) !== -1;
+      })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
     const alRitmoReal = (gastoVariableAcumulado / rango.diasTranscurridos) * rango.diasRestantes;
@@ -5178,6 +5459,35 @@
   }
 
   // ============================================================
+  // COLOR POR CATEGORÍA
+  // ============================================================
+  //
+  // Ocho tonos validados (OKLab, separación para daltonismo y contraste
+  // contra fondo oscuro — los ocho pasan) para diferenciar categorías a
+  // simple vista. Orden fijo, nunca se reasignan: la categoría en la
+  // posición N del arreglo de config.categorias siempre usa el tono N. Una
+  // novena categoría no inventa un tono nuevo: cae en el gris neutro de
+  // "sin categoría", el mismo que usan Deudas y Tarjetas, que no pertenecen
+  // a ninguna categoría de presupuesto.
+  //
+  // Vivía dentro de la sección de Simulación, pero desde el rediseño de
+  // Captura la usan las dos vistas, así que se subió aquí. No cambió ningún
+  // valor: son exactamente los mismos ocho tonos de siempre.
+  const PALETA_CATEGORIAS = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
+  const COLOR_CATEGORIA_SIN_ASIGNAR = "#64748b";
+
+  function obtenerColorDeCategoria(categoriaId, datos) {
+    if (!categoriaId) {
+      return COLOR_CATEGORIA_SIN_ASIGNAR;
+    }
+    const indice = datos.config.categorias.findIndex(function (c) { return c.id === categoriaId; });
+    if (indice === -1) {
+      return COLOR_CATEGORIA_SIN_ASIGNAR;
+    }
+    return PALETA_CATEGORIAS[indice % PALETA_CATEGORIAS.length];
+  }
+
+  // ============================================================
   // ANÁLISIS — BALANCE Y PRÓXIMOS PAGOS
   // ============================================================
 
@@ -5563,26 +5873,6 @@
   let compromisosMaterializadosSimulacion = null;
   let indiceCicloEnfocadoSimulacion = 0;
 
-  // Ocho tonos validados (OKLab, separación CVD y contraste contra el fondo
-  // real de esta pestaña #0f172a en modo oscuro — los ocho pasan) para
-  // diferenciar categorías a simple vista. Orden fijo, nunca se reasignan:
-  // la categoría en la posición N del arreglo de config.categorias siempre
-  // usa el tono N. Una novena categoría no inventa un tono nuevo, cae en el
-  // gris neutro de "sin categoría".
-  const PALETA_CATEGORIAS_SIMULACION = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
-  const COLOR_NEUTRO_SIMULACION = "#64748b";
-
-  function obtenerColorDeCategoria(categoriaId, datosSim) {
-    if (!categoriaId) {
-      return COLOR_NEUTRO_SIMULACION;
-    }
-    const indice = datosSim.config.categorias.findIndex(function (c) { return c.id === categoriaId; });
-    if (indice === -1) {
-      return COLOR_NEUTRO_SIMULACION;
-    }
-    return PALETA_CATEGORIAS_SIMULACION[indice % PALETA_CATEGORIAS_SIMULACION.length];
-  }
-
   function obtenerHorizonteDeCiclosSimulacion() {
     const cicloActual = asegurarCicloActual();
     return [cicloActual].concat(generarCiclosSimulados(cicloActual, CANTIDAD_DE_CICLOS_A_PROYECTAR));
@@ -5617,6 +5907,25 @@
       return compromisoOCandidato.subcategoria || null;
     }
     return null;
+  }
+
+  // Tercera hermana de las dos de arriba, con el mismo criterio exacto: a qué
+  // propiedad, o a qué persona, corresponde este pago.
+  //
+  // Existe porque el destinatario de un compromiso que viene de un
+  // recurrente NO vive en el compromiso: vive en el recurrente que lo
+  // generó. Sin esta función, "Agua" y "Agua" se ven idénticos en el muro
+  // aunque sean dos domicilios distintos. No agrega ningún campo al
+  // modelo — solo va a leer el que ya se captura al dar de alta la regla.
+  function resolverDestinatarioDeCompromiso(compromisoOCandidato, datos) {
+    if (compromisoOCandidato.origen === "recurrente") {
+      const recurrente = datos.recurrentes.find(function (r) { return r.id === compromisoOCandidato.origenId; });
+      return (recurrente && recurrente.destinatario) || null;
+    }
+    if (compromisoOCandidato.origen === "unico") {
+      return compromisoOCandidato.destinatario || null;
+    }
+    return null; // "deuda" y "tarjeta" se pagan a la institución, no a un destinatario
   }
 
   // Un compromiso pagado cuenta con su montoReal, no con montoEstimado —
@@ -6169,14 +6478,8 @@
   }
 
   // ============================================================
-  // CAPTURA — RESUMEN SUPERIOR
+  // CAPTURA — NOMBRES DE FECHAS
   // ============================================================
-  //
-  // Tres datos de un vistazo, sin ningún cálculo nuevo: la fecha de hoy
-  // (formato, no cómputo), cuántos de los compromisos de este ciclo ya se
-  // pagaron (cuenta el campo compromiso.pagado que ya existe) y el
-  // disponible real del ciclo (calcularDisponibleReal, el mismo número
-  // que ya es el titular de "Balance del ciclo" en Análisis).
 
   const DIAS_SEMANA_ABREVIADOS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"];
 
@@ -6193,43 +6496,38 @@
   const DIAS_SEMANA_COMPLETOS = ["Domingo", "Lunes", "Martes", "Miércoles",
                                  "Jueves", "Viernes", "Sábado"];
 
-  function renderizarResumenSuperior() {
+  // ============================================================
+  // CAPTURA — LA CINTA
+  // ============================================================
+  //
+  // Lo único del estado del ciclo que sobrevive en el teléfono. No es una
+  // pantalla ni un resumen: es una línea que no estorba el flujo.
+  //
+  // Ningún cálculo nuevo — calcularDisponibleReal es el mismo número que
+  // encabeza la vista ancha.
+
+  function renderizarCintaCaptura() {
     const datos = leerDatos();
     const ciclo = asegurarCicloActual();
-    const contenedor = document.getElementById("resumenSuperiorCaptura");
-
-    const hoy = new Date();
-    const diaSemana = DIAS_SEMANA_ABREVIADOS[hoy.getDay()];
-    const diaNumero = hoy.getDate();
-
-    const compromisosDelCiclo = datos.compromisos.filter(function (c) { return c.cicloId === ciclo.id; });
-    const pagados = compromisosDelCiclo.filter(function (c) { return c.pagado; }).length;
-
     const disponible = calcularDisponibleReal(ciclo, datos);
 
-    contenedor.innerHTML =
-      "<div class=\"chip-calendario\">" +
-        "<span class=\"chip-calendario-dia-semana\">" + diaSemana + "</span>" +
-        "<span class=\"chip-calendario-numero mono\">" + diaNumero + "</span>" +
-      "</div>" +
-      "<div class=\"resumen-pagos\">" +
-        "<p class=\"resumen-numero mono\">" + pagados + "/" + compromisosDelCiclo.length + "</p>" +
-        "<p class=\"resumen-etiqueta\">Pagos realizados</p>" +
-      "</div>" +
-      "<div class=\"resumen-disponible\">" +
-        "<p class=\"resumen-numero mono\">" + formatearMoneda(disponible) + "</p>" +
-        "<p class=\"resumen-etiqueta\">Libre para gastar</p>" +
-      "</div>";
+    document.getElementById("cintaCaptura").innerHTML =
+      "<span class=\"cinta-etiqueta\">Libre para gastar</span>" +
+      "<span class=\"cinta-monto mono" + (disponible < 0 ? " en-numeros-rojos" : "") + "\">" +
+        formatearMoneda(disponible) +
+      "</span>";
   }
 
   // ============================================================
   // CAPTURA — PENDIENTES
   // ============================================================
   //
-  // Un compromiso pendiente es un aviso de que hay que pagar algo. Un toque
-  // sobre la fila abre un formulario corto (monto real, fuente, botón
-  // "marcar como pagado"); al confirmar se crea el gasto que cierra ese
-  // compromiso y no se vuelve a mostrar como pendiente.
+  // Un compromiso pendiente es un aviso de que hay que pagar algo. Al
+  // confirmarlo se crea el gasto que lo cierra, con su monto real, y deja de
+  // aparecer como pendiente. Un solo registro, nunca dos.
+  //
+  // Aquí viven las piezas compartidas: las usan tanto Captura (el teléfono)
+  // como Próximos pagos y el cajón del calendario (la laptop).
 
   // Cuántos días faltan para una fecha. Negativo significa que ya pasó.
   function calcularDiasHastaFecha(fechaTexto) {
@@ -6263,91 +6561,20 @@
       .sort(function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : 1; });
   }
 
-  // Arma el <li> de un solo pendiente — la usan tanto los
-  // CANTIDAD_PENDIENTES_FIJOS de siempre visibles como los que quedan
-  // dentro de "Otros", con el mismo marcado y el mismo comportamiento de
-  // toque para expandir el detalle.
-  function construirFilaPendiente(compromiso) {
-    const diasHasta = calcularDiasHastaFecha(compromiso.fechaProgramada);
-    const esUrgente = diasHasta <= DIAS_PARA_PENDIENTE_URGENTE;
-    const etiquetaPago = compromiso.pagoNde ? " (pago " + compromiso.pagoNde + ")" : "";
+  // Puente para la vista ancha: el cajón del calendario marca sus pagos con
+  // un bloque de campos (".monto-real-pendiente", ".fuente-pendiente") y un
+  // botón. Esta función lee esos campos y delega en la de abajo, que es la
+  // que de verdad escribe. Captura no la usa: allá el monto y la fuente ya
+  // viven en el estado del ticket, no en un formulario.
+  function confirmarPagoDeCompromiso(compromisoId, contenedorDeCampos) {
+    const resultado = registrarPagoDeCompromiso(
+      compromisoId,
+      Number(contenedorDeCampos.querySelector(".monto-real-pendiente").value),
+      contenedorDeCampos.querySelector(".fuente-pendiente").value
+    );
 
-    return "<li class=\"" + (esUrgente ? "pendiente-urgente" : "") + "\" data-compromiso-id=\"" + compromiso.id + "\">" +
-      "<div class=\"fila-pendiente\">" +
-        "<div>" +
-          "<div class=\"nombre-pendiente\">" + escaparHTML(compromiso.nombre) + etiquetaPago + "</div>" +
-          "<span class=\"cuando-vence\">" + formatearCuandoVence(diasHasta) + "</span>" +
-        "</div>" +
-        "<div class=\"monto-pendiente mono\">" + formatearMoneda(compromiso.montoEstimado) + "</div>" +
-      "</div>" +
-      "<div class=\"confirmacion-pendiente\" id=\"confirmacion_" + compromiso.id + "\" style=\"display: none;\">" +
-        "<label>Monto real<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + compromiso.montoEstimado + "\"></label>" +
-        "<label>Fuente<select class=\"fuente-pendiente\">" +
-          "<option value=\"debito\">Débito</option>" +
-          "<option value=\"credito\">Crédito</option>" +
-        "</select></label>" +
-        "<button type=\"button\" class=\"boton-marcar-pagado\">Marcar como pagado</button>" +
-      "</div>" +
-    "</li>";
-  }
-
-  function renderizarPendientes() {
-    const datos = leerDatos();
-    const cicloActual = asegurarCicloActual();
-    const lista = document.getElementById("listaPendientes");
-
-    const pendientes = obtenerPendientesDelCiclo(datos, cicloActual.id);
-
-    if (pendientes.length === 0) {
-      lista.innerHTML = "<li class=\"vacio\">No hay pendientes en este ciclo.</li>";
-      return;
-    }
-
-    // obtenerPendientesDelCiclo ya viene ordenado por fecha real, sin
-    // agrupar por categoría — los primeros CANTIDAD_PENDIENTES_FIJOS son,
-    // literalmente, los que vencen antes, sea casa, tarjeta o suscripción.
-    // El resto se colapsa bajo "Otros" para no abrumar con 10-15 filas de
-    // golpe, sin esconder cuántos son ni cuánto suman.
-    const fijos = pendientes.slice(0, CANTIDAD_PENDIENTES_FIJOS);
-    const resto = pendientes.slice(CANTIDAD_PENDIENTES_FIJOS);
-
-    let html = fijos.map(construirFilaPendiente).join("");
-
-    if (resto.length > 0) {
-      const sumaResto = resto.reduce(function (suma, c) { return suma + c.montoEstimado; }, 0);
-      html += "<li class=\"resto-pendientes\">" +
-        "<button type=\"button\" class=\"boton-resto-pendientes\" id=\"botonRestoPendientes\" aria-expanded=\"false\">" +
-          "<span>Otros (" + resto.length + ")</span>" +
-          "<span class=\"mono\">" + formatearMoneda(sumaResto) + "</span>" +
-        "</button>" +
-        "<ul class=\"lista-resto-pendientes\" id=\"listaRestoPendientes\">" +
-          resto.map(construirFilaPendiente).join("") +
-        "</ul>" +
-      "</li>";
-    }
-
-    lista.innerHTML = html;
-
-    lista.querySelectorAll("li[data-compromiso-id]").forEach(function (filaLi) {
-      const compromisoId = filaLi.getAttribute("data-compromiso-id");
-
-      filaLi.querySelector(".fila-pendiente").addEventListener("click", function () {
-        const bloqueConfirmacion = document.getElementById("confirmacion_" + compromisoId);
-        bloqueConfirmacion.style.display = bloqueConfirmacion.style.display === "none" ? "block" : "none";
-      });
-
-      filaLi.querySelector(".boton-marcar-pagado").addEventListener("click", function () {
-        confirmarPagoDeCompromiso(compromisoId, filaLi);
-      });
-    });
-
-    const botonResto = document.getElementById("botonRestoPendientes");
-    if (botonResto) {
-      botonResto.addEventListener("click", function () {
-        const listaResto = document.getElementById("listaRestoPendientes");
-        const abierta = listaResto.classList.toggle("abierta");
-        botonResto.setAttribute("aria-expanded", abierta);
-      });
+    if (resultado.aviso) {
+      mostrarMensaje(resultado.aviso);
     }
   }
 
@@ -6357,22 +6584,25 @@
   // de una deuda o una tarjeta, no hay categoría de presupuesto semanal
   // involucrada — son gasto fijo, no variable — así que se deja sin
   // categoría y se usa el nombre del compromiso como descripción.
-  function confirmarPagoDeCompromiso(compromisoId, filaLi) {
+  //
+  // Devuelve si guardó y, si aplica, el aviso que hay que darle al usuario.
+  // No lo muestra ella: el teléfono y la laptop lo enseñan en sitios
+  // distintos, y esta función no tiene por qué saber desde dónde la llamaron.
+  function registrarPagoDeCompromiso(compromisoId, montoReal, fuente) {
     const datos = leerDatos();
     const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoId; });
-    const montoReal = Number(filaLi.querySelector(".monto-real-pendiente").value);
-    const fuente = filaLi.querySelector(".fuente-pendiente").value;
 
-    if (!montoReal || montoReal <= 0) {
-      return;
+    if (!compromiso || !montoReal || montoReal <= 0) {
+      return { guardado: false, aviso: "" };
     }
 
     // Alerta obligatoria de SPEC.md: si el pago de una tarjeta es menor al
     // calculado (compras a crédito del periodo de corte), avisar que el
     // banco va a generar intereses sobre la diferencia. Solo informa, no
     // bloquea el pago — el usuario puede decidir pagar menos a propósito.
+    let aviso = "";
     if (compromiso.origen === "tarjeta" && montoReal < compromiso.montoEstimado) {
-      mostrarMensaje("Pagaste menos de lo calculado (" + formatearMoneda(compromiso.montoEstimado) + ") — el banco va a generar intereses sobre la diferencia.");
+      aviso = "Pagaste menos de lo calculado (" + formatearMoneda(compromiso.montoEstimado) + ") — el banco va a generar intereses sobre la diferencia.";
     }
 
     let categoriaId = null;
@@ -6431,21 +6661,13 @@
 
     guardarDatos(datos);
     renderizarTodo();
+
+    return { guardado: true, aviso: aviso };
   }
 
   // ============================================================
-  // CAPTURA — GASTO NUEVO
+  // CAPTURA — SEMANA DEL CICLO
   // ============================================================
-  //
-  // Flujo de botones grandes (categoría, subcategoría, fuente y, si hace
-  // falta, tarjeta) para no depender del teclado alfabético. La selección se
-  // guarda en estas variables mientras el usuario arma el gasto, y se
-  // reinician al guardar.
-
-  let categoriaSeleccionadaGasto = null;
-  let subcategoriaSeleccionadaGasto = null;
-  let fuenteSeleccionadaGasto = null;
-  let tarjetaSeleccionadaGasto = null;
 
   // El día del gasto siempre es hoy: en la parte de "semana" se calcula
   // igual que en SPEC.md, contando de 7 en 7 días desde el inicio del ciclo.
@@ -6458,18 +6680,8 @@
   }
 
   // ============================================================
-  // CAPTURA — ATAJOS DE GASTO
+  // CAPTURA — LA CATEGORÍA "OTROS"
   // ============================================================
-  //
-  // Lo que se registra a diario no debería costar tres toques. Los atajos
-  // llevan directo al monto con la categoría y subcategoría ya puestas.
-  //
-  // Se arman con lo que más se usa de verdad, contando los gastos ya
-  // registrados. Mientras no haya historial suficiente se completan con las
-  // subcategorías de las categorías variables (comida, transporte,
-  // entretenimiento), que son las de uso diario por definición.
-
-  const CANTIDAD_DE_ATAJOS = 4;
 
   // Nombre visible de la categoría "Otros": la que recibe lo que no encaja en
   // ninguna otra. Se crea sola la primera vez que se usa (decisión del
@@ -6477,11 +6689,18 @@
   const NOMBRE_CATEGORIA_OTROS = "Otros";
   const SUBCATEGORIA_OTROS = "Sin clasificar";
 
+  // Reconocer "Otros" tiene que ser tolerante, y en un solo lugar. Esta
+  // categoría se puede escribir a mano desde Ajustes: si se comparara el
+  // nombre exacto, capturar "otros" en minúscula haría que la app no la
+  // reconociera, ofreciera crear una segunda, y los gastos acabaran repartidos
+  // entre dos categorías que se llaman igual.
+  function esLaCategoriaOtros(categoria) {
+    return String(categoria.nombre).trim().toLowerCase() === NOMBRE_CATEGORIA_OTROS.toLowerCase();
+  }
+
   function asegurarCategoriaOtros() {
     const datos = leerDatos();
-    let categoria = datos.config.categorias.find(function (c) {
-      return c.nombre === NOMBRE_CATEGORIA_OTROS;
-    });
+    let categoria = datos.config.categorias.find(esLaCategoriaOtros);
 
     if (!categoria) {
       categoria = {
@@ -6500,206 +6719,294 @@
     return categoria;
   }
 
-  // Los pares categoría+subcategoría más usados, por número de gastos.
-  function calcularAtajosDeGasto(datos) {
-    const conteo = {};
+  // ============================================================
+  // CAPTURA — QUÉ HAY QUE PAGAR
+  // ============================================================
+  //
+  // Consultas de solo lectura sobre los compromisos que ya existen. Ninguna
+  // crea nada ni cambia nada: son las preguntas que el ticket necesita
+  // hacerse para saber qué ofrecer en cada paso.
 
-    datos.gastos.forEach(function (gasto) {
-      if (!gasto.categoriaId || !gasto.subcategoria) {
-        return;
-      }
-      const llave = gasto.categoriaId + "|" + gasto.subcategoria;
-      conteo[llave] = (conteo[llave] || 0) + 1;
-    });
+  // Lo que ya venció y lo que vence hoy, junto y ordenado de lo más viejo a
+  // lo más reciente. Se buscan en TODOS los ciclos, no solo en el actual:
+  // un recibo del ciclo pasado que nunca se marcó pagado sigue debiéndose, y
+  // si solo mirara el ciclo en curso desaparecería del teléfono para siempre.
+  // Un compromiso de monto cero no es un pago pendiente: es una tarjeta sin
+  // compras en el periodo. Además sería imposible de quitar de aquí, porque
+  // no se puede registrar un pago de cero — se quedaría atorado para siempre
+  // empujando fuera de la vista a los pagos que sí se deben.
+  function hayAlgoQuePagar(compromiso) {
+    return Number(compromiso.montoEstimado) > 0;
+  }
 
-    const usados = Object.keys(conteo)
-      .sort(function (a, b) { return conteo[b] - conteo[a]; })
-      .map(function (llave) {
-        return { categoriaId: llave.split("|")[0], subcategoria: llave.split("|")[1] };
-      });
+  function obtenerVencimientosAlFrente(datos) {
+    const hoyTexto = formatearFechaISO(new Date());
+    return datos.compromisos
+      .filter(function (c) { return !c.pagado && hayAlgoQuePagar(c) && c.fechaProgramada <= hoyTexto; })
+      .sort(function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : 1; });
+  }
 
-    // Se rellena con las subcategorías de las categorías variables, que son
-    // las de gasto diario, sin repetir las que ya entraron por uso.
-    const candidatas = usados.slice();
-    datos.config.categorias
-      .filter(function (categoria) { return categoria.esVariableSemanal; })
-      .forEach(function (categoria) {
-        (categoria.subcategorias || []).forEach(function (subcategoria) {
-          const yaEsta = candidatas.some(function (a) {
-            return a.categoriaId === categoria.id && a.subcategoria === subcategoria;
-          });
-          if (!yaEsta) {
-            candidatas.push({ categoriaId: categoria.id, subcategoria: subcategoria });
-          }
-        });
-      });
-
-    return candidatas.slice(0, CANTIDAD_DE_ATAJOS).filter(function (atajo) {
-      // Una categoría pudo borrarse después de haberse usado.
-      return datos.config.categorias.some(function (c) { return c.id === atajo.categoriaId; });
+  // Lo que vence mañana. No entra a la primera pantalla: sale como nota
+  // después de guardar, se ve y se va sola.
+  function obtenerVencimientosDeManana(datos) {
+    const mananaTexto = formatearFechaISO(sumarDias(new Date(), 1));
+    return datos.compromisos.filter(function (c) {
+      return !c.pagado && c.fechaProgramada === mananaTexto;
     });
   }
 
-  function renderizarAtajosDeGasto() {
+  // Los compromisos sin pagar de una categoría en el ciclo. La categoría de
+  // un compromiso se resuelve con la función que ya existe: para uno que
+  // viene de un recurrente, vive en el recurrente, no en el compromiso.
+  function obtenerPendientesDeCategoria(categoriaId, cicloId, datos) {
+    return datos.compromisos.filter(function (c) {
+      return c.cicloId === cicloId && !c.pagado &&
+        resolverCategoriaDeCompromiso(c, datos) === categoriaId;
+    });
+  }
+
+  // Los de una subcategoría concreta. El emparejamiento es por subcategoría y
+  // no por el nombre del compromiso a propósito: el botón que se tocó ES una
+  // subcategoría, y el nombre es texto libre que puede no coincidir ("Recibo
+  // del agua" en la subcategoría "Agua").
+  function obtenerPendientesDeSubcategoria(categoriaId, subcategoria, cicloId, datos) {
+    return obtenerPendientesDeCategoria(categoriaId, cicloId, datos).filter(function (c) {
+      return resolverSubcategoriaDeCompromiso(c, datos) === subcategoria;
+    });
+  }
+
+  // El compromiso sin pagar que le toca a una tarjeta o a una deuda en este
+  // ciclo. Es el mismo que ya generó el motor y cuyo monto mantiene al día
+  // actualizarMontosDeCompromisosDeTarjeta llamando a calcularPagoTarjeta —
+  // por eso pagar por aquí no puede contar doble: cierra ese, no crea otro.
+  function obtenerPendienteDeOrigen(origen, origenId, cicloId, datos) {
+    return datos.compromisos.find(function (c) {
+      return c.cicloId === cicloId && !c.pagado && hayAlgoQuePagar(c) &&
+        c.origen === origen && c.origenId === origenId;
+    }) || null;
+  }
+
+  // Nombre completo de un pago, con su destinatario si lo tiene: dos recibos
+  // que se llaman "Agua" son cosas distintas si son de domicilios distintos.
+  function etiquetaCompletaDeCompromiso(compromiso, datos) {
+    const destinatario = resolverDestinatarioDeCompromiso(compromiso, datos);
+    return escaparHTML(compromiso.nombre) + (destinatario ? " · " + escaparHTML(destinatario) : "");
+  }
+
+  // ============================================================
+  // CAPTURA — LOS DOS RENGLONES INFORMATIVOS
+  // ============================================================
+  //
+  // Dos cálculos nuevos, y los dos leen datos que ya existen: presupuesto
+  // semanal, gastos y compromisos. Ninguno agrega un campo al modelo ni
+  // toca una fórmula del motor.
+  //
+  // Los dos son informativos. Ninguno bloquea, ninguno es un tope, ninguno
+  // es una barra de progreso: dicen cómo va la cosa y ya.
+
+  // Cuánto queda del presupuesto semanal de una categoría variable, contando
+  // lo que se está tecleando ahora mismo. Puede quedar negativo, y entonces
+  // dice por cuánto se pasó.
+  //
+  // Devuelve null cuando esa categoría no tiene presupuesto capturado: sin un
+  // total contra el cual medir, no hay nada honesto que decir.
+  function calcularRestanteSemanalDeCategoria(categoria, ciclo, datos, montoEnCurso) {
+    const presupuesto = Number(obtenerPresupuestoSemanalVigente(ciclo, datos)[categoria.id] || 0);
+    if (presupuesto <= 0) {
+      return null;
+    }
+
+    // Lo ya gastado sale de la misma función que dibuja el avance semanal en
+    // la laptop, con su mismo filtro exacto (categoría, ciclo y número de
+    // semana): así el teléfono y la laptop nunca dicen números distintos.
+    const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo.fechaInicio);
+    const yaGastado = calcularProyeccionDeCierreSemanal(categoria, ciclo, datos, semanaDeHoy).gastadoEnLaSemana;
+
+    return presupuesto - yaGastado - montoEnCurso;
+  }
+
+  // Cuántos pagos de esta categoría siguen pendientes en el ciclo y cuánto
+  // suman, SIN contar el que se está pagando en este momento. Por eso este
+  // renglón no se mueve al editar el monto: el monto que cambia es
+  // justamente el del pago que queda fuera de la cuenta.
+  function calcularFaltantesDeCategoriaEnElCiclo(categoriaId, cicloId, datos, idQueSeEstaPagando) {
+    const faltantes = obtenerPendientesDeCategoria(categoriaId, cicloId, datos)
+      .filter(function (c) { return c.id !== idQueSeEstaPagando; });
+
+    return {
+      cuantos: faltantes.length,
+      suma: faltantes.reduce(function (total, c) { return total + Number(c.montoEstimado); }, 0)
+    };
+  }
+
+  // Arma el renglón que va arriba del monto. Cuál de los dos aparece lo
+  // decide la categoría:
+  //
+  // - Variable y pagando con débito -> lo que queda de la semana. Con
+  //   crédito no aparece: el presupuesto semanal mide lo que sale de la
+  //   cuenta esta semana, y una compra a crédito sale en otro ciclo.
+  // - No variable y cerrando un compromiso -> cuántos faltan de esa
+  //   categoría este ciclo.
+  // - Cualquier otro caso (tarjetas, deudas, categorías sin presupuesto):
+  //   ningún renglón. Más vale nada que un número que no significa nada.
+  function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEstaPagando) {
     const datos = leerDatos();
-    const contenedor = document.getElementById("atajosGasto");
-    const atajos = calcularAtajosDeGasto(datos);
-
-    const nombreDeCategoria = {};
-    datos.config.categorias.forEach(function (c) { nombreDeCategoria[c.id] = c.nombre; });
-
-    contenedor.innerHTML = atajos.map(function (atajo) {
-      return "<button type=\"button\" class=\"atajo-gasto\"" +
-        " data-atajo-categoria=\"" + atajo.categoriaId + "\"" +
-        " data-atajo-subcategoria=\"" + escaparHTML(atajo.subcategoria) + "\">" +
-        "<span class=\"atajo-titulo\">" + escaparHTML(atajo.subcategoria) + "</span>" +
-        "<span class=\"atajo-categoria\">" + escaparHTML(nombreDeCategoria[atajo.categoriaId] || "") + "</span>" +
-      "</button>";
-    }).join("") +
-    "<button type=\"button\" class=\"atajo-gasto atajo-otro\" id=\"atajoOtro\">" +
-      "<span class=\"atajo-titulo\">Otro</span>" +
-      "<span class=\"atajo-categoria\">sin clasificar</span>" +
-    "</button>";
-
-    contenedor.querySelectorAll("[data-atajo-categoria]").forEach(function (boton) {
-      boton.addEventListener("click", function () {
-        usarAtajoDeGasto(
-          boton.getAttribute("data-atajo-categoria"),
-          boton.getAttribute("data-atajo-subcategoria")
-        );
-      });
-    });
-
-    document.getElementById("atajoOtro").addEventListener("click", function () {
-      const categoria = asegurarCategoriaOtros();
-      renderizarBotonesCategoriaGasto();
-      usarAtajoDeGasto(categoria.id, SUBCATEGORIA_OTROS);
-    });
-  }
-
-  // Salta directo al monto: la categoría y la subcategoría ya quedaron
-  // elegidas por el atajo.
-  function usarAtajoDeGasto(categoriaId, subcategoria) {
-    seleccionarCategoriaGasto(categoriaId);
-    seleccionarSubcategoriaGasto(subcategoria);
-    document.getElementById("montoGastoNuevo").focus();
-  }
-
-  function renderizarBotonesCategoriaGasto() {
-    const datos = leerDatos();
-    const contenedor = document.getElementById("botonesCategoriaGasto");
-
-    contenedor.innerHTML = datos.config.categorias.map(function (categoria) {
-      return "<button type=\"button\" class=\"boton-grande\" data-categoria-id=\"" + categoria.id + "\">" + escaparHTML(categoria.nombre) + "</button>";
-    }).join("");
-
-    contenedor.querySelectorAll("button").forEach(function (boton) {
-      boton.addEventListener("click", function () {
-        seleccionarCategoriaGasto(this.getAttribute("data-categoria-id"));
-      });
-    });
-  }
-
-  function seleccionarCategoriaGasto(categoriaId) {
-    categoriaSeleccionadaGasto = categoriaId;
-    subcategoriaSeleccionadaGasto = null;
-
-    document.querySelectorAll("#botonesCategoriaGasto button").forEach(function (boton) {
-      boton.classList.toggle("seleccionado", boton.getAttribute("data-categoria-id") === categoriaId);
-    });
-
-    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
     const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaId; });
-    const contenedorSubcategoria = document.getElementById("botonesSubcategoriaGasto");
 
-    contenedorSubcategoria.innerHTML = categoria.subcategorias.map(function (sub) {
-      return "<button type=\"button\" class=\"boton-grande\" data-subcategoria=\"" + escaparHTML(sub) + "\">" + escaparHTML(sub) + "</button>";
-    }).join("");
+    if (!categoria) {
+      return "<p class=\"renglon-informativo\"></p>";
+    }
 
-    contenedorSubcategoria.querySelectorAll("button").forEach(function (boton) {
-      boton.addEventListener("click", function () {
-        seleccionarSubcategoriaGasto(this.getAttribute("data-subcategoria"));
-      });
-    });
+    if (categoria.esVariableSemanal) {
+      if (fuente !== "debito") {
+        return "<p class=\"renglon-informativo\"></p>";
+      }
+      const restante = calcularRestanteSemanalDeCategoria(categoria, ciclo, datos, montoEnCurso);
+      if (restante === null) {
+        return "<p class=\"renglon-informativo\"></p>";
+      }
+      if (restante < 0) {
+        return "<p class=\"renglon-informativo excedido\">Te pasaste por " +
+          formatearMoneda(Math.abs(restante)) + " en " + escaparHTML(categoria.nombre) + " esta semana</p>";
+      }
+      return "<p class=\"renglon-informativo\">Te quedan " + formatearMoneda(restante) +
+        " en " + escaparHTML(categoria.nombre) + " esta semana</p>";
+    }
 
-    document.getElementById("pasoSubcategoriaGasto").style.display = "block";
-    document.getElementById("pasoDetalleGasto").style.display = "none";
+    if (!idQueSeEstaPagando) {
+      return "<p class=\"renglon-informativo\"></p>";
+    }
+
+    const faltantes = calcularFaltantesDeCategoriaEnElCiclo(categoriaId, ciclo.id, datos, idQueSeEstaPagando);
+    if (faltantes.cuantos === 0) {
+      return "<p class=\"renglon-informativo\">Con este se cierra " + escaparHTML(categoria.nombre) + " este ciclo</p>";
+    }
+    return "<p class=\"renglon-informativo\">Faltan " + faltantes.cuantos + " de " +
+      escaparHTML(categoria.nombre) + " este ciclo · " + formatearMoneda(faltantes.suma) + " por pagar</p>";
   }
 
-  function seleccionarSubcategoriaGasto(subcategoria) {
-    subcategoriaSeleccionadaGasto = subcategoria;
+  // ============================================================
+  // CAPTURA — ESTADO DEL TICKET
+  // ============================================================
+  //
+  // Captura funciona como una caja registradora: un paso por pantalla, el
+  // papel imprimiéndose hacia abajo, y al guardar el ticket se desprende para
+  // dejar salir el siguiente en blanco. Nunca hay dos pasos abiertos a la vez
+  // y nunca hay scroll.
+  //
+  // Los pasos son:
+  //
+  //   "opciones"     Las categorías, más Tarjetas y Deudas, más lo que vence
+  //                  hoy o ya venció. Es lo primero que se ve al abrir.
+  //   "subcategoria" Las subcategorías de la categoría elegida (o la lista de
+  //                  tarjetas, o la de deudas).
+  //   "monto"        Teclado propio, débito/crédito y Guardar. Es el paso de
+  //                  un gasto libre, uno que nadie esperaba.
+  //   "pago"         La misma pantalla, pero cerrando un compromiso que ya
+  //                  existía. Se llega desde un vencimiento, desde una
+  //                  subcategoría no variable, o desde una tarjeta o deuda.
+  //
+  // Qué categorías son de gasto libre y cuáles van a buscar un pendiente lo
+  // decide esVariableSemanal, que ya está en el modelo: las variables
+  // (comida, transporte) son gasto libre; las no variables (servicios,
+  // suscripciones) tienen un compromiso detrás, y lo que se hace con ellas
+  // no es inventar un gasto, es pagar el que ya existe.
 
-    document.querySelectorAll("#botonesSubcategoriaGasto button").forEach(function (boton) {
-      boton.classList.toggle("seleccionado", boton.getAttribute("data-subcategoria") === subcategoria);
-    });
+  const PASO_OPCIONES = "opciones";
+  const PASO_SUBCATEGORIA = "subcategoria";
+  const PASO_MONTO = "monto";
+  const PASO_PAGO = "pago";
 
-    // Con los atajos se puede llegar aquí sin haber visto los botones de
-    // categoría, así que el detalle dice en voz alta a dónde va el gasto.
-    const datos = leerDatos();
-    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaSeleccionadaGasto; });
-    document.getElementById("destinoDelGasto").textContent =
-      (categoria ? categoria.nombre : "") + " · " + subcategoria;
+  // Cuántos vencimientos se ven completos antes de resumir el resto en una
+  // línea. Los primeros son los más viejos: lo vencido pesa más que lo que
+  // apenas vence hoy.
+  const VENCIMIENTOS_VISIBLES_AL_FRENTE = 4;
 
-    document.getElementById("pasoDetalleGasto").style.display = "block";
+  // A partir de cuántas opciones la rejilla pasa de dos a tres columnas. Con
+  // más de doce en dos columnas, los botones quedan demasiado bajos para el
+  // pulgar.
+  const OPCIONES_PARA_TRES_COLUMNAS = 12;
+
+  let pasoDelTicket = PASO_OPCIONES;
+  let categoriaSeleccionadaGasto = null;
+  let subcategoriaSeleccionadaGasto = null;
+  let fuenteSeleccionadaGasto = "debito";
+  let tarjetaSeleccionadaGasto = null;
+  // El monto se guarda como el texto que se ha tecleado, no como número: es
+  // lo que permite mostrar "12." mientras se escribe "12.50".
+  let montoEscritoEnElTicket = "";
+  let descripcionEscritaEnElTicket = "";
+  let destinatarioElegidoEnElTicket = "";
+  // Tarjetas y Deudas no son categorías, así que cuando se elige una de esas
+  // dos el paso siguiente muestra tarjetas o deudas en vez de subcategorías.
+  let bloqueEspecialElegido = null;
+  let compromisoQueSeEstaPagando = null;
+  let pasoAlQueRegresaElPago = PASO_OPCIONES;
+  // Qué campo de texto está abierto ocupando el lugar del teclado numérico.
+  let campoDeTextoAbierto = null;
+  let elTicketDebeEntrarImprimiendose = false;
+
+  // "Otros" no es variable, pero sí es gasto libre: es la salida para lo que no
+  // encaja en ninguna categoría y nunca va a tener un compromiso detrás. Ahí
+  // viven las compras que nadie programa.
+  function esCategoriaDeGastoLibre(categoria) {
+    return categoria.esVariableSemanal || esLaCategoriaOtros(categoria);
   }
 
-  // Los destinatarios ya usados se ofrecen como sugerencia: escribir "Casa de
-  // mi abuela" una vez y que la segunda salga sola es la diferencia entre que
-  // el campo se use y que se ignore.
-  function renderizarDestinatariosUsados() {
-    const datos = leerDatos();
+  function montoDelTicketComoNumero() {
+    return Number(montoEscritoEnElTicket) || 0;
+  }
+
+  // Deja el ticket como recién salido de la máquina.
+  function reiniciarElTicket() {
+    pasoDelTicket = PASO_OPCIONES;
+    categoriaSeleccionadaGasto = null;
+    subcategoriaSeleccionadaGasto = null;
+    fuenteSeleccionadaGasto = "debito";
+    tarjetaSeleccionadaGasto = null;
+    montoEscritoEnElTicket = "";
+    descripcionEscritaEnElTicket = "";
+    destinatarioElegidoEnElTicket = "";
+    bloqueEspecialElegido = null;
+    compromisoQueSeEstaPagando = null;
+    pasoAlQueRegresaElPago = PASO_OPCIONES;
+    campoDeTextoAbierto = null;
+  }
+
+  // La tarjeta que viene marcada de entrada: la de mayor línea.
+  //
+  // Se eligió por lineaTotal, que es un dato ya capturado por tarjeta, y no
+  // por "línea disponible": la app no lleva el saldo ocupado real de una
+  // tarjeta sobre datos reales (el que existe vive solo dentro de la
+  // simulación), así que calcularlo sería inventar un tercer cálculo.
+  function tarjetaPreseleccionada(datos) {
+    if (datos.config.tarjetas.length === 0) {
+      return null;
+    }
+    const ordenadas = datos.config.tarjetas.slice().sort(function (a, b) {
+      return Number(b.lineaTotal) - Number(a.lineaTotal);
+    });
+    return ordenadas[0].id;
+  }
+
+  // Los destinatarios que ya se han usado en esta categoría. Se ofrecen como
+  // lista y no como texto libre porque en el teléfono volver a teclear un
+  // nombre largo es la diferencia entre que el campo se use y que se ignore.
+  function obtenerDestinatariosDeLaCategoria(datos, categoriaId) {
     const usados = [];
 
-    datos.gastos.concat(datos.recurrentes, datos.compromisos).forEach(function (registro) {
-      const destinatario = registro.destinatario;
+    function anotar(destinatario) {
       if (destinatario && usados.indexOf(destinatario) === -1) {
         usados.push(destinatario);
       }
-    });
-
-    document.getElementById("destinatariosUsados").innerHTML = usados.map(function (destinatario) {
-      return "<option value=\"" + escaparHTML(destinatario) + "\"></option>";
-    }).join("");
-  }
-
-  // Si solo hay una tarjeta configurada, se asigna sola (no le cuesta un
-  // toque al usuario). Si hay varias, hay que elegir cuál.
-  function seleccionarFuenteGasto(fuente) {
-    fuenteSeleccionadaGasto = fuente;
-    tarjetaSeleccionadaGasto = null;
-
-    document.querySelectorAll("#botonesFuenteGasto button").forEach(function (boton) {
-      boton.classList.toggle("seleccionado", boton.getAttribute("data-fuente") === fuente);
-    });
-
-    const datos = leerDatos();
-    const contenedorTarjeta = document.getElementById("pasoTarjetaGasto");
-
-    if (fuente !== "credito" || datos.config.tarjetas.length === 0) {
-      contenedorTarjeta.style.display = "none";
-      return;
     }
 
-    if (datos.config.tarjetas.length === 1) {
-      tarjetaSeleccionadaGasto = datos.config.tarjetas[0].id;
-      contenedorTarjeta.style.display = "none";
-      return;
-    }
+    datos.gastos.forEach(function (g) { if (g.categoriaId === categoriaId) { anotar(g.destinatario); } });
+    datos.recurrentes.forEach(function (r) { if (r.categoriaId === categoriaId) { anotar(r.destinatario); } });
+    datos.compromisos.forEach(function (c) { if (c.categoriaId === categoriaId) { anotar(c.destinatario); } });
 
-    contenedorTarjeta.style.display = "block";
-    const contenedorBotones = document.getElementById("botonesTarjetaGasto");
-    contenedorBotones.innerHTML = datos.config.tarjetas.map(function (tarjeta) {
-      return "<button type=\"button\" class=\"boton-grande\" data-tarjeta-id=\"" + tarjeta.id + "\">" + escaparHTML(tarjeta.nombre) + "</button>";
-    }).join("");
-
-    contenedorBotones.querySelectorAll("button").forEach(function (boton) {
-      boton.addEventListener("click", function () {
-        tarjetaSeleccionadaGasto = boton.getAttribute("data-tarjeta-id");
-        contenedorBotones.querySelectorAll("button").forEach(function (b) {
-          b.classList.toggle("seleccionado", b === boton);
-        });
-      });
-    });
+    return usados;
   }
 
   // Revisa si ya existe, en los últimos MINUTOS_PARA_ALERTA_DUPLICADO
@@ -6723,10 +7030,13 @@
     });
   }
 
-  function manejarGuardarGastoNuevo() {
-    const monto = Number(document.getElementById("montoGastoNuevo").value);
+  // Guarda un gasto libre: el de las categorías variables y el de "Otros".
+  // No cierra ningún compromiso — nace del flujo de tres pantallas, no de
+  // algo que ya se debía — así que su compromisoId va en null.
+  function guardarGastoDelTicket() {
+    const monto = montoDelTicketComoNumero();
 
-    if (!categoriaSeleccionadaGasto || !subcategoriaSeleccionadaGasto || !fuenteSeleccionadaGasto || !monto || monto <= 0) {
+    if (!categoriaSeleccionadaGasto || !subcategoriaSeleccionadaGasto || monto <= 0) {
       return;
     }
 
@@ -6757,136 +7067,780 @@
       subcategoria: subcategoriaSeleccionadaGasto,
       // Se captura desde el propio gasto: sin esto, el desglose por
       // destinatario que pide SPEC.md nunca tendría datos de gastos libres.
-      destinatario: document.getElementById("destinatarioGastoNuevo").value.trim() || null,
+      destinatario: destinatarioElegidoEnElTicket || null,
       fuente: fuenteSeleccionadaGasto,
       tarjetaId: tarjetaSeleccionadaGasto,
       compromisoId: null,
-      descripcion: document.getElementById("descripcionGastoNuevo").value.trim()
+      descripcion: descripcionEscritaEnElTicket.trim()
     });
 
     guardarDatos(datos);
-    reiniciarFormularioDeGastoNuevo();
-    renderizarTodo();
+    cerrarElTicketYEmpezarOtro();
   }
 
-  function reiniciarFormularioDeGastoNuevo() {
-    categoriaSeleccionadaGasto = null;
-    subcategoriaSeleccionadaGasto = null;
-    fuenteSeleccionadaGasto = null;
-    tarjetaSeleccionadaGasto = null;
+  // Cierra un compromiso que ya existía: un vencimiento, un recibo que se
+  // buscó por su subcategoría, o el corte de una tarjeta. Delega en la misma
+  // función que usa la laptop, para que un pago se registre igual venga de
+  // donde venga.
+  function guardarPagoDelTicket() {
+    const monto = montoDelTicketComoNumero();
 
-    document.getElementById("montoGastoNuevo").value = "";
-    document.getElementById("descripcionGastoNuevo").value = "";
-    document.getElementById("destinatarioGastoNuevo").value = "";
-    document.getElementById("pasoCategoriaGasto").style.display = "none";
-    document.getElementById("pasoSubcategoriaGasto").style.display = "none";
-    document.getElementById("pasoDetalleGasto").style.display = "none";
-    document.getElementById("pasoTarjetaGasto").style.display = "none";
+    if (!compromisoQueSeEstaPagando || monto <= 0) {
+      return;
+    }
 
-    document.querySelectorAll("#botonesCategoriaGasto button, #botonesFuenteGasto button").forEach(function (boton) {
-      boton.classList.remove("seleccionado");
-    });
-    document.querySelectorAll("#atajosGasto .atajo-gasto").forEach(function (boton) {
-      boton.classList.remove("seleccionado");
-    });
+    const resultado = registrarPagoDeCompromiso(compromisoQueSeEstaPagando, monto, fuenteSeleccionadaGasto);
+
+    if (!resultado.guardado) {
+      return;
+    }
+
+    // En el teléfono no existe el bloque de mensajes de la laptop, así que
+    // un aviso que importa (pagar menos del corte genera intereses) tiene
+    // que interrumpir: es la última oportunidad de enterarse.
+    if (resultado.aviso) {
+      alert(resultado.aviso);
+    }
+
+    cerrarElTicketYEmpezarOtro();
+  }
+
+  // El gesto que cierra cualquier guardado: el ticket se desprende hacia
+  // abajo, sube uno en blanco por la pantalla 1, y si algo vence mañana sale
+  // la nota. Se repite cada vez que se guarda, aunque sea la tercera del día.
+  function cerrarElTicketYEmpezarOtro() {
+    desprenderElTicket();
+    reiniciarElTicket();
+    renderizarTodo();
+    mostrarNotaDeManana();
   }
 
   // ============================================================
-  // CAPTURA — HOY Y AVANCE SEMANAL
+  // CAPTURA — DIBUJADO DEL TICKET
   // ============================================================
   //
-  // Responde "¿ya lo registré?" con algo que se mira, no con algo que hay
-  // que recordar: todo lo capturado hoy queda visible en la misma pantalla.
+  // Cada paso arma su propio HTML y se pinta entero. Los pasos no comparten
+  // marcado y no se acumulan: el ticket siempre muestra uno y solo uno.
 
-  function renderizarGastosDeHoy() {
-    const datos = leerDatos();
-    const hoyTexto = formatearFechaISO(new Date());
-    const lista = document.getElementById("listaGastosDeHoy");
+  // Cabecera común: la flecha para regresar, a dónde va lo que se está
+  // capturando, y la fecha en la esquina como en cualquier recibo.
+  function htmlCabeceraDelTicket(titulo, color, conFlecha) {
+    const hoy = new Date();
+    const fecha = DIAS_SEMANA_ABREVIADOS[hoy.getDay()] + " " + hoy.getDate() + " " + MESES_ABREVIADOS[hoy.getMonth()];
 
-    const gastosDeHoy = datos.gastos
-      .filter(function (g) { return g.fecha === hoyTexto; })
-      .sort(function (a, b) { return a.hora < b.hora ? 1 : -1; });
-
-    if (gastosDeHoy.length === 0) {
-      lista.innerHTML = "<li class=\"vacio\">Todavía no hay gastos registrados hoy.</li>";
-      return;
-    }
-
-    lista.innerHTML = gastosDeHoy.map(function (gasto) {
-      const categoria = datos.config.categorias.find(function (c) { return c.id === gasto.categoriaId; });
-      const etiqueta = categoria
-        ? escaparHTML(categoria.nombre) + " — " + escaparHTML(gasto.subcategoria)
-        : escaparHTML(gasto.descripcion || "Pago de compromiso");
-
-      const etiquetaDestinatario = gasto.destinatario ? ", " + escaparHTML(gasto.destinatario) : "";
-
-      return "<li>" +
-        "<div class=\"fila-gasto-hoy\">" +
-          "<div>" +
-            "<div class=\"nombre-gasto-hoy\">" + etiqueta + "</div>" +
-            "<span class=\"detalle-gasto-hoy\">" + gasto.hora + ", " + gasto.fuente + etiquetaDestinatario + "</span>" +
-          "</div>" +
-          "<div class=\"monto-gasto-hoy mono\">" + formatearMoneda(gasto.monto) + "</div>" +
-        "</div>" +
-      "</li>";
-    }).join("");
+    return "<div class=\"ticket-cabecera\">" +
+      (conFlecha ? "<button type=\"button\" class=\"boton-atras\" data-accion=\"atras\" aria-label=\"Regresar un paso\">←</button>" : "") +
+      (color ? "<span class=\"marca-categoria\" style=\"--color-categoria: " + color + ";\"></span>" : "") +
+      "<span class=\"ticket-titulo\">" + titulo + "</span>" +
+      "<span class=\"ticket-fecha mono\">" + fecha + "</span>" +
+    "</div>";
   }
 
-  // Texto de alerta bajo cada barra: el color ya viene de la proyección
-  // de cierre de semana (calcularProyeccionDeCierreSemanal), no solo de lo
-  // gastado hasta hoy — así avisa antes de que la categoría se pase, no
-  // solo después. Sin presupuesto asignado no hay nada contra qué medir
-  // margen, así que no se muestra ninguna alerta (mismo criterio "gris"
-  // del semáforo del ciclo, pero sin repetir su etiqueta porque aquí no es
-  // que falte un ingreso, es que falta un presupuesto).
-  function construirTextoAlertaSemanal(color, margen) {
-    if (color === "gris") {
+  // Una rejilla de botones grandes. Se usa para categorías, subcategorías,
+  // tarjetas, deudas y para elegir entre varios recibos del mismo nombre.
+  const ALTO_MAXIMO_DE_RENGLON = 88;
+  const SEPARACION_ENTRE_RENGLONES = 7;
+
+  function htmlRejillaDeOpciones(opciones) {
+    const columnas = opciones.length > OPCIONES_PARA_TRES_COLUMNAS ? 3 : 2;
+    const filas = Math.ceil(opciones.length / columnas);
+
+    // El tope de alto se calcula aquí porque el CSS no sabe cuántas filas
+    // hay. Si el tope no cabe en la pantalla, la rejilla se encoge sola: el
+    // tope es un máximo, nunca un mínimo.
+    const topeDeAlto = (filas * ALTO_MAXIMO_DE_RENGLON) + ((filas - 1) * SEPARACION_ENTRE_RENGLONES);
+
+    const botones = opciones.map(function (opcion) {
+      const atributos = Object.keys(opcion.datos || {}).map(function (nombre) {
+        return " data-" + nombre + "=\"" + escaparHTML(String(opcion.datos[nombre])) + "\"";
+      }).join("");
+
+      return "<button type=\"button\" class=\"boton-ticket\"" +
+        " style=\"--color-categoria: " + (opcion.color || "var(--tinta-ter-c)") + ";\"" +
+        (opcion.apagada ? " disabled" : "") +
+        atributos + ">" +
+        "<span>" + escaparHTML(opcion.nombre) + "</span>" +
+        (opcion.apoyo ? "<span class=\"apoyo-boton-ticket\">" + escaparHTML(opcion.apoyo) + "</span>" : "") +
+      "</button>";
+    }).join("");
+
+    return "<div class=\"rejilla-ticket\" style=\"--columnas-ticket: " + columnas +
+      "; max-height: " + topeDeAlto + "px;\">" + botones + "</div>";
+  }
+
+  // ---------- Paso 1: qué se va a registrar ----------
+
+  function htmlPasoOpciones() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+
+    if (datos.config.categorias.length === 0 && datos.config.tarjetas.length === 0) {
+      return htmlCabeceraDelTicket("Captura", null, false) +
+        "<p class=\"ticket-vacio\">Todavía no hay categorías dadas de alta.<br>" +
+        "Créalas desde la laptop y aquí aparecen solas.</p>";
+    }
+
+    const opciones = [];
+
+    datos.config.categorias.forEach(function (categoria) {
+      // Una categoría que solo sirve para pagar pendientes y no tiene
+      // ninguno este ciclo se ve apagada: entrar sería llegar a una pantalla
+      // donde no hay nada que tocar.
+      const sinNadaQuePagar = !esCategoriaDeGastoLibre(categoria) &&
+        obtenerPendientesDeCategoria(categoria.id, ciclo.id, datos).length === 0;
+
+      opciones.push({
+        nombre: categoria.nombre,
+        color: obtenerColorDeCategoria(categoria.id, datos),
+        apagada: sinNadaQuePagar,
+        datos: { accion: "elegir-categoria", categoria: categoria.id }
+      });
+    });
+
+    // La salida para lo que no encaja en nada. Si la categoría todavía no
+    // existe se ofrece igual y se crea sola al usarla, como hasta ahora.
+    if (!datos.config.categorias.some(esLaCategoriaOtros)) {
+      opciones.push({
+        nombre: NOMBRE_CATEGORIA_OTROS,
+        color: COLOR_CATEGORIA_SIN_ASIGNAR,
+        datos: { accion: "crear-otros" }
+      });
+    }
+
+    // Tarjetas y Deudas no son categorías: su gasto es saldo, no
+    // presupuesto. Pero sí son pagos del ciclo, así que entran al mismo
+    // nivel, con el gris de "sin categoría" que ya usan en el muro.
+    if (datos.config.tarjetas.length > 0) {
+      const hayCorte = datos.config.tarjetas.some(function (tarjeta) {
+        return obtenerPendienteDeOrigen("tarjeta", tarjeta.id, ciclo.id, datos) !== null;
+      });
+      opciones.push({
+        nombre: "Tarjetas",
+        color: COLOR_CATEGORIA_SIN_ASIGNAR,
+        apagada: !hayCorte,
+        datos: { accion: "elegir-bloque", bloque: "tarjeta" }
+      });
+    }
+
+    const deudasActivas = datos.deudas.filter(function (d) { return d.activa; });
+    if (deudasActivas.length > 0) {
+      const hayPago = deudasActivas.some(function (deuda) {
+        return obtenerPendienteDeOrigen("deuda", deuda.id, ciclo.id, datos) !== null;
+      });
+      opciones.push({
+        nombre: "Deudas",
+        color: COLOR_CATEGORIA_SIN_ASIGNAR,
+        apagada: !hayPago,
+        datos: { accion: "elegir-bloque", bloque: "deuda" }
+      });
+    }
+
+    // El nombre de la app hace de encabezado del recibo, como el del
+    // establecimiento en un ticket de verdad. No dice "gasto nuevo" porque
+    // desde aquí también se paga lo que ya se debía.
+    return htmlCabeceraDelTicket("Ciclo", null, false) +
+      htmlVencimientosAlFrente(datos) +
+      htmlRejillaDeOpciones(opciones);
+  }
+
+  // Lo vencido y lo que vence hoy, arriba de las categorías. No tapa nada ni
+  // interrumpe: es una fila más que se puede tocar o ignorar. Si no hay nada,
+  // no se ve absolutamente nada.
+  function htmlVencimientosAlFrente(datos) {
+    const vencimientos = obtenerVencimientosAlFrente(datos);
+
+    if (vencimientos.length === 0) {
       return "";
     }
-    if (color === "rojo") {
-      return "<p class=\"detalle\">" + ETIQUETA_SEMAFORO.rojo + "</p>";
-    }
-    if (color === "amarillo") {
-      return "<p class=\"detalle\">" + ETIQUETA_SEMAFORO.amarillo + " — margen antes de rojo: " + formatearMoneda(margen.antesDeRojo) + "</p>";
-    }
-    return "<p class=\"detalle\">" + ETIQUETA_SEMAFORO.verde + " — margen antes de amarillo: " + formatearMoneda(margen.antesDeAmarillo) + "</p>";
+
+    const alFrente = vencimientos.slice(0, VENCIMIENTOS_VISIBLES_AL_FRENTE);
+    const resto = vencimientos.length - alFrente.length;
+
+    const filas = alFrente.map(function (compromiso) {
+      const diasHasta = calcularDiasHastaFecha(compromiso.fechaProgramada);
+
+      return "<button type=\"button\" class=\"fila-vencimiento" + (diasHasta < 0 ? " ya-vencido" : "") + "\"" +
+        " data-accion=\"pagar\" data-compromiso=\"" + compromiso.id + "\" data-regreso=\"" + PASO_OPCIONES + "\">" +
+        "<span class=\"nombre\">" + etiquetaCompletaDeCompromiso(compromiso, datos) +
+          "<span class=\"cuando\">" + formatearCuandoVence(diasHasta) + "</span>" +
+        "</span>" +
+        "<span class=\"monto mono\">" + formatearMoneda(compromiso.montoEstimado) + "</span>" +
+      "</button>";
+    }).join("");
+
+    const linea = resto > 0
+      ? "<p class=\"vencimientos-de-mas\">y " + resto + (resto === 1 ? " más" : " más") + " esperando</p>"
+      : "";
+
+    return "<div class=\"vencimientos-ticket\">" + filas + linea + "</div>";
   }
 
-  function renderizarAvanceSemanal() {
-    const datos = leerDatos();
-    const cicloActual = asegurarCicloActual();
-    const semanaActual = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), cicloActual.fechaInicio);
-    const categoriasVariables = datos.config.categorias.filter(function (c) { return c.esVariableSemanal; });
-    const contenedor = document.getElementById("contenedorAvanceSemanal");
+  // ---------- Paso 2: subcategoría, tarjeta o deuda ----------
 
-    if (categoriasVariables.length === 0) {
-      contenedor.innerHTML = "<p class=\"pista\">No hay categorías con presupuesto semanal.</p>";
+  function htmlPasoSubcategoria() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+
+    if (bloqueEspecialElegido === "tarjeta") {
+      return htmlCabeceraDelTicket("Tarjetas", COLOR_CATEGORIA_SIN_ASIGNAR, true) +
+        htmlRejillaDeOpciones(datos.config.tarjetas
+          .slice()
+          .sort(function (a, b) { return Number(b.lineaTotal) - Number(a.lineaTotal); })
+          .map(function (tarjeta) {
+            const pendiente = obtenerPendienteDeOrigen("tarjeta", tarjeta.id, ciclo.id, datos);
+            return {
+              nombre: tarjeta.nombre,
+              color: COLOR_CATEGORIA_SIN_ASIGNAR,
+              apoyo: pendiente ? formatearMoneda(pendiente.montoEstimado) : "sin corte por pagar",
+              apagada: !pendiente,
+              datos: pendiente
+                ? { accion: "pagar", compromiso: pendiente.id, regreso: PASO_SUBCATEGORIA }
+                : {}
+            };
+          }));
+    }
+
+    if (bloqueEspecialElegido === "deuda") {
+      return htmlCabeceraDelTicket("Deudas", COLOR_CATEGORIA_SIN_ASIGNAR, true) +
+        htmlRejillaDeOpciones(datos.deudas.filter(function (d) { return d.activa; }).map(function (deuda) {
+          const pendiente = obtenerPendienteDeOrigen("deuda", deuda.id, ciclo.id, datos);
+          return {
+            nombre: deuda.nombre,
+            color: COLOR_CATEGORIA_SIN_ASIGNAR,
+            apoyo: pendiente ? formatearMoneda(pendiente.montoEstimado) : "sin pago este ciclo",
+            apagada: !pendiente,
+            datos: pendiente
+              ? { accion: "pagar", compromiso: pendiente.id, regreso: PASO_SUBCATEGORIA }
+              : {}
+          };
+        }));
+    }
+
+    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaSeleccionadaGasto; });
+    if (!categoria) {
+      return htmlPasoOpciones();
+    }
+
+    const color = obtenerColorDeCategoria(categoria.id, datos);
+    const esLibre = esCategoriaDeGastoLibre(categoria);
+
+    const opciones = (categoria.subcategorias || []).map(function (subcategoria) {
+      if (esLibre) {
+        return {
+          nombre: subcategoria,
+          color: color,
+          datos: { accion: "elegir-subcategoria", subcategoria: subcategoria }
+        };
+      }
+
+      // Categoría no variable: la subcategoría no abre un gasto libre, va a
+      // buscar el recibo que ya se debe. Uno solo entra directo; varios (el
+      // mismo servicio en dos lugares) preguntan cuál.
+      const pendientes = obtenerPendientesDeSubcategoria(categoria.id, subcategoria, ciclo.id, datos);
+
+      if (pendientes.length === 0) {
+        return { nombre: subcategoria, color: color, apoyo: "nada por pagar", apagada: true, datos: {} };
+      }
+      if (pendientes.length === 1) {
+        return {
+          nombre: subcategoria,
+          color: color,
+          apoyo: formatearMoneda(pendientes[0].montoEstimado),
+          datos: { accion: "pagar", compromiso: pendientes[0].id, regreso: PASO_SUBCATEGORIA }
+        };
+      }
+      return {
+        nombre: subcategoria,
+        color: color,
+        apoyo: pendientes.length + " por pagar",
+        datos: { accion: "elegir-subcategoria", subcategoria: subcategoria }
+      };
+    });
+
+    return htmlCabeceraDelTicket(categoria.nombre, color, true) +
+      htmlLoRegistradoHoy(datos, categoria) +
+      htmlRejillaDeOpciones(opciones);
+  }
+
+  // Cuando una subcategoría no variable tiene varios recibos pendientes (el
+  // mismo servicio en dos casas), se elige cuál se está pagando. Solo salen
+  // los que siguen sin pagar.
+  function htmlPasoElegirPendiente() {
+    const datos = leerDatos();
+    const ciclo = asegurarCicloActual();
+    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaSeleccionadaGasto; });
+    const color = obtenerColorDeCategoria(categoria.id, datos);
+    const pendientes = obtenerPendientesDeSubcategoria(categoria.id, subcategoriaSeleccionadaGasto, ciclo.id, datos);
+
+    return htmlCabeceraDelTicket(categoria.nombre + " · " + subcategoriaSeleccionadaGasto, color, true) +
+      htmlRejillaDeOpciones(pendientes.map(function (compromiso) {
+        const destinatario = resolverDestinatarioDeCompromiso(compromiso, datos);
+        return {
+          nombre: destinatario || compromiso.nombre,
+          color: color,
+          apoyo: formatearMoneda(compromiso.montoEstimado),
+          datos: { accion: "pagar", compromiso: compromiso.id, regreso: PASO_SUBCATEGORIA }
+        };
+      }));
+  }
+
+  // Lo ya registrado hoy en esta categoría, con hora y monto. Responde "¿ya
+  // lo capturé?" sin tener que recordarlo. Solo aparece si hay algo, y el
+  // CSS lo corta a tres líneas: es un vistazo, no una lista para leer.
+  function htmlLoRegistradoHoy(datos, categoria) {
+    const hoyTexto = formatearFechaISO(new Date());
+
+    const deHoy = datos.gastos
+      .filter(function (g) { return g.fecha === hoyTexto && g.categoriaId === categoria.id; })
+      .sort(function (a, b) { return a.hora < b.hora ? -1 : 1; });
+
+    if (deHoy.length === 0) {
+      return "";
+    }
+
+    const partes = deHoy.map(function (gasto) {
+      return "<span class=\"hora mono\">" + escaparHTML(gasto.hora) + "</span> " +
+        escaparHTML(gasto.subcategoria || "") + " " +
+        "<span class=\"importe mono\">" + formatearMoneda(gasto.monto) + "</span>";
+    });
+
+    return "<p class=\"hoy-en-categoria\">Hoy en " + escaparHTML(categoria.nombre) + ": " +
+      partes.join(" · ") + "</p>";
+  }
+
+  // ---------- Paso 3: el monto ----------
+
+  // La misma pantalla sirve para un gasto libre y para cerrar un compromiso.
+  // Lo único que cambia es de dónde sale el título, si hay campos de detalle,
+  // y qué hace el botón de abajo.
+  function htmlPasoMonto() {
+    const datos = leerDatos();
+    const esPago = pasoDelTicket === PASO_PAGO;
+
+    let titulo = "";
+    let color = null;
+    let categoriaDelRenglon = null;
+
+    if (esPago) {
+      const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoQueSeEstaPagando; });
+      if (!compromiso) {
+        return htmlPasoOpciones();
+      }
+      categoriaDelRenglon = resolverCategoriaDeCompromiso(compromiso, datos);
+      color = obtenerColorDeCategoria(categoriaDelRenglon, datos);
+      titulo = etiquetaCompletaDeCompromiso(compromiso, datos) +
+        " · " + formatearCuandoVence(calcularDiasHastaFecha(compromiso.fechaProgramada));
+    } else {
+      const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaSeleccionadaGasto; });
+      categoriaDelRenglon = categoria.id;
+      color = obtenerColorDeCategoria(categoria.id, datos);
+      titulo = escaparHTML(categoria.nombre) + " · " + escaparHTML(subcategoriaSeleccionadaGasto);
+    }
+
+    return htmlCabeceraDelTicket(titulo, color, true) +
+      htmlDelRenglonInformativo(
+        categoriaDelRenglon,
+        fuenteSeleccionadaGasto,
+        montoDelTicketComoNumero(),
+        esPago ? compromisoQueSeEstaPagando : null
+      ) +
+      htmlDelMonto() +
+      htmlDeLaFuente(datos, esPago) +
+      (esPago ? "" : htmlDeLosDetalles(datos)) +
+      (campoDeTextoAbierto ? htmlDelCampoDeTexto() : htmlDelTeclado()) +
+      "<button type=\"button\" class=\"boton-guardar-ticket\" data-accion=\"guardar\"" +
+        (montoDelTicketComoNumero() > 0 ? "" : " disabled") + ">" +
+        (esPago ? "Confirmar pago" : "Guardar") +
+      "</button>";
+  }
+
+  function htmlDelMonto() {
+    const enEspera = montoEscritoEnElTicket === "";
+    return "<div class=\"monto-ticket\" id=\"montoDelTicket\">" +
+      "<span class=\"signo mono\">$</span>" +
+      "<span class=\"cifra mono" + (enEspera ? " en-espera" : "") + "\">" +
+        (enEspera ? "0" : escaparHTML(montoEscritoEnElTicket)) +
+      "</span>" +
+    "</div>";
+  }
+
+  // Débito viene abierta por default. Cambiar de pestaña no borra el monto:
+  // el monto vive en el estado del ticket, no en la pestaña.
+  function htmlDeLaFuente(datos, esPago) {
+    const pestanas = "<div class=\"pestanas-fuente\">" +
+      "<button type=\"button\" class=\"pestana-fuente" + (fuenteSeleccionadaGasto === "debito" ? " activa" : "") + "\"" +
+        " data-accion=\"elegir-fuente\" data-fuente=\"debito\">Débito</button>" +
+      "<button type=\"button\" class=\"pestana-fuente" + (fuenteSeleccionadaGasto === "credito" ? " activa" : "") + "\"" +
+        " data-accion=\"elegir-fuente\" data-fuente=\"credito\">Crédito</button>" +
+    "</div>";
+
+    // Al cerrar un compromiso no se pregunta la tarjeta: el gasto que se crea
+    // hereda lo que ya sabe el compromiso, y preguntar aquí prometería
+    // guardar un dato que ese camino no guarda.
+    if (esPago || fuenteSeleccionadaGasto !== "credito" || datos.config.tarjetas.length < 2) {
+      return pestanas;
+    }
+
+    const chips = datos.config.tarjetas.map(function (tarjeta) {
+      return "<button type=\"button\" class=\"chip-tarjeta" + (tarjeta.id === tarjetaSeleccionadaGasto ? " activa" : "") + "\"" +
+        " data-accion=\"elegir-tarjeta\" data-tarjeta=\"" + tarjeta.id + "\">" + escaparHTML(tarjeta.nombre) + "</button>";
+    }).join("");
+
+    return pestanas + "<div class=\"chips-tarjeta\">" + chips + "</div>";
+  }
+
+  // Descripción y "Para quién", debajo del monto. "Para quién" solo aparece
+  // si esa categoría ya tiene destinatarios: ofrecer un selector vacío es
+  // peor que no ofrecer nada.
+  function htmlDeLosDetalles(datos) {
+    const destinatarios = obtenerDestinatariosDeLaCategoria(datos, categoriaSeleccionadaGasto);
+
+    let html = "<div class=\"detalles-ticket\">" +
+      "<button type=\"button\" class=\"fila-detalle\" data-accion=\"abrir-descripcion\">" +
+        "<span>Descripción</span>" +
+        "<span class=\"valor" + (descripcionEscritaEnElTicket ? "" : " sin-poner") + "\">" +
+          (descripcionEscritaEnElTicket ? escaparHTML(descripcionEscritaEnElTicket) : "—") +
+        "</span>" +
+      "</button>";
+
+    if (destinatarios.length > 0) {
+      html += "<div class=\"fila-detalle\">" +
+        "<span>Para quién</span>" +
+        "<select class=\"valor\" data-campo=\"destinatario\">" +
+          "<option value=\"\">—</option>" +
+          destinatarios.map(function (destinatario) {
+            return "<option value=\"" + escaparHTML(destinatario) + "\"" +
+              (destinatario === destinatarioElegidoEnElTicket ? " selected" : "") + ">" +
+              escaparHTML(destinatario) + "</option>";
+          }).join("") +
+        "</select>" +
+      "</div>";
+    }
+
+    return html + "</div>";
+  }
+
+  // El teclado lo dibuja la app: así está visible desde el primer instante,
+  // sin un toque extra, y nunca tapa el botón Guardar.
+  const TECLAS_DEL_TICKET = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "borrar"];
+
+  function htmlDelTeclado() {
+    return "<div class=\"teclado-ticket\">" +
+      TECLAS_DEL_TICKET.map(function (tecla) {
+        const esBorrar = tecla === "borrar";
+        return "<button type=\"button\" class=\"tecla" + (esBorrar ? " tecla-borrar" : "") + "\"" +
+          " data-accion=\"tecla\" data-tecla=\"" + tecla + "\"" +
+          (esBorrar ? " aria-label=\"Borrar\"" : "") + ">" +
+          (esBorrar ? "⌫" : tecla) +
+        "</button>";
+      }).join("") +
+    "</div>";
+  }
+
+  // Mientras se escribe la descripción, el campo ocupa el lugar del teclado
+  // numérico. Es el único momento en que sale el teclado de letras del
+  // sistema, y al terminar el ticket vuelve a como estaba.
+  function htmlDelCampoDeTexto() {
+    return "<div class=\"campo-escritura\">" +
+      "<span class=\"rotulo\">Descripción</span>" +
+      "<input type=\"text\" data-campo=\"descripcion\" value=\"" + escaparHTML(descripcionEscritaEnElTicket) + "\">" +
+      "<button type=\"button\" class=\"boton-listo\" data-accion=\"cerrar-descripcion\">Listo</button>" +
+    "</div>";
+  }
+
+  // ---------- Dibujar y animar ----------
+
+  function renderizarTicket() {
+    const ticket = document.getElementById("ticketCaptura");
+
+    if (pasoDelTicket === PASO_OPCIONES) {
+      ticket.innerHTML = htmlPasoOpciones();
+    } else if (pasoDelTicket === PASO_SUBCATEGORIA) {
+      ticket.innerHTML = htmlPasoSubcategoria();
+    } else if (pasoDelTicket === PASO_MONTO && !laCategoriaElegidaEsDeGastoLibre()) {
+      // Una subcategoría no variable con varios recibos pendientes no lleva
+      // al monto: lleva a elegir cuál de ellos se está pagando.
+      ticket.innerHTML = htmlPasoElegirPendiente();
+    } else {
+      ticket.innerHTML = htmlPasoMonto();
+    }
+
+    ticket.classList.toggle("entrando", elTicketDebeEntrarImprimiendose);
+    elTicketDebeEntrarImprimiendose = false;
+
+    // Si se estaba escribiendo la descripción, el foco vuelve al campo: sin
+    // esto, cada letra cerraría el teclado del sistema.
+    const campo = ticket.querySelector("input[data-campo=\"descripcion\"]");
+    if (campo) {
+      campo.focus();
+      campo.setSelectionRange(campo.value.length, campo.value.length);
+    }
+  }
+
+  function laCategoriaElegidaEsDeGastoLibre() {
+    const datos = leerDatos();
+    const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaSeleccionadaGasto; });
+    return !categoria || esCategoriaDeGastoLibre(categoria);
+  }
+
+  // El corte: se clona el ticket que está en pantalla y el clon se va hacia
+  // abajo mientras el nuevo entra desde arriba. Se clona en vez de animar el
+  // original porque el original se reescribe entero en el mismo instante.
+  function desprenderElTicket() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
 
-    const presupuestoVigente = obtenerPresupuestoSemanalVigente(cicloActual, datos);
-    contenedor.innerHTML = categoriasVariables.map(function (categoria) {
-      const presupuesto = presupuestoVigente[categoria.id] || 0;
-      const proyeccion = calcularProyeccionDeCierreSemanal(categoria, cicloActual, datos, semanaActual);
-      const color = calcularColorDelSemaforo(proyeccion.proyeccionCierreSemanal, presupuesto);
-      const margen = presupuesto > 0 ? calcularMargenAntesDeUmbrales(proyeccion.proyeccionCierreSemanal, presupuesto) : null;
+    const carro = document.getElementById("carroCaptura");
+    const fantasma = document.getElementById("ticketCaptura").cloneNode(true);
 
-      // La barra muestra el hecho (cuánto llevas gastado de verdad); el
-      // color rojo de "excedido" viene de la proyección, así que puede
-      // encenderse antes de que la barra llegue al 100% — es la alerta
-      // temprana, no un reflejo de lo ya gastado.
-      const porcentajeGastado = presupuesto > 0 ? Math.min(proyeccion.gastadoEnLaSemana / presupuesto, 1) * 100 : 0;
-      const excedido = color === "rojo";
+    fantasma.removeAttribute("id");
+    fantasma.classList.remove("entrando");
+    fantasma.classList.add("ticket-fantasma");
+    carro.appendChild(fantasma);
 
-      return "<div class=\"avance-semanal-item\">" +
-        "<div class=\"avance-cabecera\">" +
-          "<span class=\"avance-categoria\">" + escaparHTML(categoria.nombre) + "</span>" +
-          "<span class=\"mono\">" + formatearMoneda(proyeccion.gastadoEnLaSemana) + " de " + formatearMoneda(presupuesto) + "</span>" +
-        "</div>" +
-        "<div class=\"barra-fondo\"><div class=\"barra-relleno" + (excedido ? " excedido" : "") + "\" style=\"width: " + porcentajeGastado + "%;\"></div></div>" +
-        construirTextoAlertaSemanal(color, margen) +
-      "</div>";
-    }).join("");
+    fantasma.addEventListener("animationend", function () { fantasma.remove(); });
+    elTicketDebeEntrarImprimiendose = true;
+  }
+
+  // Redibuja solo el monto, el renglón informativo y el botón: teclear no
+  // tiene por qué rehacer la pantalla entera ni reiniciar sus animaciones.
+  function actualizarMontoEnPantalla() {
+    const ticket = document.getElementById("ticketCaptura");
+    const datos = leerDatos();
+    const esPago = pasoDelTicket === PASO_PAGO;
+
+    let categoriaDelRenglon = categoriaSeleccionadaGasto;
+    if (esPago) {
+      const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoQueSeEstaPagando; });
+      categoriaDelRenglon = compromiso ? resolverCategoriaDeCompromiso(compromiso, datos) : null;
+    }
+
+    ticket.querySelector(".monto-ticket").outerHTML = htmlDelMonto();
+    ticket.querySelector(".renglon-informativo").outerHTML = htmlDelRenglonInformativo(
+      categoriaDelRenglon,
+      fuenteSeleccionadaGasto,
+      montoDelTicketComoNumero(),
+      esPago ? compromisoQueSeEstaPagando : null
+    );
+    ticket.querySelector(".boton-guardar-ticket").disabled = montoDelTicketComoNumero() <= 0;
+  }
+
+  // La nota de mañana: sale sola al guardar y se va sola. No pide ningún
+  // toque y no bloquea nada.
+  function mostrarNotaDeManana() {
+    const nota = document.getElementById("notaCaptura");
+    const datos = leerDatos();
+    const vencenManana = obtenerVencimientosDeManana(datos);
+
+    if (vencenManana.length === 0) {
+      nota.hidden = true;
+      return;
+    }
+
+    if (vencenManana.length === 1) {
+      nota.innerHTML = "Mañana vence " + etiquetaCompletaDeCompromiso(vencenManana[0], datos) +
+        " · <span class=\"mono\">" + formatearMoneda(vencenManana[0].montoEstimado) + "</span>";
+    } else {
+      const suma = vencenManana.reduce(function (total, c) { return total + Number(c.montoEstimado); }, 0);
+      nota.innerHTML = "Mañana vencen " + vencenManana.length + " pagos · " +
+        "<span class=\"mono\">" + formatearMoneda(suma) + "</span>";
+    }
+
+    // Se quita y se vuelve a poner para que la animación arranque de nuevo
+    // aunque la nota ya estuviera puesta de un guardado anterior.
+    nota.hidden = true;
+    void nota.offsetWidth;
+    nota.hidden = false;
+    nota.addEventListener("animationend", function alTerminar() {
+      nota.hidden = true;
+      nota.removeEventListener("animationend", alTerminar);
+    });
+  }
+
+  // ============================================================
+  // CAPTURA — TOQUES DEL TICKET
+  // ============================================================
+  //
+  // Un solo escucha para todo el ticket, en vez de reconectar botones en
+  // cada dibujado: el contenido cambia entero en cada paso, pero el
+  // contenedor es siempre el mismo.
+
+  function avanzarDelTicket(paso) {
+    pasoDelTicket = paso;
+    renderizarTicket();
+    document.getElementById("ticketCaptura").classList.add("paso-avanza");
+  }
+
+  function manejarToqueEnElTicket(evento) {
+    const boton = evento.target.closest("[data-accion]");
+    if (!boton) {
+      return;
+    }
+
+    const datos = leerDatos();
+    const accion = boton.getAttribute("data-accion");
+
+    if (accion === "atras") {
+      regresarUnPasoDelTicket();
+      return;
+    }
+
+    if (accion === "elegir-categoria" || accion === "crear-otros") {
+      const categoria = accion === "crear-otros"
+        ? asegurarCategoriaOtros()
+        : datos.config.categorias.find(function (c) { return c.id === boton.getAttribute("data-categoria"); });
+
+      categoriaSeleccionadaGasto = categoria.id;
+      subcategoriaSeleccionadaGasto = null;
+      bloqueEspecialElegido = null;
+      avanzarDelTicket(PASO_SUBCATEGORIA);
+      return;
+    }
+
+    if (accion === "elegir-bloque") {
+      bloqueEspecialElegido = boton.getAttribute("data-bloque");
+      categoriaSeleccionadaGasto = null;
+      avanzarDelTicket(PASO_SUBCATEGORIA);
+      return;
+    }
+
+    if (accion === "elegir-subcategoria") {
+      subcategoriaSeleccionadaGasto = boton.getAttribute("data-subcategoria");
+      // En una categoría de gasto libre esto lleva al monto; en una no
+      // variable con varios recibos del mismo nombre, a elegir cuál. Lo
+      // decide renderizarTicket, que ya sabe distinguirlas.
+      fuenteSeleccionadaGasto = "debito";
+      tarjetaSeleccionadaGasto = null;
+      avanzarDelTicket(PASO_MONTO);
+      return;
+    }
+
+    if (accion === "pagar") {
+      compromisoQueSeEstaPagando = boton.getAttribute("data-compromiso");
+      pasoAlQueRegresaElPago = boton.getAttribute("data-regreso");
+      const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoQueSeEstaPagando; });
+      // El monto llega precargado con el estimado y es editable: casi
+      // siempre es el correcto, y cuando no lo es se corrige tecleando.
+      montoEscritoEnElTicket = String(compromiso.montoEstimado);
+      fuenteSeleccionadaGasto = "debito";
+      avanzarDelTicket(PASO_PAGO);
+      return;
+    }
+
+    if (accion === "elegir-fuente") {
+      fuenteSeleccionadaGasto = boton.getAttribute("data-fuente");
+      // Si solo hay una tarjeta se asigna sola: no le cuesta un toque al
+      // usuario. Con varias, viene marcada la de mayor línea.
+      if (fuenteSeleccionadaGasto === "credito") {
+        tarjetaSeleccionadaGasto = datos.config.tarjetas.length === 1
+          ? datos.config.tarjetas[0].id
+          : tarjetaPreseleccionada(datos);
+      } else {
+        tarjetaSeleccionadaGasto = null;
+      }
+      renderizarTicket();
+      return;
+    }
+
+    if (accion === "elegir-tarjeta") {
+      tarjetaSeleccionadaGasto = boton.getAttribute("data-tarjeta");
+      renderizarTicket();
+      return;
+    }
+
+    if (accion === "tecla") {
+      escribirEnElMontoDelTicket(boton.getAttribute("data-tecla"));
+      return;
+    }
+
+    if (accion === "abrir-descripcion") {
+      campoDeTextoAbierto = "descripcion";
+      renderizarTicket();
+      return;
+    }
+
+    if (accion === "cerrar-descripcion") {
+      campoDeTextoAbierto = null;
+      renderizarTicket();
+      return;
+    }
+
+    if (accion === "guardar") {
+      if (pasoDelTicket === PASO_PAGO) {
+        guardarPagoDelTicket();
+      } else {
+        guardarGastoDelTicket();
+      }
+    }
+  }
+
+  function regresarUnPasoDelTicket() {
+    if (campoDeTextoAbierto) {
+      campoDeTextoAbierto = null;
+      renderizarTicket();
+      return;
+    }
+
+    if (pasoDelTicket === PASO_PAGO) {
+      compromisoQueSeEstaPagando = null;
+      montoEscritoEnElTicket = "";
+      avanzarDelTicket(pasoAlQueRegresaElPago);
+      return;
+    }
+
+    if (pasoDelTicket === PASO_MONTO) {
+      subcategoriaSeleccionadaGasto = null;
+      montoEscritoEnElTicket = "";
+      descripcionEscritaEnElTicket = "";
+      destinatarioElegidoEnElTicket = "";
+      avanzarDelTicket(PASO_SUBCATEGORIA);
+      return;
+    }
+
+    reiniciarElTicket();
+    avanzarDelTicket(PASO_OPCIONES);
+  }
+
+  // Escribe un dígito, un punto o borra. Las reglas evitan lo que un teclado
+  // numérico de verdad tampoco deja hacer: dos puntos, tres decimales, o un
+  // número más largo que la pantalla.
+  function escribirEnElMontoDelTicket(tecla) {
+    if (tecla === "borrar") {
+      montoEscritoEnElTicket = montoEscritoEnElTicket.slice(0, -1);
+      actualizarMontoEnPantalla();
+      return;
+    }
+
+    if (tecla === ".") {
+      if (montoEscritoEnElTicket.indexOf(".") === -1) {
+        montoEscritoEnElTicket = (montoEscritoEnElTicket === "" ? "0" : montoEscritoEnElTicket) + ".";
+        actualizarMontoEnPantalla();
+      }
+      return;
+    }
+
+    const partes = montoEscritoEnElTicket.split(".");
+    const yaTieneDosDecimales = partes.length === 2 && partes[1].length >= 2;
+    if (yaTieneDosDecimales || montoEscritoEnElTicket.length >= 9) {
+      return;
+    }
+
+    // Sin ceros a la izquierda: "007" no es un monto.
+    montoEscritoEnElTicket = montoEscritoEnElTicket === "0" ? tecla : montoEscritoEnElTicket + tecla;
+    actualizarMontoEnPantalla();
+  }
+
+  function manejarEscrituraEnElTicket(evento) {
+    if (evento.target.getAttribute("data-campo") === "descripcion") {
+      descripcionEscritaEnElTicket = evento.target.value;
+    }
+  }
+
+  function manejarCambioEnElTicket(evento) {
+    if (evento.target.getAttribute("data-campo") === "destinatario") {
+      destinatarioElegidoEnElTicket = evento.target.value;
+    }
   }
 
   // ============================================================
@@ -6999,6 +7953,50 @@
     });
   }
 
+  // Dos pagos de la misma categoría pueden llamarse igual y ser cosas
+  // distintas: el "Agua" de un domicilio y el "Agua" del otro. Con el nombre
+  // solo, el muro miente — se ven idénticos.
+  //
+  // Cuando un nombre se repite dentro del mismo recuadro, la fila se parte
+  // en dos líneas y el destinatario baja a la segunda, en texto secundario
+  // chico (el mismo tratamiento que ya tienen los títulos de subcategoría).
+  // Si un pago es el único con su nombre, su destinatario no desambigua
+  // nada y la fila se queda en una línea, que es lo que mantiene el muro
+  // compacto.
+  //
+  // Devuelve un índice de "a qué pagos hay que bajarles el destinatario",
+  // no lo escribe en ningún lado: es una decisión de dibujo, no un dato.
+  function calcularDestinatariosVisiblesDelRecuadro(grupos, datos) {
+    const pagosPorNombre = {};
+
+    grupos.forEach(function (grupo) {
+      grupo.pagos.forEach(function (pago) {
+        const nombre = String(pago.nombre).trim().toLowerCase();
+        if (!pagosPorNombre[nombre]) {
+          pagosPorNombre[nombre] = [];
+        }
+        pagosPorNombre[nombre].push(pago);
+      });
+    });
+
+    const destinatarioPorPago = {};
+
+    Object.keys(pagosPorNombre).forEach(function (nombre) {
+      const pagosQueSeLlamanIgual = pagosPorNombre[nombre];
+      if (pagosQueSeLlamanIgual.length < 2) {
+        return;
+      }
+      pagosQueSeLlamanIgual.forEach(function (pago) {
+        const destinatario = resolverDestinatarioDeCompromiso(pago, datos);
+        if (destinatario) {
+          destinatarioPorPago[pago.idSimulado || pago.id] = destinatario;
+        }
+      });
+    });
+
+    return destinatarioPorPago;
+  }
+
   // Arma los recuadros del muro a partir de los compromisos del ciclo.
   //
   // Un recuadro por categoría de presupuesto, más uno de Deudas y otro de
@@ -7075,7 +8073,12 @@
         grupos.forEach(function (grupo) { grupo.titulo = null; });
       }
 
-      recuadros.push({ tipo: "pagos", nombre: categoria.nombre, grupos: grupos });
+      recuadros.push({
+        tipo: "pagos",
+        nombre: categoria.nombre,
+        grupos: grupos,
+        destinatariosVisibles: calcularDestinatariosVisiblesDelRecuadro(grupos, datos)
+      });
     });
 
     // Deudas y tarjetas, cada una en su recuadro.
@@ -7153,12 +8156,20 @@
     // En un ciclo futuro no hay días transcurridos ni gasto real que medir, así
     // que ahí manda el presupuesto del ciclo entero, que es lo que calcula el
     // motor de simulación.
+    // Solo débito, igual que el balance de abajo: un gasto libre a crédito no
+    // sale de la cuenta en este ciclo, vuelve como pago de la tarjeta y ya está
+    // contado ahí. Si esta fila lo incluyera, el recuadro no sumaría.
     const variableGastado = datos.gastos
-      .filter(function (g) { return g.cicloId === ciclo.id && g.compromisoId === null; })
+      .filter(function (g) {
+        return g.cicloId === ciclo.id && g.compromisoId === null && g.fuente === "debito";
+      })
       .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
 
+    // El mismo apartado que resta la cifra grande, no el ritmo proyectado: si
+    // esta fila mostrara otra cosa, las filas del resumen no sumarían el
+    // balance de abajo y el recuadro se leería como si tuviera un error.
     const variablePorVenir = esCicloActual
-      ? calcularGastoVariablePorVenir(ciclo, datos)
+      ? calcularPresupuestoVariablePendiente(ciclo, datos)
       : resultado.gastoVariableProyectado;
 
     // El mismo número y la misma función que la cifra grande de arriba, para
@@ -7284,10 +8295,20 @@
             : "<button type=\"button\" class=\"boton-opciones-pago\" data-opciones-de=\"" + pago.idSimulado + "\"" +
               " title=\"Cómo pagarlo\" aria-label=\"Opciones de pago de " + escaparHTML(pago.nombre) + "\">···</button>";
 
+          // El destinatario solo baja a una segunda línea cuando hace falta
+          // para no confundir dos pagos que se llaman igual (ver
+          // calcularDestinatariosVisiblesDelRecuadro). Nunca se trunca: si el
+          // nombre es largo, la fila crece, y el muro se reacomoda solo
+          // porque su ajuste mide el contenido real.
+          const destinatarioVisible = (recuadro.destinatariosVisibles || {})[pago.idSimulado || pago.id];
+          const segundaLinea = destinatarioVisible
+            ? "<span class=\"destinatario-fila-muro\">" + escaparHTML(destinatarioVisible) + "</span>"
+            : "";
+
           const fila = "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") +
               (pago.estadoCredito ? " es-credito" : "") + "\">" +
             "<span class=\"punto-estado " + estado + "\"></span>" +
-            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + etiquetaCredito + "</span>" +
+            "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + etiquetaCredito + segundaLinea + "</span>" +
             "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
             montoHTML +
             botonOpciones +
@@ -8327,10 +9348,12 @@
     });
 
     contenedor.innerHTML = Object.keys(porCategoria).map(function (nombre) {
+      const grupos = [{ titulo: null, pagos: porCategoria[nombre] }];
       return htmlDeRecuadroDelMuro({
         tipo: "pagos",
         nombre: nombre,
-        grupos: [{ titulo: null, pagos: porCategoria[nombre] }]
+        grupos: grupos,
+        destinatariosVisibles: calcularDestinatariosVisiblesDelRecuadro(grupos, datos)
       }, false, true);
     }).join("");
 
@@ -8444,7 +9467,7 @@
 
   function renderizarTodo() {
     renderizarAvisoRespaldo();
-    renderizarResumenSuperior();
+    renderizarCintaCaptura();
     actualizarMontosDeCompromisosDeTarjeta(leerDatos());
     renderizarCategorias();
     actualizarSelectsDelFormularioRecurrente();
@@ -8457,12 +9480,7 @@
     renderizarOcurrenciasDelCiclo();
     renderizarPresupuestoSemanal();
     renderizarCompromisos();
-    renderizarBotonesCategoriaGasto();
-    renderizarAtajosDeGasto();
-    renderizarDestinatariosUsados();
-    renderizarPendientes();
-    renderizarGastosDeHoy();
-    renderizarAvanceSemanal();
+    renderizarTicket();
     renderizarBalanceDelCiclo();
     renderizarTrayectoriaSemaforo();
     renderizarProximosPagosAnalisis();
@@ -8564,19 +9582,12 @@
   });
   document.getElementById("inputArchivo").addEventListener("change", importarJSON);
 
-  document.querySelectorAll("#botonesFuenteGasto button").forEach(function (boton) {
-    boton.addEventListener("click", function () {
-      seleccionarFuenteGasto(this.getAttribute("data-fuente"));
-    });
-  });
-  document.getElementById("botonGuardarGastoNuevo").addEventListener("click", manejarGuardarGastoNuevo);
-
-  // Los atajos cubren el día a día; la lista completa de categorías se
-  // despliega solo cuando hace falta, para no llenar la pantalla de botones.
-  document.getElementById("botonMasCategorias").addEventListener("click", function () {
-    const paso = document.getElementById("pasoCategoriaGasto");
-    paso.style.display = paso.style.display === "none" ? "block" : "none";
-  });
+  // Un solo escucha para todo el ticket: su contenido se reescribe entero en
+  // cada paso, pero el contenedor no cambia nunca.
+  const ticketCaptura = document.getElementById("ticketCaptura");
+  ticketCaptura.addEventListener("click", manejarToqueEnElTicket);
+  ticketCaptura.addEventListener("input", manejarEscrituraEnElTicket);
+  ticketCaptura.addEventListener("change", manejarCambioEnElTicket);
 
   function inicializar() {
     const cicloActual = asegurarCicloActual();
