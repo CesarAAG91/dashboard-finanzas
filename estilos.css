@@ -1,0 +1,2002 @@
+/* ============================================================
+   ESTILOS
+   ============================================================
+
+   Todo el CSS de la app. Son dos diseños distintos conviviendo en
+   un archivo, separados por el ancho de la pantalla:
+
+     - Pantalla angosta (menos de 641px): la vista de Captura, con
+       su propia paleta — fondo casi negro y ticket de papel crema.
+     - Pantalla ancha (641px o más): la vista de Análisis, con los
+       neutros cálidos del sistema de diseño aprobado el 29 jul 2026.
+       Todo va anclado a #vistaAncha para no tocar la otra.
+
+   El color solo significa estado. Nunca decora.
+   ============================================================ */
+
+/* El fondo de la página es el mismo neutro cálido que usan las dos vistas.
+   Antes era el azul pizarra de la paleta original: se pintaba primero al
+   cargar y asomaba alrededor de las tarjetas, así que la app parpadeaba en
+   azul antes de mostrar su color real. */
+body {
+  font-family: -apple-system, system-ui, sans-serif;
+  background-color: #18161c;
+  color: #f6f3ef;
+  margin: 0;
+  padding: 16px;
+  max-width: 640px;
+}
+h1 {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+h2 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+p.descripcion {
+  color: #948e9c;
+  font-size: 14px;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+section {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #221f27;
+}
+label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #f6f3ef;
+}
+label input,
+label select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  padding: 8px;
+  background-color: #221f27;
+  color: #f6f3ef;
+  border: 1px solid #35313c;
+  border-radius: 6px;
+  font-size: 14px;
+}
+label input[type="checkbox"] {
+  display: inline-block;
+  width: auto;
+  margin-top: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+button {
+  background-color: #948e9c;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+button:active {
+  background-color: #0d5f58;
+}
+.pista {
+  color: #6f6a78;
+  font-size: 12px;
+  margin: -4px 0 12px 0;
+}
+.aviso {
+  color: #fde047;
+  border-left: 3px solid #fde047;
+  padding-left: 8px;
+  margin: 4px 0;
+}
+.costo-credito {
+  color: #f87171;
+  font-weight: bold;
+  margin: 8px 0;
+  min-height: 20px;
+  font-size: 14px;
+}
+ul.lista-items {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0 0;
+}
+ul.lista-items li {
+  padding: 8px 0;
+  border-bottom: 1px solid #221f27;
+  font-size: 14px;
+}
+ul.lista-items li.vacio {
+  color: #6f6a78;
+  font-style: italic;
+  border-bottom: none;
+}
+.detalle {
+  color: #948e9c;
+  font-size: 12px;
+}
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: 260px;
+  background-color: #221f27;
+  color: #f6f3ef;
+  border: 1px solid #35313c;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 13px;
+}
+.botones {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+#mensajeEstado {
+  margin-top: 12px;
+  font-size: 13px;
+  min-height: 18px;
+}
+details summary {
+  cursor: pointer;
+  color: #948e9c;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+/*
+  Captura (angosta, celular) y la vista ancha (laptop) nunca se muestran
+  las dos a la vez: las separa el ancho de pantalla, no un control. La
+  vista ancha es una sola página continua — ya no hay pestañas.
+*/
+#vistaCaptura {
+  display: flex;
+}
+#vistaAncha {
+  display: none;
+}
+@media (min-width: 641px) {
+  #vistaCaptura {
+    display: none;
+  }
+  #vistaAncha {
+    display: block;
+  }
+  /* La vista ancha es una sola página que ocupa la pantalla completa, así
+     que en laptop el body suelta la columna de 640px y su padding: cada
+     zona de la página pone el propio. */
+  body {
+    max-width: none;
+    padding: 0;
+  }
+  /* El título y su párrafo explican cómo funciona la app en general —
+     útiles la primera vez, no cada vez que se entra a trabajar. En la
+     pantalla angosta se siguen viendo. */
+  body > h1,
+  body > p.descripcion {
+    display: none;
+  }
+  body > details {
+    margin: 0 22px 22px;
+  }
+}
+
+.monto-grande {
+  font-size: 22px;
+  text-align: center;
+}
+.pendiente-urgente {
+  border-left: 3px solid #f87171;
+  padding-left: 8px;
+}
+.edicion-categoria,
+.edicion-recurrente,
+.edicion-deuda,
+.edicion-tarjeta,
+.edicion-ingreso {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #221f27;
+  border-radius: 8px;
+}
+.estado-deuda-item {
+  margin-bottom: 14px;
+}
+
+/* Semáforo del ciclo: verde/amarillo/rojo son los umbrales de SPEC.md;
+   gris es "todavía no hay ingreso capturado para comparar". */
+.semaforo {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.semaforo-verde {
+  background-color: #2c283355;
+  color: #5eead4;
+}
+.semaforo-amarillo {
+  background-color: #eab30855;
+  color: #fde047;
+}
+.semaforo-rojo {
+  background-color: #f8717155;
+  color: #fca5a5;
+}
+.semaforo-gris {
+  background-color: #6f6a7855;
+  color: #f6f3ef;
+}
+
+/* Gráfica de trayectoria del semáforo: mismos colores de estado que
+   .semaforo-*, aplicados como trazo de línea en vez de fondo de chip. */
+.grafica-trayectoria {
+  position: relative;
+  margin-top: 12px;
+  padding: 10px;
+  background-color: #221f27;
+  border-radius: 8px;
+}
+.grafica-trayectoria svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.grafica-eje-texto {
+  fill: #948e9c;
+  font-size: 10px;
+}
+.grafica-linea-referencia {
+  stroke: #35313c;
+  stroke-width: 1;
+}
+.grafica-linea-hoy {
+  stroke: #6f6a78;
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+.grafica-crosshair {
+  stroke: #f6f3ef;
+  stroke-width: 1;
+  pointer-events: none;
+  display: none;
+}
+.grafica-leyenda {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #948e9c;
+}
+.grafica-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.grafica-leyenda .marca {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+.grafica-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background-color: #18161c;
+  border: 1px solid #35313c;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  display: none;
+  transform: translate(-50%, -100%);
+}
+.grafica-tooltip .valor {
+  font-weight: 600;
+  color: #f6f3ef;
+}
+
+/* ============================================================
+   CAPTURA — EL TICKET (pantalla angosta, iPhone)
+   ============================================================
+   Todo lo de aquí en adelante está anclado a #vistaCaptura a
+   propósito: la vista ancha tiene su propio sistema visual y no debe
+   verse afectada por nada de esto.
+
+   La idea que ordena toda la pantalla: la app es una caja
+   registradora. El fondo casi negro es la máquina; el rectángulo
+   claro es el papel térmico que va saliendo, un paso por vez. Por eso
+   el texto del papel es tinta oscura sobre crema (legible bajo el sol,
+   caminando) y el monto va en monoespaciada grande, como un recibo
+   impreso.
+
+   Dos colores tienen significado y ninguno es decorativo:
+   - Los 8 tonos de categoría (PALETA_CATEGORIAS en el JavaScript) —
+     marcan a qué categoría pertenece cada cosa.
+   - El semáforo, y solo para vencimientos. Los valores verde/ámbar/
+     rojo de arriba en este archivo se calcularon contra un fondo
+     oscuro; sobre el papel claro no se leen, así que aquí van los
+     mismos tres tonos oscurecidos para que contrasten contra el crema.
+     Es la misma señal, adaptada al papel, no una paleta nueva.
+*/
+#vistaCaptura {
+  /* La máquina */
+  --fondo-c: #0c0b0e;
+  /* El papel */
+  --papel-c: #f7f4ec;
+  --papel-linea-c: #d9d3c4;
+  --papel-toque-c: #eae4d6;
+  /* La tinta, en tres niveles */
+  --tinta-c: #17161a;
+  --tinta-sec-c: #5b564d;
+  --tinta-ter-c: #8b8578;
+  /* Texto sobre la máquina (la cinta de arriba y la nota de mañana) */
+  --cinta-texto-c: #efece4;
+  --cinta-etiqueta-c: #837d8f;
+  --cinta-borde-c: #2a2730;
+  /* Semáforo sobre papel */
+  --verde-papel-c: #0f6b4f;
+  --ambar-papel-c: #8a5300;
+  --rojo-papel-c: #b3261e;
+
+  position: relative;
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--fondo-c);
+  color: var(--cinta-texto-c);
+  padding: calc(env(safe-area-inset-top) + 10px)
+           calc(env(safe-area-inset-right) + 12px)
+           calc(env(safe-area-inset-bottom) + 10px)
+           calc(env(safe-area-inset-left) + 12px);
+}
+#vistaCaptura .mono {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* En el teléfono no hay nada arriba ni abajo del ticket: el título, la
+   descripción, el aviso de respaldo y el bloque de exportar/importar
+   viven en la laptop. Aquí romperían la promesa de que el flujo cabe en
+   pantalla sin scroll. */
+@media (max-width: 640px) {
+  body {
+    padding: 0;
+    max-width: none;
+  }
+  body > h1,
+  body > p.descripcion,
+  body > details {
+    display: none;
+  }
+  body > #avisoRespaldo {
+    display: none !important;
+  }
+}
+
+/* ---------- La cinta: el único número que sobrevive del resumen ---------- */
+/* Libre para gastar (calcularDisponibleReal) es el mismo número que manda
+   en la vista ancha. Va sobre la máquina, no sobre el papel: no es parte
+   del recibo que se está imprimiendo, es el estado del ciclo. */
+#cintaCaptura {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 6px 10px;
+}
+#cintaCaptura .cinta-etiqueta {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--cinta-etiqueta-c);
+}
+#cintaCaptura .cinta-monto {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--cinta-texto-c);
+}
+#cintaCaptura .cinta-monto.en-numeros-rojos {
+  color: #fca5a5;
+}
+/* La puerta al respaldo. Discreta a propósito: se usa una vez por semana,
+   no veinte veces al día como el resto de la pantalla. */
+#cintaCaptura .boton-datos-cinta {
+  flex: 0 0 auto;
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--cinta-borde-c);
+  border-radius: 3px;
+  padding: 4px 9px;
+  color: var(--cinta-etiqueta-c);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+#cintaCaptura .boton-datos-cinta:active { color: var(--cinta-texto-c); }
+/* Cuando toca respaldar, el botón se marca. Es el aviso de respaldo de
+   siempre, ahora donde se puede actuar sobre él. Ámbar del semáforo: es un
+   vencimiento, que es justo para lo que ese color existe. */
+#cintaCaptura .boton-datos-cinta.toca-respaldar {
+  border-color: #fde047;
+  color: #fde047;
+}
+
+/* ---------- La capa de respaldo ---------- */
+#capaDatosCaptura {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: rgba(12, 11, 14, 0.94);
+}
+#capaDatosCaptura[hidden] { display: none; }
+#capaDatosCaptura .panel-datos {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#capaDatosCaptura .titulo-datos {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cinta-etiqueta-c);
+}
+#capaDatosCaptura .estado-respaldo {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--cinta-texto-c);
+}
+#capaDatosCaptura .estado-respaldo.toca-respaldar { color: #fde047; }
+#capaDatosCaptura .boton-datos {
+  width: 100%;
+  background-color: var(--papel-c);
+  color: var(--tinta-c);
+  border: 0;
+  border-radius: 3px;
+  padding: 15px 0;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#capaDatosCaptura .boton-cerrar-datos {
+  width: 100%;
+  margin-top: 6px;
+  background: transparent;
+  border: 1px solid var(--cinta-borde-c);
+  border-radius: 3px;
+  padding: 12px 0;
+  color: var(--cinta-etiqueta-c);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ---------- El carro: por donde sale el papel ---------- */
+#carroCaptura {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+#ticketCaptura,
+.ticket-fantasma {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--papel-c);
+  color: var(--tinta-c);
+  border-radius: 3px;
+  padding: 18px 16px 16px;
+  overflow: hidden;
+}
+/* La perforación de arriba: por ahí se desprendió el ticket anterior. */
+#ticketCaptura::before,
+.ticket-fantasma::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 7px;
+  background-image: radial-gradient(circle at 50% 0, var(--fondo-c) 4.5px, transparent 5px);
+  background-size: 13px 7px;
+  background-repeat: repeat-x;
+}
+
+/* La firma del diseño: cada paso se imprime hacia abajo, y al guardar el
+   ticket se desprende con un corte limpio mientras el siguiente sube. */
+@keyframes imprimirTicket {
+  from { transform: translateY(-101%); }
+  to   { transform: translateY(0); }
+}
+@keyframes cortarTicket {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(106%); opacity: 0; }
+}
+@keyframes imprimirLinea {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#ticketCaptura.entrando {
+  animation: imprimirTicket 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.ticket-fantasma {
+  z-index: 2;
+  animation: cortarTicket 340ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+#ticketCaptura.paso-avanza > * {
+  animation: imprimirLinea 220ms ease-out backwards;
+}
+#ticketCaptura.paso-avanza > *:nth-child(2) { animation-delay: 40ms; }
+#ticketCaptura.paso-avanza > *:nth-child(3) { animation-delay: 80ms; }
+#ticketCaptura.paso-avanza > *:nth-child(4) { animation-delay: 110ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  #ticketCaptura.entrando,
+  #ticketCaptura.paso-avanza > *,
+  .ticket-fantasma,
+  #notaCaptura {
+    animation: none;
+  }
+  .ticket-fantasma { display: none; }
+}
+
+/* ---------- Cabecera del ticket ---------- */
+#vistaCaptura .ticket-cabecera {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 9px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed var(--papel-linea-c);
+}
+#vistaCaptura .boton-atras {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--papel-linea-c);
+  border-radius: 3px;
+  color: var(--tinta-c);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+#vistaCaptura .boton-atras:active { background-color: var(--papel-toque-c); }
+#vistaCaptura .ticket-titulo {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--tinta-sec-c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* La categoría elegida se reconoce por su tono antes de leer el nombre. */
+#vistaCaptura .marca-categoria {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: var(--color-categoria, var(--tinta-ter-c));
+}
+#vistaCaptura .ticket-fecha {
+  flex: 0 0 auto;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--tinta-ter-c);
+}
+
+/* ---------- Vencimientos al frente (pantalla 1) ---------- */
+#vistaCaptura .vencimientos-ticket {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--papel-linea-c);
+}
+#vistaCaptura .fila-vencimiento {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-left: 3px solid var(--ambar-papel-c);
+  border-radius: 0;
+  padding: 8px 0 8px 9px;
+  font-family: inherit;
+  text-align: left;
+  color: var(--tinta-c);
+  cursor: pointer;
+}
+#vistaCaptura .fila-vencimiento:active { background-color: var(--papel-toque-c); }
+#vistaCaptura .fila-vencimiento.ya-vencido { border-left-color: var(--rojo-papel-c); }
+#vistaCaptura .fila-vencimiento .nombre {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#vistaCaptura .fila-vencimiento .cuando {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ambar-papel-c);
+}
+#vistaCaptura .fila-vencimiento.ya-vencido .cuando { color: var(--rojo-papel-c); }
+#vistaCaptura .fila-vencimiento .monto {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 700;
+}
+#vistaCaptura .vencimientos-de-mas {
+  margin: 4px 0 0 12px;
+  font-size: 11px;
+  color: var(--tinta-ter-c);
+}
+
+/* ---------- Rejilla de categorías y subcategorías ---------- */
+/* Las filas se reparten el alto disponible, así que con 18 categorías la
+   pantalla se llena sin scroll: solo baja el alto de cada botón.
+   Pero con dos opciones no tiene sentido que cada botón mida media
+   pantalla, así que el JavaScript pone un tope de alto por renglón (sabe
+   cuántas filas hay, el CSS no) y el sobrante se va abajo. Cuando el tope
+   no cabe, manda el alto disponible y las filas se encogen — nunca al
+   revés, que es lo que garantiza que jamás aparezca scroll. */
+#vistaCaptura .rejilla-ticket {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: auto;
+  display: grid;
+  grid-template-columns: repeat(var(--columnas-ticket, 2), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 7px;
+}
+#vistaCaptura .boton-ticket {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+  background-color: transparent;
+  border: 1px solid var(--papel-linea-c);
+  border-left: 4px solid var(--color-categoria, var(--tinta-ter-c));
+  border-radius: 3px;
+  padding: 8px 10px;
+  color: var(--tinta-c);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  line-height: 1.15;
+  cursor: pointer;
+}
+#vistaCaptura .boton-ticket:active { background-color: var(--papel-toque-c); }
+/* Una opción apagada no es un error: es que ahí no hay nada que pagar hoy.
+   Se sigue viendo, para que la pantalla no cambie de forma según el día. */
+#vistaCaptura .boton-ticket:disabled {
+  color: var(--tinta-ter-c);
+  border-color: var(--papel-linea-c);
+  border-left-color: var(--papel-linea-c);
+  cursor: default;
+}
+/* El dato de apoyo: cuánto se debe, o por qué el botón está apagado. */
+#vistaCaptura .apoyo-boton-ticket {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--tinta-ter-c);
+}
+
+/* ---------- Lo ya registrado hoy en esta categoría (pantalla 2) ---------- */
+/* Nunca crece más de tres líneas: si hoy hubo diez compras, se corta. Es un
+   recordatorio de un vistazo, no una lista para leer. */
+#vistaCaptura .hoy-en-categoria {
+  flex: 0 0 auto;
+  margin: 0 0 10px;
+  padding-bottom: 9px;
+  border-bottom: 1px dashed var(--papel-linea-c);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--tinta-sec-c);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#vistaCaptura .hoy-en-categoria .hora { color: var(--tinta-ter-c); }
+#vistaCaptura .hoy-en-categoria .importe { font-weight: 600; color: var(--tinta-c); }
+
+/* ---------- Renglón informativo, arriba del monto ---------- */
+#vistaCaptura .renglon-informativo {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--tinta-sec-c);
+  min-height: 17px;
+}
+#vistaCaptura .renglon-informativo.excedido {
+  color: var(--rojo-papel-c);
+  font-weight: 600;
+}
+
+/* ---------- El monto ---------- */
+#vistaCaptura .monto-ticket {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 4px 0 10px;
+}
+#vistaCaptura .monto-ticket .signo {
+  font-size: 20px;
+  color: var(--tinta-ter-c);
+}
+#vistaCaptura .monto-ticket .cifra {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+#vistaCaptura .monto-ticket .cifra.en-espera { color: var(--tinta-ter-c); }
+
+/* ---------- Débito / Crédito ---------- */
+#vistaCaptura .pestanas-fuente {
+  flex: 0 0 auto;
+  display: flex;
+  border: 1px solid var(--papel-linea-c);
+  border-radius: 3px;
+  overflow: hidden;
+}
+#vistaCaptura .pestana-fuente {
+  flex: 1 1 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 9px 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta-sec-c);
+  cursor: pointer;
+}
+#vistaCaptura .pestana-fuente.activa {
+  background-color: var(--tinta-c);
+  color: var(--papel-c);
+}
+#vistaCaptura .chips-tarjeta {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+#vistaCaptura .chip-tarjeta {
+  background: transparent;
+  border: 1px solid var(--papel-linea-c);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--tinta-sec-c);
+  cursor: pointer;
+}
+#vistaCaptura .chip-tarjeta.activa {
+  border-color: var(--tinta-c);
+  color: var(--tinta-c);
+  font-weight: 700;
+}
+/* En qué se convierte una compra a meses. Vacío cuando es de contado, pero
+   el renglón se queda: si apareciera y desapareciera, la pantalla brincaría
+   cada vez que se toca un plazo. */
+#vistaCaptura .renglon-reparto {
+  flex: 0 0 auto;
+  margin: 6px 0 0;
+  min-height: 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--tinta-sec-c);
+}
+
+/* ---------- Descripción y "Para quién" ---------- */
+/* Se tocan para escribirlas y el campo ocupa el lugar del teclado numérico.
+   Si se quedaran siempre abiertas, el teclado de letras del iPhone taparía
+   el botón Guardar, que es el único protagonista de esta pantalla. */
+#vistaCaptura .detalles-ticket {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  border-top: 1px dashed var(--papel-linea-c);
+}
+#vistaCaptura .fila-detalle {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 7px 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--tinta-sec-c);
+  text-align: left;
+  cursor: pointer;
+}
+#vistaCaptura .fila-detalle .valor {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  color: var(--tinta-c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#vistaCaptura .fila-detalle .valor.sin-poner { color: var(--tinta-ter-c); }
+
+/* ---------- Teclado numérico propio ---------- */
+/* Dibujado por la app, no el del sistema: así está visible desde el primer
+   instante, nunca tapa el botón Guardar y nunca provoca scroll. */
+/* Mismo criterio que la rejilla: las teclas se reparten lo que quede, pero
+   con un tope para que no se conviertan en cuatro franjas gigantes. El
+   sobrante se va arriba, así el teclado queda pegado al botón Guardar,
+   donde cae el pulgar. */
+#vistaCaptura .teclado-ticket {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 288px;
+  margin-top: auto;
+  padding-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 6px;
+}
+#vistaCaptura .tecla {
+  background: transparent;
+  border: 1px solid var(--papel-linea-c);
+  border-radius: 3px;
+  padding: 0;
+  color: var(--tinta-c);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 21px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#vistaCaptura .tecla:active { background-color: var(--papel-toque-c); }
+#vistaCaptura .tecla.tecla-borrar { font-size: 17px; }
+
+/* El campo de texto ocupa el hueco del teclado mientras se escribe. */
+#vistaCaptura .campo-escritura {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+}
+#vistaCaptura .campo-escritura .rotulo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tinta-ter-c);
+}
+#vistaCaptura .campo-escritura input {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--tinta-c);
+  border-radius: 0;
+  padding: 6px 2px;
+  color: var(--tinta-c);
+  font-family: inherit;
+  font-size: 18px;
+}
+#vistaCaptura .campo-escritura input:focus { outline: none; }
+#vistaCaptura .boton-listo {
+  background-color: transparent;
+  border: 1px solid var(--tinta-c);
+  border-radius: 3px;
+  padding: 8px 18px;
+  color: var(--tinta-c);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- Guardar: el único protagonista ---------- */
+#vistaCaptura .boton-guardar-ticket {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 10px;
+  background-color: var(--tinta-c);
+  color: var(--papel-c);
+  border: 0;
+  border-radius: 3px;
+  padding: 17px 0;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+#vistaCaptura .boton-guardar-ticket:active { background-color: #33313a; }
+#vistaCaptura .boton-guardar-ticket:disabled {
+  background-color: var(--papel-linea-c);
+  color: var(--tinta-ter-c);
+  cursor: default;
+}
+
+/* ---------- Pantalla vacía ---------- */
+#vistaCaptura .ticket-vacio {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tinta-sec-c);
+}
+
+/* ---------- La nota de "vence mañana" ---------- */
+/* Se ve y se va sola. No pide ningún toque, no bloquea nada, y vuelve a
+   salir cada vez que se guarda un gasto ese día. */
+#notaCaptura {
+  position: absolute;
+  left: calc(env(safe-area-inset-left) + 20px);
+  right: calc(env(safe-area-inset-right) + 20px);
+  bottom: calc(env(safe-area-inset-bottom) + 22px);
+  z-index: 3;
+  box-sizing: border-box;
+  background-color: #1c1a21;
+  border: 1px solid var(--cinta-borde-c);
+  border-left: 3px solid #fde047;
+  border-radius: 4px;
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--cinta-texto-c);
+  pointer-events: none;
+  animation: notaEntraYSeVa 4200ms ease forwards;
+}
+@keyframes notaEntraYSeVa {
+  0%   { opacity: 0; transform: translateY(10px); }
+  7%   { opacity: 1; transform: translateY(0); }
+  88%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+
+/* ============================================================ */
+/* FILA DE COMPROMISO SIMULADO                                   */
+/* ============================================================ */
+/* Único resto vivo de la vieja pestaña de Simulación: la fila
+   editable de un compromiso (nombre, monto, marca de modificado).
+   Ya no tiene pestaña propia — la reusa la ventana de opciones de
+   pago, que la vuelve a vestir más abajo (#cuerpoOpcionesPago). */
+.fila-compromiso-simulado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-bottom: 1px solid #18161c;
+}
+.fila-compromiso-simulado .nombre-compromiso-simulado {
+  flex: 1;
+  min-width: 100px;
+}
+.fila-compromiso-simulado input,
+.fila-compromiso-simulado select {
+  font-size: 12px;
+  padding: 4px 6px;
+}
+.monto-simulado-editado {
+  width: 90px;
+}
+.marca-modificado {
+  color: #fde047;
+  font-size: 11px;
+  border: 1px solid #fde047;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* ============================================================ */
+/* VISTA ANCHA — una sola página                                 */
+/* ============================================================ */
+/*
+   Sistema de diseño aprobado el 29 jul 2026: neutros cálidos, el color
+   solo significa estado, el dato pesa más que su envoltorio, y la cifra
+   protagonista en peso 300 (no negritas).
+
+   Todo va anclado a #vistaAncha para no tocar la vista de Captura, que
+   tiene su propia paleta ya aprobada.
+*/
+#vistaAncha {
+  --fondo-a: #18161c;
+  --superficie-a: #221f27;
+  --superficie-alta-a: #2c2833;
+  --borde-a: #35313c;
+  --borde-sutil-a: #29262f;
+  --texto-a: #f6f3ef;
+  --texto-2a: #948e9c;
+  --texto-3a: #6f6a78;
+
+  --mono-a: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* La única variable que reescala el muro: el interior de los recuadros
+     se mide en em, así que cambiar este número los reescala completos.
+     La fija acomodarMuroDePagos. */
+  --escala: 1;
+
+  background-color: var(--fondo-a);
+  color: var(--texto-a);
+}
+
+/* ---------- Primera pantalla: ocupa el viewport completo ---------- */
+/* Requisito duro del usuario: todos los pagos del ciclo visibles de un
+   golpe, sin scroll. La altura la reparten encabezado, muro y cajón; el
+   muro es el único que cede espacio. */
+#primeraPantalla {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#encabezadoCiclo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--borde-sutil-a);
+}
+
+#vistaAncha .etiqueta-ancha {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+}
+
+#vistaAncha .veredicto-ciclo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Un número manda. El peso 300 es lo que más separa el resultado de un
+   panel administrativo. */
+#vistaAncha .cifra-protagonista {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 40px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+#vistaAncha .identidad-ciclo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  color: var(--texto-2a);
+}
+#vistaAncha .identidad-ciclo .cifra-a { color: var(--texto-a); }
+
+#vistaAncha .navegacion-ciclos {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+}
+#vistaAncha .navegacion-ciclos button {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-a);
+  color: var(--texto-2a);
+  border-radius: 6px;
+  width: 24px;
+  height: 22px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+#vistaAncha .navegacion-ciclos button:hover:not(:disabled) { color: var(--texto-a); }
+#vistaAncha .navegacion-ciclos button:disabled { opacity: 0.35; cursor: default; }
+
+#bandaTrayectoria[hidden] { display: none; }
+
+#vistaAncha .resumen-ciclo {
+  margin-left: auto;
+  display: flex;
+  gap: 24px;
+  align-items: baseline;
+}
+#vistaAncha .dato-secundario {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: right;
+}
+#vistaAncha .dato-secundario .valor-a {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  color: var(--texto-a);
+}
+
+/* ---------- Barra de simulación ---------- */
+/* Solo aparece cuando hay algo sin guardar. Usa el ámbar del semáforo, que
+   ya significa "atención, pendiente" en toda la app. */
+#barraSimulacion {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 22px 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(253, 224, 71, 0.35);
+  border-radius: 8px;
+  background-color: rgba(253, 224, 71, 0.07);
+}
+#barraSimulacion[hidden] { display: none; }
+#vistaAncha .aviso-simulacion {
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: #fde047;
+}
+#vistaAncha .nota-simulacion {
+  flex: 0 1 auto;
+  font-size: 12px;
+  color: var(--texto-3a);
+}
+#barraSimulacion button {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-a);
+  color: var(--texto-2a);
+  border-radius: 7px;
+  padding: 6px 13px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+#barraSimulacion button:hover { color: var(--texto-a); }
+/* Guardar es la acción que toca datos reales: se distingue con la misma
+   inversión neutra del botón de agregar, no con un color nuevo. */
+#botonGuardarSimulacion {
+  background-color: var(--texto-a) !important;
+  border-color: var(--texto-a) !important;
+  color: var(--fondo-a) !important;
+  font-weight: 500;
+}
+
+/* ---------- Trayectoria ---------- */
+/* Lo real y lo proyectado no se disfrazan uno de otro: trazo sólido y color
+   pleno para lo que ya pasó, el mismo color al 55% y punteado para lo que
+   todavía no. Sin leyenda — la diferencia se lee sola. */
+#bandaTrayectoria {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  align-items: center;
+  gap: 22px;
+  padding: 12px 22px 0;
+}
+#vistaAncha .texto-trayectoria {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  color: var(--texto-2a);
+}
+#vistaAncha .texto-trayectoria strong { color: var(--texto-a); }
+#vistaAncha .grafica-trayectoria-banda { line-height: 0; }
+#vistaAncha .grafica-trayectoria-banda svg { width: 100%; height: 54px; display: block; }
+#vistaAncha .linea-real {
+  fill: none;
+  stroke: var(--texto-a);
+  stroke-width: 1.5;
+}
+#vistaAncha .linea-proyectada {
+  fill: none;
+  stroke: var(--texto-a);
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+#vistaAncha .marca-hoy {
+  stroke: var(--borde-a);
+  stroke-width: 1;
+}
+#vistaAncha .linea-cero {
+  stroke: #f87171;
+  stroke-opacity: 0.35;
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+#vistaAncha .punto-quiebre {
+  fill: #f87171;
+}
+#vistaAncha .punto-hoy {
+  fill: var(--texto-a);
+}
+
+/* ---------- Muro de pagos ---------- */
+/* Columnas explícitas repartidas por JavaScript, no CSS multi-column:
+   dejando el reparto al navegador, la altura no se puede medir de forma
+   confiable justo después de cambiar columnas y escala en el mismo cuadro
+   (Chromium devuelve el layout anterior), y todo el acomodo depende de
+   esas mediciones. Ver acomodarMuroDePagos. */
+#vistaAncha .zona-muro {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 14px 22px;
+}
+#vistaAncha .zona-muro.con-scroll { overflow-y: auto; }
+#vistaAncha .zona-muro:not(.con-scroll) { overflow: hidden; }
+
+#vistaAncha .muro {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(10px * var(--escala));
+}
+#vistaAncha .columna-muro {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--escala));
+}
+
+#vistaAncha .recuadro {
+  background-color: var(--superficie-a);
+  border: 1px solid var(--borde-sutil-a);
+  border-radius: 8px;
+  padding: calc(0.6em * var(--escala)) calc(0.75em * var(--escala));
+  font-size: calc(1em * var(--escala));
+}
+
+#vistaAncha .encabezado-recuadro {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5em;
+  padding-bottom: 0.45em;
+  margin-bottom: 0.35em;
+  border-bottom: 1px solid var(--borde-sutil-a);
+}
+#vistaAncha .nombre-categoria-muro {
+  font-size: 0.82em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#vistaAncha .total-categoria-muro {
+  flex: 0 0 auto;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82em;
+}
+#vistaAncha .titulo-subcategoria-muro {
+  font-size: 0.65em;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+  padding: 0.3em 0 0.1em;
+}
+
+/* Densidad honesta: el aire va entre recuadros, no dentro de cada fila. */
+#vistaAncha .fila-muro {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45em;
+  padding: 0.14em 0;
+  font-size: 0.78em;
+  line-height: 1.35;
+}
+#vistaAncha .punto-estado {
+  flex: 0 0 auto;
+  width: 0.45em;
+  height: 0.45em;
+  border-radius: 50%;
+  margin-bottom: 0.08em;
+}
+/* Los tres estados se derivan de pagado + fechaProgramada; no hace falta
+   ningún campo nuevo en el modelo. Son el único color de la pantalla. */
+#vistaAncha .punto-estado.pagado { background-color: #5eead4; }
+#vistaAncha .punto-estado.pendiente { background-color: #fde047; }
+#vistaAncha .punto-estado.vencido { background-color: #f87171; }
+
+/* Ningún nombre se corta con "...": si no cabe en una línea, pasa a la
+   siguiente. Truncar en una app de dinero es peor que ocupar un renglón
+   más — "Suscripción de..." no dice cuál. */
+#vistaAncha .nombre-fila-muro {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--texto-2a);
+}
+/* Segunda línea: a quién corresponde este pago. Mismo tratamiento que los
+   títulos de subcategoría (chico, apagado), para que se lea como apoyo del
+   nombre y no como otro pago. */
+#vistaAncha .destinatario-fila-muro {
+  display: block;
+  font-size: 0.82em;
+  line-height: 1.2;
+  color: var(--texto-3a);
+}
+#vistaAncha .fila-muro.es-pagado .nombre-fila-muro { color: var(--texto-3a); }
+
+#vistaAncha .dia-fila-muro {
+  flex: 0 0 auto;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9em;
+  color: var(--texto-3a);
+}
+#vistaAncha .monto-fila-muro {
+  flex: 0 0 auto;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-a);
+}
+/* El monto de un pago pendiente es editable, pero se ve como el texto que
+   reemplaza hasta que se enfoca: si trajera borde y fondo, cada fila del
+   muro parecería un formulario y la pantalla dejaría de leerse de un golpe.
+   Mismo ancho y misma tipografía, así que editarlo no reacomoda nada. */
+#vistaAncha .monto-editable-muro {
+  flex: 0 0 auto;
+  width: 5.4em;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 5px;
+  padding: 0 2px;
+  color: var(--texto-a);
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 1em;
+  text-align: right;
+}
+#vistaAncha .monto-editable-muro:hover {
+  border-color: var(--borde-a);
+}
+#vistaAncha .monto-editable-muro:focus {
+  border-color: var(--texto-2a);
+  background-color: var(--superficie-alta-a);
+  outline: none;
+}
+/* Las flechitas del campo numérico roban ancho y ensucian la fila. */
+#vistaAncha .monto-editable-muro::-webkit-outer-spin-button,
+#vistaAncha .monto-editable-muro::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* El presupuesto semanal de las categorías variables se edita en el muro. */
+#vistaAncha .fila-presupuesto-muro {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45em;
+  padding: 0.2em 0;
+  font-size: 0.78em;
+}
+#vistaAncha .fila-presupuesto-muro label {
+  flex: 1 1 auto;
+  color: var(--texto-2a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#vistaAncha .fila-presupuesto-muro input {
+  flex: 0 0 auto;
+  width: 5.2em;
+  background-color: var(--superficie-alta-a);
+  border: 1px solid var(--borde-a);
+  border-radius: 5px;
+  color: var(--texto-a);
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 1em;
+  padding: 0.15em 0.35em;
+  text-align: right;
+}
+#vistaAncha .unidad-tope {
+  flex: 0 0 auto;
+  font-size: 0.85em;
+  color: var(--texto-3a);
+}
+
+/* Resumen del ciclo: cierra el muro con a dónde llega todo esto. */
+#vistaAncha .fila-resumen-muro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6em;
+  padding: 0.16em 0;
+  font-size: 0.78em;
+}
+#vistaAncha .etiqueta-resumen { color: var(--texto-2a); }
+#vistaAncha .fila-balance {
+  margin-top: 0.35em;
+  padding-top: 0.4em;
+  border-top: 1px solid var(--borde-sutil-a);
+  font-weight: 600;
+}
+#vistaAncha .fila-balance .etiqueta-resumen { color: var(--texto-a); }
+/* Único caso en que el color no marca el estado de un pago sino el del
+   ciclo entero: alcanza o no alcanza. Reusa los mismos dos colores. */
+#vistaAncha .fila-balance.balance-alcanza .monto-fila-muro { color: #5eead4; }
+#vistaAncha .fila-balance.balance-no-alcanza .monto-fila-muro { color: #f87171; }
+
+/* ---------- Cajón de calendario ---------- */
+/* Cerrado es una tira; abierto crece hacia arriba tapando el muro. No se
+   usa una ventana flotante a propósito: el cajón nunca deja de estar
+   anclado al fondo, así que el asa se queda donde el dedo ya la buscó. */
+#cajonCalendario {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--borde-a);
+  background-color: var(--superficie-a);
+  padding: 0 22px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* El asa es la barra de encabezado completa. */
+#asaCajon {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  padding: 11px 0 3px;
+  cursor: pointer;
+  text-align: left;
+}
+#vistaAncha .titulo-cajon {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--texto-2a);
+}
+#vistaAncha .pista-cajon {
+  font-size: 12px;
+  color: var(--texto-3a);
+}
+#vistaAncha .leyenda-cajon {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+#vistaAncha .item-leyenda {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+#vistaAncha .leyenda-cajon .punto-estado {
+  width: 6px;
+  height: 6px;
+  margin: 0;
+}
+#vistaAncha .chevron-cajon {
+  font-size: 13px;
+  color: var(--texto-3a);
+  line-height: 1;
+}
+#asaCajon:hover .chevron-cajon,
+#asaCajon:hover .pista-cajon { color: var(--texto-2a); }
+/* Abierto, el chevron apunta al revés: la acción ahora es minimizar. */
+#cajonCalendario.abierto .chevron-cajon { transform: rotate(180deg); display: inline-block; }
+
+/* ---- Cerrado: los próximos siete días ---- */
+#vistaAncha .proximos-dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+#vistaAncha .celda-proxima {
+  border: 1px solid var(--borde-sutil-a);
+  background-color: var(--fondo-a);
+  border-radius: 8px;
+  padding: 7px 9px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+#vistaAncha .celda-proxima:hover { border-color: var(--borde-a); }
+/* Hoy se distingue por el trazo, no por color: el color es estado. */
+#vistaAncha .celda-proxima.es-hoy { border-color: var(--texto-2a); }
+#vistaAncha .celda-proxima .dia-semana {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--texto-3a);
+}
+#vistaAncha .celda-proxima .numero-grande {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--texto-a);
+}
+#vistaAncha .celda-proxima .puntos-del-dia { min-height: 6px; }
+#vistaAncha .celda-proxima .monto-del-dia {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--texto-2a);
+}
+#vistaAncha .celda-proxima.sin-nada .numero-grande,
+#vistaAncha .celda-proxima.sin-nada .monto-del-dia { color: var(--texto-3a); }
+#cajonCalendario.abierto {
+  /* Al abrirse deja de ser una fila y pasa a ser una columna. Ocupa todo lo
+     que queda bajo el encabezado (flex: 1) en vez de una altura fija en vh:
+     una altura fija dejaba una banda muerta contra el borde inferior. */
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding-bottom: 16px;
+}
+#cajonCalendario.abierto .proximos-dias { display: none; }
+
+/* Con el cajón desplegado el muro queda tapado, así que se retira en vez de
+   dejarlo pelear por la altura sobrante: si se queda, su acomodo se
+   recalcula contra cuarenta pixeles y asoma roto por encima del cajón. */
+#primeraPantalla.con-cajon-abierto .zona-muro { display: none; }
+
+/* Dos zonas: el mes a la izquierda, el día elegido a la derecha. */
+#cuerpoCajon {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(0, 1.15fr);
+  gap: 22px;
+}
+#cuerpoCajon[hidden] { display: none; }
+
+#ladoMes {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#encabezadoMesCajon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--texto-2a);
+}
+#nombreMesCajon {
+  flex: 1 1 auto;
+  color: var(--texto-a);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+#encabezadoMesCajon button {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-alta-a);
+  color: var(--texto-2a);
+  border-radius: 7px;
+  width: 28px;
+  height: 26px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+#encabezadoMesCajon button:hover { color: var(--texto-a); }
+
+#rejillaMesCajon {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 4px;
+}
+#vistaAncha .encabezado-dia-semana {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--texto-3a);
+  text-align: center;
+  padding-bottom: 2px;
+}
+#vistaAncha .celda-dia {
+  border: 1px solid var(--borde-sutil-a);
+  background-color: var(--fondo-a);
+  border-radius: 7px;
+  padding: 4px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  min-height: 0;
+  overflow: hidden;
+}
+#vistaAncha .celda-dia.fuera-del-mes { visibility: hidden; }
+#vistaAncha .celda-dia:hover { border-color: var(--borde-a); }
+#vistaAncha .celda-dia.elegida {
+  border-color: var(--texto-2a);
+  background-color: var(--superficie-alta-a);
+}
+/* Hoy se marca con el número en pleno, sin color: el color es estado. */
+#vistaAncha .celda-dia.es-hoy .numero-dia {
+  color: var(--texto-a);
+  font-weight: 600;
+}
+#vistaAncha .numero-dia {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+#vistaAncha .puntos-del-dia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+#vistaAncha .puntos-del-dia .punto-estado {
+  width: 5px;
+  height: 5px;
+  margin: 0;
+}
+#vistaAncha .celda-dia.fuera-del-ciclo { opacity: 0.45; }
+
+/* Panel del día elegido: las mismas filas del muro. */
+#ladoDia {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 1px solid var(--borde-sutil-a);
+  padding-left: 22px;
+}
+#encabezadoDiaCajon {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+#vistaAncha .fecha-dia-elegido {
+  font-size: 14px;
+  font-weight: 600;
+}
+#vistaAncha .total-dia-elegido {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--texto-2a);
+}
+#contenidoDiaCajon {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* Dentro del cajón las filas no se reescalan con el muro: aquí hay espacio
+   y el detalle se lee de cerca. */
+#contenidoDiaCajon .recuadro {
+  font-size: 1em;
+  margin-bottom: 8px;
+}
+#vistaAncha .dia-sin-nada {
+  font-size: 13px;
+  color: var(--texto-3a);
+  padding: 6px 0;
+}
+
+/* Confirmar un pago desde el día abierto. */
+#vistaAncha .confirmacion-en-cajon {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0 9px 1.1em;
+}
+#vistaAncha .confirmacion-en-cajon label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+}
+#vistaAncha .confirmacion-en-cajon input,
+#vistaAncha .confirmacion-en-cajon select {
+  background-color: var(--superficie-alta-a);
+  border: 1px solid var(--borde-a);
+  border-radius: 6px;
+  color: var(--texto-a);
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  padding: 4px 6px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+#vistaAncha .confirmacion-en-cajon input { width: 6.5em; text-align: right; }
+#vistaAncha .confirmacion-en-cajon select { font-family: inherit; }
+#vistaAncha .boton-marcar-pagado {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-alta-a);
+  color: var(--texto-a);
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+#vistaAncha .boton-marcar-pagado:hover { border-color: var(--texto-3a); }
+/* ---------- Análisis, debajo ---------- */
+#zonaAnalisis {
+  padding: 26px 22px;
+  max-width: 1100px;
+}
+
+/* ---------- Acción ---------- */
+/* En el flujo, en su propia fila: así no hay número mágico que mantener
+   sincronizado con la altura del cajón, que cambia según su contenido. */
+#accionesFlotantes {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 22px 12px;
+}
+/* Con el calendario desplegado no hay dónde ponerlo sin tapar el panel del
+   día. Para dar de alta algo en una fecha concreta el lugar natural es el
+   propio día (pendiente, va con los modales de registro). */
+#primeraPantalla.con-cajon-abierto #accionesFlotantes {
+  display: none;
+}
+/* Inversión neutra: el único elemento de la app con fondo claro sólido, que
+   es lo que lo hace resaltar sin necesidad de color ni de tamaño. Radio 10,
+   como todo el sistema — no un pill, para que no se lea como una insignia. */
+#botonAgregarYAjustar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 16px 11px 13px;
+  background-color: var(--texto-a);
+  color: var(--fondo-a);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+#botonAgregarYAjustar .signo-mas {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  /* El signo carga el peso visual, así que se le da su propio espacio
+     separado del texto por una línea, no por aire. */
+  padding-right: 9px;
+  border-right: 1px solid rgba(24, 22, 28, 0.22);
+}
+#botonAgregarYAjustar:hover { background-color: #ffffff; }
+#botonAgregarYAjustar:active { transform: translateY(1px); }
+
+/* ---------- Marca de crédito y botón de opciones ---------- */
+#vistaAncha .marca-credito {
+  font-family: var(--mono-a);
+  font-size: 0.85em;
+  color: var(--texto-3a);
+  border: 1px solid var(--borde-a);
+  border-radius: 4px;
+  padding: 0 0.3em;
+}
+/* Un pago diferido ya no sale de este ciclo: se atenúa, como los pagados. */
+#vistaAncha .fila-muro.es-credito .nombre-fila-muro,
+#vistaAncha .fila-muro.es-credito .monto-editable-muro { color: var(--texto-3a); }
+
+#vistaAncha .boton-opciones-pago {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--texto-3a);
+  font-family: inherit;
+  font-size: 1em;
+  line-height: 1;
+  padding: 0 0.15em;
+  cursor: pointer;
+  /* Discreto hasta que se busca: el muro es para leer, no para operar. */
+  opacity: 0;
+}
+#vistaAncha .fila-muro:hover .boton-opciones-pago,
+#vistaAncha .boton-opciones-pago:focus-visible { opacity: 1; }
+#vistaAncha .fila-muro.es-credito .boton-opciones-pago { opacity: 1; }
+#vistaAncha .boton-opciones-pago:hover { color: var(--texto-a); }
+
+/* ---------- Ventana de opciones de pago ---------- */
+#capaOpcionesPago {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(12, 10, 15, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  z-index: 60;
+}
+#capaOpcionesPago[hidden] { display: none; }
+#panelOpcionesPago {
+  background-color: var(--fondo-a);
+  border: 1px solid var(--borde-a);
+  border-radius: 10px;
+  width: min(520px, 100%);
+}
+#encabezadoOpcionesPago {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--borde-sutil-a);
+}
+#encabezadoOpcionesPago h2 { margin: 0; font-size: 15px; }
+#botonCerrarOpcionesPago {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-a);
+  color: var(--texto-2a);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+#cuerpoOpcionesPago { padding: 14px 16px 18px; }
+#cuerpoOpcionesPago .pista { margin-top: 0; }
+/* La fila de controles viene del motor de simulación; aquí solo se le da
+   aire y se la hace envolver en pantallas angostas. */
+#cuerpoOpcionesPago .fila-compromiso-simulado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+#cuerpoOpcionesPago input,
+#cuerpoOpcionesPago select {
+  background-color: var(--superficie-alta-a);
+  border: 1px solid var(--borde-a);
+  border-radius: 6px;
+  color: var(--texto-a);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 7px;
+}
+#cuerpoOpcionesPago input {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  width: 7em;
+  text-align: right;
+}
+#cuerpoOpcionesPago .nombre-compromiso-simulado { display: none; }
+#cuerpoOpcionesPago .controles-credito-simulado {
+  display: none;
+  gap: 8px;
+}
+#cuerpoOpcionesPago .marca-modificado {
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+
+/* ---------- Modal de Ajustes ---------- */
+/* Ventana flotante de tamaño contenido, nunca a pantalla completa. */
+#capaModal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(12, 10, 15, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  z-index: 50;
+}
+#capaModal[hidden] { display: none; }
+
+#panelAjustes {
+  background-color: var(--fondo-a);
+  border: 1px solid var(--borde-a);
+  border-radius: 10px;
+  width: min(760px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#encabezadoAjustes {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--borde-sutil-a);
+}
+#encabezadoAjustes h2 { margin: 0; font-size: 15px; }
+#botonCerrarAjustes {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-a);
+  color: var(--texto-2a);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#contenidoAjustes {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 18px 18px;
+}
+
+#vistaAncha button:focus-visible,
+#vistaAncha input:focus-visible,
+#vistaAncha select:focus-visible {
+  outline: 2px solid var(--texto-2a);
+  outline-offset: 1px;
+}

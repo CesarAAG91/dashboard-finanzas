@@ -1,12 +1,15 @@
 CLAUDE.md
 SPEC.md
+MAPA.md
 DECISIONES.md
 PROGRESO.md
 PROMPT-INICIAL.md
 .claude/
 
-# Imágenes de referencia y capturas de trabajo: se quedan locales, el repo
-# solo lleva los tres archivos de la app (index.html, manifest.json, icon.png).
+# Imágenes de referencia y capturas de trabajo: se quedan locales. El repo solo
+# lleva los archivos que la app necesita para correr: index.html, estilos.css,
+# los cinco .js (motor, ajustes, captura, analisis, arranque), manifest.json e
+# icon.png.
 *.png
 *.jpeg
 *.jpg
