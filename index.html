@@ -479,6 +479,88 @@
   #cintaCaptura .cinta-monto.en-numeros-rojos {
     color: #fca5a5;
   }
+  /* La puerta al respaldo. Discreta a propósito: se usa una vez por semana,
+     no veinte veces al día como el resto de la pantalla. */
+  #cintaCaptura .boton-datos-cinta {
+    flex: 0 0 auto;
+    position: relative;
+    background: transparent;
+    border: 1px solid var(--cinta-borde-c);
+    border-radius: 3px;
+    padding: 4px 9px;
+    color: var(--cinta-etiqueta-c);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #cintaCaptura .boton-datos-cinta:active { color: var(--cinta-texto-c); }
+  /* Cuando toca respaldar, el botón se marca. Es el aviso de respaldo de
+     siempre, ahora donde se puede actuar sobre él. Ámbar del semáforo: es un
+     vencimiento, que es justo para lo que ese color existe. */
+  #cintaCaptura .boton-datos-cinta.toca-respaldar {
+    border-color: #fde047;
+    color: #fde047;
+  }
+
+  /* ---------- La capa de respaldo ---------- */
+  #capaDatosCaptura {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-color: rgba(12, 11, 14, 0.94);
+  }
+  #capaDatosCaptura[hidden] { display: none; }
+  #capaDatosCaptura .panel-datos {
+    width: 100%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #capaDatosCaptura .titulo-datos {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--cinta-etiqueta-c);
+  }
+  #capaDatosCaptura .estado-respaldo {
+    margin: 0 0 8px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--cinta-texto-c);
+  }
+  #capaDatosCaptura .estado-respaldo.toca-respaldar { color: #fde047; }
+  #capaDatosCaptura .boton-datos {
+    width: 100%;
+    background-color: var(--papel-c);
+    color: var(--tinta-c);
+    border: 0;
+    border-radius: 3px;
+    padding: 15px 0;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #capaDatosCaptura .boton-cerrar-datos {
+    width: 100%;
+    margin-top: 6px;
+    background: transparent;
+    border: 1px solid var(--cinta-borde-c);
+    border-radius: 3px;
+    padding: 12px 0;
+    color: var(--cinta-etiqueta-c);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
 
   /* ---------- El carro: por donde sale el papel ---------- */
   #carroCaptura {
@@ -2200,6 +2282,22 @@
 
     <!-- Nota de "vence mañana": sale sola después de guardar y se va sola. -->
     <div id="notaCaptura" hidden></div>
+
+    <!-- Respaldo. Es la única puerta para exportar e importar desde el
+         teléfono, y no es opcional: los datos viven en el almacenamiento del
+         navegador, que iOS puede borrar solo tras un tiempo sin usar la app.
+         Vive detrás de un botón de la cinta para no meterse en el flujo de
+         captura, que es lo que se hace veinte veces al día. -->
+    <div id="capaDatosCaptura" hidden>
+      <div class="panel-datos">
+        <p class="titulo-datos">Respaldo</p>
+        <p class="estado-respaldo" id="estadoRespaldoCaptura"></p>
+        <button type="button" class="boton-datos" id="botonExportarCaptura">Exportar respaldo</button>
+        <button type="button" class="boton-datos" id="botonImportarCaptura">Importar respaldo</button>
+        <input type="file" id="archivoRespaldoCaptura" accept="application/json" hidden>
+        <button type="button" class="boton-cerrar-datos" id="botonCerrarDatos">Cerrar</button>
+      </div>
+    </div>
 
   </div>
 
@@ -6515,7 +6613,50 @@
       "<span class=\"cinta-etiqueta\">Libre para gastar</span>" +
       "<span class=\"cinta-monto mono" + (disponible < 0 ? " en-numeros-rojos" : "") + "\">" +
         formatearMoneda(disponible) +
-      "</span>";
+      "</span>" +
+      "<button type=\"button\" class=\"boton-datos-cinta" +
+        (necesitaAvisoDeRespaldo(datos) ? " toca-respaldar" : "") + "\"" +
+        " data-abrir-datos=\"1\" aria-label=\"Respaldo\">⤓</button>";
+  }
+
+  // ============================================================
+  // CAPTURA — RESPALDO
+  // ============================================================
+  //
+  // Exportar e importar tienen que existir en el teléfono, no solo en la
+  // laptop: los datos viven en el almacenamiento del navegador y iOS lo puede
+  // vaciar tras un tiempo sin abrir la app. Es también la única forma de mover
+  // datos entre los dos aparatos, porque no hay sincronización (fuera de
+  // alcance, decidido desde el principio).
+  //
+  // No va en el flujo de captura porque no es del día a día: vive detrás del
+  // botón de la cinta, que se marca en ámbar cuando ya toca respaldar.
+
+  function abrirCapaDeDatos() {
+    const datos = leerDatos();
+    const capa = document.getElementById("capaDatosCaptura");
+    const estado = document.getElementById("estadoRespaldoCaptura");
+    const toca = necesitaAvisoDeRespaldo(datos);
+
+    if (datos.ultimoRespaldo) {
+      const dias = calcularDiasDesdeFecha(datos.ultimoRespaldo);
+      estado.textContent = dias === 0
+        ? "Último respaldo: hoy."
+        : "Último respaldo hace " + dias + (dias === 1 ? " día" : " días") + ".";
+    } else {
+      estado.textContent = "Todavía no has hecho ningún respaldo.";
+    }
+
+    if (toca) {
+      estado.textContent += " Conviene exportar ya: si el teléfono borra los datos, no hay de dónde recuperarlos.";
+    }
+    estado.classList.toggle("toca-respaldar", toca);
+
+    capa.hidden = false;
+  }
+
+  function cerrarCapaDeDatos() {
+    document.getElementById("capaDatosCaptura").hidden = true;
   }
 
   // ============================================================
@@ -9588,6 +9729,36 @@
   ticketCaptura.addEventListener("click", manejarToqueEnElTicket);
   ticketCaptura.addEventListener("input", manejarEscrituraEnElTicket);
   ticketCaptura.addEventListener("change", manejarCambioEnElTicket);
+
+  // La cinta se vuelve a dibujar en cada guardado, así que el escucha va en el
+  // contenedor y no en el botón, que deja de existir en cada redibujado.
+  document.getElementById("cintaCaptura").addEventListener("click", function (evento) {
+    if (evento.target.closest("[data-abrir-datos]")) {
+      abrirCapaDeDatos();
+    }
+  });
+
+  document.getElementById("botonCerrarDatos").addEventListener("click", cerrarCapaDeDatos);
+
+  document.getElementById("botonExportarCaptura").addEventListener("click", function () {
+    exportarJSON();
+    // En el teléfono no existe el bloque de mensajes de la laptop, así que la
+    // confirmación tiene que interrumpir: sin ella no hay forma de saber si el
+    // respaldo salió, y creerlo hecho cuando no lo está es el peor caso.
+    alert("Respaldo exportado. Guárdalo fuera del teléfono (Archivos, correo o la nube).");
+    abrirCapaDeDatos();
+  });
+
+  document.getElementById("botonImportarCaptura").addEventListener("click", function () {
+    document.getElementById("archivoRespaldoCaptura").click();
+  });
+
+  // Reusa la misma función que la laptop, incluido el aviso que resume qué
+  // entró: un import que no se aplicó ya pasó inadvertido una vez.
+  document.getElementById("archivoRespaldoCaptura").addEventListener("change", function (evento) {
+    importarJSON(evento);
+    cerrarCapaDeDatos();
+  });
 
   function inicializar() {
     const cicloActual = asegurarCicloActual();
