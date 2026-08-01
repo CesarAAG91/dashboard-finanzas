@@ -20,7 +20,14 @@
 //   - Días de un ciclo.
 //   - Simulación: pura, nunca escribe en localStorage.
 //
-// Este archivo se carga PRIMERO. No depende de ningún otro.
+// Este archivo se carga PRIMERO, pero no está del todo aislado: llama a
+// renderizarTodo() (que vive en arranque.js) para redibujar después de un
+// cambio, y a mostrarMensaje() (en ajustes.js) al importar un respaldo.
+// Eso funciona porque las funciones son globales entre archivos y esas
+// llamadas ocurren cuando el usuario hace algo, no al cargar la página.
+//
+// Pendiente conocido: calcularSemanaDeLaFecha() es un cálculo de fechas y
+// debería vivir aquí, pero quedó en captura.js. Se llama desde aquí una vez.
 
 // ============================================================
 // ALMACENAMIENTO: estructura de datos, lectura y guardado
