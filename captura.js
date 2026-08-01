@@ -248,20 +248,6 @@ function registrarPagoDeCompromiso(compromisoId, montoReal, fuente) {
 }
 
 // ============================================================
-// CAPTURA — SEMANA DEL CICLO
-// ============================================================
-
-// El día del gasto siempre es hoy: en la parte de "semana" se calcula
-// igual que en SPEC.md, contando de 7 en 7 días desde el inicio del ciclo.
-function calcularSemanaDeLaFecha(fechaTexto, cicloInicioTexto) {
-  const fecha = crearFechaLocal(fechaTexto);
-  const inicio = crearFechaLocal(cicloInicioTexto);
-  const milisegundosPorDia = 1000 * 60 * 60 * 24;
-  const diasTranscurridos = Math.round((fecha - inicio) / milisegundosPorDia);
-  return Math.floor(diasTranscurridos / 7) + 1;
-}
-
-// ============================================================
 // CAPTURA — LA CATEGORÍA "OTROS"
 // ============================================================
 

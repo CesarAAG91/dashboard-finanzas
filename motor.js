@@ -26,8 +26,7 @@
 // Eso funciona porque las funciones son globales entre archivos y esas
 // llamadas ocurren cuando el usuario hace algo, no al cargar la página.
 //
-// Pendiente conocido: calcularSemanaDeLaFecha() es un cálculo de fechas y
-// debería vivir aquí, pero quedó en captura.js. Se llama desde aquí una vez.
+// Fuera de esas dos, no usa nada de los otros archivos.
 
 // ============================================================
 // ALMACENAMIENTO: estructura de datos, lectura y guardado
@@ -1176,6 +1175,17 @@ function calcularRangoDeLaSemanaActual(ciclo, numeroDeSemana) {
   const finSemana = finSemanaSinAcotar > finCiclo ? finCiclo : finSemanaSinAcotar;
 
   return calcularRangoDeDias(formatearFechaISO(inicioSemana), formatearFechaISO(finSemana));
+}
+
+// Lo inverso de la anterior: dada una fecha, en qué semana del ciclo cae.
+// Se cuenta de 7 en 7 días desde el inicio del ciclo, como pide SPEC.md, y
+// la primera semana es la 1, no la 0.
+function calcularSemanaDeLaFecha(fechaTexto, cicloInicioTexto) {
+  const fecha = crearFechaLocal(fechaTexto);
+  const inicio = crearFechaLocal(cicloInicioTexto);
+  const milisegundosPorDia = 1000 * 60 * 60 * 24;
+  const diasTranscurridos = Math.round((fecha - inicio) / milisegundosPorDia);
+  return Math.floor(diasTranscurridos / 7) + 1;
 }
 
 // ============================================================
