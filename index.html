@@ -211,42 +211,14 @@
     }
   }
 
-  /* Botones grandes para elegir categoría, subcategoría, fuente y tarjeta
-     de un toque, sin teclado alfabético. */
-  .botones-grandes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 10px 0 16px 0;
-  }
-  .boton-grande {
-    flex: 1 1 calc(50% - 8px);
-    min-width: 100px;
-    padding: 16px 8px;
-    font-size: 15px;
-    background-color: #221f27;
-    color: #f6f3ef;
-    border: 2px solid #35313c;
-    border-radius: 10px;
-    cursor: pointer;
-    text-align: center;
-  }
-  .boton-grande.seleccionado {
-    border-color: #948e9c;
-    background-color: #2c283355;
-  }
   .monto-grande {
     font-size: 22px;
     text-align: center;
-  }
-  .fila-pendiente {
-    cursor: pointer;
   }
   .pendiente-urgente {
     border-left: 3px solid #f87171;
     padding-left: 8px;
   }
-  .confirmacion-pendiente,
   .edicion-categoria,
   .edicion-recurrente,
   .edicion-deuda,
@@ -257,24 +229,8 @@
     background-color: #221f27;
     border-radius: 8px;
   }
-  .avance-semanal-item {
-    margin-bottom: 14px;
-  }
   .estado-deuda-item {
     margin-bottom: 14px;
-  }
-  .barra-fondo {
-    background-color: #221f27;
-    border-radius: 6px;
-    height: 10px;
-    overflow: hidden;
-  }
-  .barra-relleno {
-    height: 100%;
-    background-color: #948e9c;
-  }
-  .barra-relleno.excedido {
-    background-color: #f87171;
   }
 
   /* Semáforo del ciclo: verde/amarillo/rojo son los umbrales de SPEC.md;
@@ -1076,132 +1032,12 @@
   }
 
   /* ============================================================ */
-  /* PESTAÑA DE SIMULACIÓN — densa, sin scroll de página. El       */
-  /* balance del ciclo enfocado va en una franja fija arriba para  */
-  /* que nunca se pierda de vista mientras se explora la lista de  */
-  /* compromisos; los dos paneles de abajo scrollean por dentro,   */
-  /* nunca la página completa.                                     */
+  /* FILA DE COMPROMISO SIMULADO                                   */
   /* ============================================================ */
-  #vistaSimulacion {
-    height: calc(100vh - 32px);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .banner-simulacion {
-    background-color: #422006;
-    border: 1px solid #fde047;
-    color: #fde047;
-    border-radius: 8px;
-    padding: 10px 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-  .franja-balance-simulacion {
-    /* Sin position:sticky a propósito: el bloque de depuración (JSON
-       crudo) siempre vive después de #vistaSimulacion en el documento, así
-       que si la página completa llega a hacer scroll, un sticky aquí se
-       despega de su contenedor y termina flotando encima de esos controles
-       — el balance ya queda siempre visible por ser un hermano fuera de
-       los paneles con scroll interno, no hace falta sticky para eso. */
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-  }
-  .tile-simulacion {
-    background-color: #221f27;
-    border: 1px solid #35313c;
-    border-radius: 8px;
-    padding: 10px 14px;
-    flex: 1;
-    min-width: 120px;
-  }
-  .tile-simulacion .etiqueta-tile {
-    display: block;
-    font-size: 11px;
-    color: #948e9c;
-  }
-  .tile-simulacion .monto-tile {
-    font-size: 18px;
-    font-weight: 600;
-  }
-  .cuerpo-simulacion {
-    display: grid;
-    grid-template-columns: 2.2fr 1fr;
-    gap: 10px;
-    flex: 1;
-    min-height: 0;
-  }
-  .panel-simulacion {
-    background-color: #221f27;
-    border: 1px solid #35313c;
-    border-radius: 8px;
-    padding: 10px 14px;
-    overflow-y: auto;
-    min-height: 0;
-  }
-  /* Cada categoría (y "Ciclos del horizonte") es una tarjeta dentro de una
-     composición en columnas tipo mampostería (CSS multi-column, no grid):
-     una tarjeta corta (ej. Seguros, con un solo compromiso) deja que la
-     SIGUIENTE tarjeta empiece justo debajo en la misma columna, en vez de
-     dejar un hueco vacío hasta la fila siguiente — así se aprovecha todo el
-     espacio de la primera pantalla en vez de alinear todo a una grilla
-     rígida por filas. */
-  .grilla-categorias-simulacion {
-    columns: 3 250px;
-    column-gap: 8px;
-    margin-top: 8px;
-  }
-  .categoria-simulada {
-    box-sizing: border-box;
-    background-color: #18161c;
-    border: 1px solid #35313c;
-    border-left: 4px solid #35313c;
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-bottom: 8px;
-    break-inside: avoid;
-    display: inline-block;
-    width: 100%;
-  }
-  .categoria-simulada .encabezado-categoria-simulada {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 2px 0 6px 0;
-  }
-  .punto-categoria {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 6px;
-  }
-  /* Sub-agrupamiento por subcategoría (ej. Servicios -> Luz, Agua...) —
-     mismo campo que ya se captura en cada recurrente/único, sin inventar
-     nada nuevo. Cada uno es un "globo" (píldora) teñido a baja opacidad con
-     el color de su categoría — agrupa por familia de color sin necesitar un
-     tono nuevo por subcategoría. */
-  .subgrupo-categoria-simulada {
-    margin-top: 6px;
-  }
-  .encabezado-subgrupo-simulada {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 999px;
-    margin-bottom: 2px;
-  }
+  /* Único resto vivo de la vieja pestaña de Simulación: la fila
+     editable de un compromiso (nombre, monto, marca de modificado).
+     Ya no tiene pestaña propia — la reusa la ventana de opciones de
+     pago, que la vuelve a vestir más abajo (#cuerpoOpcionesPago). */
   .fila-compromiso-simulado {
     display: flex;
     align-items: center;
@@ -1228,60 +1064,6 @@
     border: 1px solid #fde047;
     border-radius: 4px;
     padding: 1px 5px;
-  }
-  /* La tarjeta de "Ciclos del horizonte" no es una categoría de gasto — se
-     distingue con el mismo acento que ya usa el resto de la app para datos
-     proyectados/positivos. Deudas y Tarjetas ya no vive aquí: tiene su
-     propio panel a la derecha (ver #panelDeudasTarjetasSimulacion). */
-  .tarjeta-horizonte-simulacion {
-    border-left-color: #5eead4;
-  }
-  .tarjeta-deuda-simulada {
-    border-top: 1px solid #35313c;
-    padding: 6px 0;
-  }
-  .tarjeta-deuda-simulada:first-child {
-    border-top: none;
-    padding-top: 0;
-  }
-  .encabezado-tarjeta-deuda {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .barra-progreso {
-    background-color: #35313c;
-    border-radius: 4px;
-    height: 6px;
-    margin: 4px 0;
-    overflow: hidden;
-  }
-  .barra-progreso-relleno {
-    background-color: #5eead4;
-    height: 100%;
-  }
-  .barra-progreso-relleno.excede {
-    background-color: #fca5a5;
-  }
-  .tarjeta-deuda-simulada.excede-linea .encabezado-tarjeta-deuda {
-    color: #fca5a5;
-  }
-  .fila-horizonte-simulacion {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    border-bottom: 1px solid #18161c;
-  }
-  .fila-horizonte-simulacion.ciclo-enfocado {
-    font-weight: 600;
-    color: #5eead4;
-  }
-  .balance-negativo-simulacion {
-    color: #fca5a5;
-  }
-  .balance-positivo-simulacion {
-    color: #5eead4;
   }
 
   /* ============================================================ */
@@ -1693,11 +1475,6 @@
     flex: 0 0 auto;
     font-size: 0.85em;
     color: var(--texto-3a);
-  }
-  #vistaAncha .nota-recuadro-muro {
-    font-size: 0.7em;
-    color: var(--texto-3a);
-    padding-top: 0.3em;
   }
 
   /* Resumen del ciclo: cierra el muro con a dónde llega todo esto. */
@@ -5934,24 +5711,6 @@
     return dias;
   }
 
-  // Resumen del balance encadenado para el ciclo simulado que se está
-  // viendo — es la respuesta directa a "¿este ciclo futuro se ve bien?".
-  // No usa el semáforo de tres colores del ciclo real (esa fórmula compara
-  // contra un ingreso ya capturado, que un ciclo proyectado no tiene):
-  // aquí solo importa si el balance encadenado alcanza o no.
-  function renderizarHTMLResumenProyectado(resultado) {
-    const colorBalance = resultado.balanceDelCiclo >= 0 ? "verde" : "rojo";
-    return "<div class=\"panel-detalle-dia\">" +
-      "<div class=\"monto-grande\">" + formatearMoneda(resultado.balanceDelCiclo) + "</div>" +
-      "<div class=\"semaforo semaforo-" + colorBalance + "\">" + (resultado.balanceDelCiclo >= 0 ? "Alcanza" : "No alcanza") + "</div>" +
-      "<p class=\"detalle\">Remanente que trae del ciclo anterior: " + formatearMoneda(resultado.remanenteInicial) + "</p>" +
-      "<p class=\"detalle\">Ingreso del ciclo: " + formatearMoneda(resultado.ingresoDelCiclo) + "</p>" +
-      "<p class=\"detalle\">Compromisos proyectados: " + formatearMoneda(resultado.totalCompromisos) + "</p>" +
-      "<p class=\"detalle\">Gasto variable estimado: " + formatearMoneda(resultado.gastoVariableProyectado) + "</p>" +
-      "<p class=\"pista\">Estimado con el presupuesto semanal y las reglas de ingreso configuradas hoy — se recalcula cada vez que los cambies.</p>" +
-    "</div>";
-  }
-
   // ============================================================
   // ANÁLISIS — DEUDA
   // ============================================================
@@ -6191,45 +5950,6 @@
     return { contribucionesPorCiclo: contribucionesPorCiclo, advertenciasFueraDeHorizonte: advertenciasFueraDeHorizonte };
   }
 
-  // Punto B del plan: cuánto de la línea de una tarjeta ocuparía un
-  // diferimiento simulado en el punto de un ciclo dado — un MSI bloquea la
-  // línea completa desde el momento de la compra, no solo lo que falta
-  // pagar hacia adelante. Informativo, nunca bloqueante.
-  // Cuenta por fechas reales, igual que el reparto de arriba: cuántas
-  // mensualidades ya se cobraron para cuando termina el ciclo enfocado, y
-  // cuántas siguen pendientes ocupando la línea.
-  function calcularSaldoOcupadoDeTarjetaSimulada(tarjeta, indiceCicloEnfocado, materializados, horizonte) {
-    const cicloEnfocado = horizonte[indiceCicloEnfocado];
-    if (!cicloEnfocado) {
-      return 0;
-    }
-    const finDelCicloEnfocado = crearFechaLocal(cicloEnfocado.fechaFin);
-    let saldoOcupado = 0;
-
-    materializados.forEach(function (item) {
-      if (!item.estadoCredito || item.estadoCredito.tarjetaId !== tarjeta.id || !item.fechaProgramada) {
-        return;
-      }
-      if (crearFechaLocal(item.fechaProgramada) > finDelCicloEnfocado) {
-        return; // en ese punto de la simulación, esta compra todavía no existe
-      }
-
-      const totalDeMeses = item.estadoCredito.mesesDiferidos;
-      const montoPorMes = calcularDiferimientoSimulado(montoEfectivoDeSimulado(item), totalDeMeses);
-      const primerPago = calcularFechaDePrimerPagoDeTarjeta(tarjeta, crearFechaLocal(item.fechaProgramada));
-
-      let mensualidadesYaCobradas = 0;
-      for (let mes = 0; mes < totalDeMeses; mes++) {
-        if (sumarMeses(primerPago, mes) <= finDelCicloEnfocado) {
-          mensualidadesYaCobradas++;
-        }
-      }
-      saldoOcupado += Math.max(0, (totalDeMeses - mensualidadesYaCobradas) * montoPorMes);
-    });
-
-    return saldoOcupado;
-  }
-
   // Encadena los 7 ciclos del horizonte (actual + 6 proyectados) igual que
   // calcularProyeccionMultiCiclo, pero leyendo la lista materializada (ya
   // editable) en vez de re-derivar candidatos en cada paso.
@@ -6282,18 +6002,6 @@
     renderizarTodo();
   }
 
-  function renderizarFranjaBalanceSimulacion(resultado) {
-    const contenedor = document.getElementById("franjaBalanceSimulacion");
-    const claseBalance = resultado.balanceDelCiclo >= 0 ? "balance-positivo-simulacion" : "balance-negativo-simulacion";
-
-    contenedor.innerHTML =
-      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Ciclo enfocado</span><span class=\"monto-tile\">" + resultado.ciclo.id + "</span></div>" +
-      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Ingreso</span><span class=\"monto-tile\">" + formatearMoneda(resultado.ingresoDelCiclo) + "</span></div>" +
-      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Comprometido</span><span class=\"monto-tile\">" + formatearMoneda(resultado.totalComprometido) + "</span></div>" +
-      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Gasto variable proyectado</span><span class=\"monto-tile\">" + formatearMoneda(resultado.gastoVariableProyectado) + "</span></div>" +
-      "<div class=\"tile-simulacion\"><span class=\"etiqueta-tile\">Balance</span><span class=\"monto-tile " + claseBalance + "\">" + formatearMoneda(resultado.balanceDelCiclo) + "</span></div>";
-  }
-
   // Fila de un compromiso editable dentro del panel. Si ya está marcado a
   // crédito diferido, sigue apareciendo aquí (no solo en el bucket
   // sintético) para poder revertirlo o cambiarle tarjeta/meses — su monto
@@ -6329,135 +6037,6 @@
       "<select class=\"ciclo-destino-simulado\"" + deshabilitado + ">" + horizonteOpcionesHTML + "</select>" +
       controlesFuenteHTML +
     "</div>";
-  }
-
-  // Arma una tarjeta compacta (barra de progreso simple, no dona) para una
-  // deuda o una tarjeta de crédito dentro del recuadro dedicado. filaEditableHTML
-  // es opcional: el compromiso de pago de este ciclo si existe, con los
-  // mismos controles de siempre (monto/mover de ciclo/crédito).
-  function construirTarjetaDeDeudaOTarjeta(nombre, porcentaje, etiquetaDerecha, detalleHTML, filaEditableHTML, excede) {
-    const porcentajeAcotado = Math.max(0, Math.min(1, porcentaje));
-    return "<div class=\"tarjeta-deuda-simulada" + (excede ? " excede-linea" : "") + "\">" +
-      "<div class=\"encabezado-tarjeta-deuda\"><span>" + escaparHTML(nombre) + "</span><span>" + etiquetaDerecha + "</span></div>" +
-      "<div class=\"barra-progreso\"><div class=\"barra-progreso-relleno" + (excede ? " excede" : "") + "\" style=\"width:" + (porcentajeAcotado * 100).toFixed(1) + "%;\"></div></div>" +
-      detalleHTML +
-      (filaEditableHTML || "") +
-    "</div>";
-  }
-
-  // Tarjeta compacta que resume los 7 ciclos del horizonte con su balance —
-  // ahora es una tarjeta más dentro de la grilla de la izquierda (antes vivía
-  // en un panel aparte a la derecha, que ahora es de Deudas y Tarjetas).
-  function construirTarjetaDeCiclosDelHorizonte(proyeccion) {
-    const filasHTML = proyeccion.resultadosPorCiclo.map(function (resultado, indice) {
-      const claseBalance = resultado.balanceDelCiclo >= 0 ? "balance-positivo-simulacion" : "balance-negativo-simulacion";
-      const claseEnfocado = indice === indiceCicloEnfocadoSimulacion ? " ciclo-enfocado" : "";
-      return "<div class=\"fila-horizonte-simulacion" + claseEnfocado + "\" data-indice-ciclo=\"" + indice + "\">" +
-        "<span>" + resultado.ciclo.id + (indice === 0 ? " (actual)" : "") + "</span>" +
-        "<span class=\"" + claseBalance + "\">" + formatearMoneda(resultado.balanceDelCiclo) + "</span>" +
-      "</div>";
-    }).join("");
-
-    return "<div class=\"categoria-simulada tarjeta-horizonte-simulacion\">" +
-      "<div class=\"encabezado-categoria-simulada\"><span>Ciclos del horizonte</span></div>" +
-      "<div class=\"items-categoria-simulada\">" + filasHTML + "</div>" +
-    "</div>";
-  }
-
-  function renderizarPanelCategoriasSimulacion(resultado, proyeccion) {
-    const contenedor = document.getElementById("panelCategoriasSimulacion");
-    const cicloEnfocado = resultado.ciclo;
-    const itemsDelCiclo = compromisosMaterializadosSimulacion.filter(function (m) { return m.cicloId === cicloEnfocado.id; });
-    const itemsDeCategoria = itemsDelCiclo.filter(function (m) { return m.origen !== "deuda" && m.origen !== "tarjeta"; });
-
-    // Agrupación categoría -> subcategoría (ej. Servicios -> Luz, Agua...).
-    // La subcategoría ya se captura en cada recurrente/único, no se inventa
-    // nada nuevo. Todo se muestra siempre desplegado — nada de acordeones —
-    // para que las categorías completas quepan de un vistazo.
-    const categorias = {};
-    const ordenCategorias = [];
-
-    itemsDeCategoria.forEach(function (item) {
-      let key = "sin-categoria";
-      let nombreCategoria = "Sin categoría";
-      if (item.categoriaId) {
-        const categoria = datosSimulados.config.categorias.find(function (c) { return c.id === item.categoriaId; });
-        key = item.categoriaId;
-        nombreCategoria = categoria ? categoria.nombre : "Categoría eliminada";
-      }
-      if (!categorias[key]) {
-        categorias[key] = { nombre: nombreCategoria, subtotal: 0, subgrupos: {}, ordenSubgrupos: [], color: obtenerColorDeCategoria(item.categoriaId, datosSimulados) };
-        ordenCategorias.push(key);
-      }
-      const cat = categorias[key];
-      const subKey = item.subcategoria || "General";
-      if (!cat.subgrupos[subKey]) {
-        cat.subgrupos[subKey] = { nombre: subKey, items: [], subtotal: 0 };
-        cat.ordenSubgrupos.push(subKey);
-      }
-      cat.subgrupos[subKey].items.push(item);
-      if (!item.estadoCredito) {
-        cat.subgrupos[subKey].subtotal += montoEfectivoDeSimulado(item);
-        cat.subtotal += montoEfectivoDeSimulado(item);
-      }
-    });
-
-    const horizonteOpcionesHTML = proyeccion.horizonte.map(function (c) {
-      return "<option value=\"" + c.id + "\">" + c.id + "</option>";
-    }).join("");
-    const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) { return t.permiteDiferirAMeses; });
-
-    let html = "<div class=\"cabecera-panel-simulacion\">" +
-      "<button type=\"button\" id=\"botonCicloAnteriorSimulacion\"" + (indiceCicloEnfocadoSimulacion === 0 ? " disabled" : "") + ">&larr; Anterior</button>" +
-      " <strong>" + cicloEnfocado.id + "</strong> " +
-      "<button type=\"button\" id=\"botonCicloSiguienteSimulacion\"" + (indiceCicloEnfocadoSimulacion === CANTIDAD_DE_CICLOS_A_PROYECTAR ? " disabled" : "") + ">Siguiente &rarr;</button>" +
-    "</div>";
-
-    if (ordenCategorias.length === 0) {
-      html += "<p class=\"pista\">Sin compromisos en este ciclo.</p>";
-    }
-
-    html += "<div class=\"grilla-categorias-simulacion\">";
-
-    html += ordenCategorias.map(function (key) {
-      const categoria = categorias[key];
-
-      // Cada subcategoría es un "globo" (píldora) teñido con el mismo color
-      // de su categoría, a baja opacidad — así se agrupan visualmente por
-      // familia de color sin recurrir a un tono nuevo por subcategoría.
-      const subgruposHTML = categoria.ordenSubgrupos.map(function (subKey) {
-        const sub = categoria.subgrupos[subKey];
-        const filasHTML = sub.items.map(function (item) {
-          return construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQuePermitenDiferir);
-        }).join("");
-        return "<div class=\"subgrupo-categoria-simulada\">" +
-          "<div class=\"encabezado-subgrupo-simulada\" style=\"background-color:" + categoria.color + "22; color:" + categoria.color + ";\"><span>" + escaparHTML(sub.nombre) + "</span><span>" + formatearMoneda(sub.subtotal) + "</span></div>" +
-          filasHTML +
-        "</div>";
-      }).join("");
-
-      return "<div class=\"categoria-simulada\" style=\"border-left-color:" + categoria.color + ";\">" +
-        "<div class=\"encabezado-categoria-simulada\"><span><span class=\"punto-categoria\" style=\"background-color:" + categoria.color + ";\"></span>" + escaparHTML(categoria.nombre) + "</span><span>" + formatearMoneda(categoria.subtotal) + "</span></div>" +
-        "<div class=\"items-categoria-simulada\">" + subgruposHTML + "</div>" +
-      "</div>";
-    }).join("");
-
-    html += construirTarjetaDeCiclosDelHorizonte(proyeccion);
-    html += "</div>";
-
-    contenedor.innerHTML = html;
-
-    document.getElementById("botonCicloAnteriorSimulacion").addEventListener("click", function () { cambiarCicloEnfocadoSimulacion(-1); });
-    document.getElementById("botonCicloSiguienteSimulacion").addEventListener("click", function () { cambiarCicloEnfocadoSimulacion(1); });
-
-    contenedor.querySelectorAll(".fila-horizonte-simulacion").forEach(function (fila) {
-      fila.addEventListener("click", function () {
-        indiceCicloEnfocadoSimulacion = Number(fila.getAttribute("data-indice-ciclo"));
-        renderizarTodo();
-      });
-    });
-
-    conectarEventosDeFilaCompromisoSimulado(contenedor);
   }
 
   function conectarEventosDeFilaCompromisoSimulado(contenedor) {
@@ -6543,70 +6122,6 @@
         }
       });
     });
-  }
-
-  // Panel dedicado de Deudas y Tarjetas — antes era una tarjeta más entre las
-  // categorías, ahora tiene su propio panel a la derecha (a cambio, "Ciclos
-  // del horizonte" pasó a ser una tarjeta dentro de la grilla de la
-  // izquierda). Separado de las categorías de presupuesto a propósito: son
-  // gasto fijo ya comprometido, no una categoría de consumo. Cada deuda
-  // activa y CADA tarjeta dada de alta aparece siempre, aunque no tenga
-  // ningún movimiento este ciclo.
-  function renderizarPanelDeudasTarjetasSimulacion(resultado, proyeccion) {
-    const contenedor = document.getElementById("panelDeudasTarjetasSimulacion");
-    const cicloEnfocado = resultado.ciclo;
-    const itemsDelCiclo = compromisosMaterializadosSimulacion.filter(function (m) { return m.cicloId === cicloEnfocado.id; });
-    const itemsDeDeuda = itemsDelCiclo.filter(function (m) { return m.origen === "deuda"; });
-    const itemsDeTarjetaReal = itemsDelCiclo.filter(function (m) { return m.origen === "tarjeta"; });
-
-    const horizonteOpcionesHTML = proyeccion.horizonte.map(function (c) {
-      return "<option value=\"" + c.id + "\">" + c.id + "</option>";
-    }).join("");
-    const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) { return t.permiteDiferirAMeses; });
-
-    const deudasActivas = datosSimulados.deudas.filter(function (d) { return d.activa; });
-    const tarjetas = datosSimulados.config.tarjetas;
-
-    const subtotalDeudas = itemsDeDeuda.reduce(function (s, item) { return s + (item.estadoCredito ? 0 : montoEfectivoDeSimulado(item)); }, 0);
-    const subtotalTarjetas = Object.keys(resultado.contribucionesTarjeta || {}).reduce(function (s, id) { return s + resultado.contribucionesTarjeta[id]; }, 0);
-
-    let html = "<h3 style=\"margin-top: 0;\">Deudas y Tarjetas</h3>" +
-      "<p class=\"detalle\">Comprometido este ciclo: " + formatearMoneda(subtotalDeudas + subtotalTarjetas) + "</p>";
-
-    if (deudasActivas.length === 0 && tarjetas.length === 0) {
-      html += "<p class=\"pista\">No hay deudas activas ni tarjetas dadas de alta.</p>";
-    }
-
-    html += deudasActivas.map(function (deuda) {
-      const estado = calcularEstadoDeDeuda(deuda);
-      const itemDeEstaDeuda = itemsDeDeuda.find(function (i) { return i.origenId === deuda.id; });
-      const filaEditable = itemDeEstaDeuda ? construirFilaCompromisoSimulado(itemDeEstaDeuda, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) : "";
-      const detalle = "<p class=\"detalle\">Saldo restante: " + formatearMoneda(estado.saldoRestante) + " — se liquida " + formatearFechaISO(estado.fechaLiquidacion) + "</p>";
-      return construirTarjetaDeDeudaOTarjeta(deuda.nombre, estado.porcentajePagado, (estado.porcentajePagado * 100).toFixed(0) + "% pagado", detalle, filaEditable, false);
-    }).join("");
-
-    html += tarjetas.map(function (tarjeta) {
-      const saldoOcupado = calcularSaldoOcupadoDeTarjetaSimulada(tarjeta, indiceCicloEnfocadoSimulacion, compromisosMaterializadosSimulacion, proyeccion.horizonte);
-      const porcentajeOcupado = tarjeta.lineaTotal > 0 ? saldoOcupado / tarjeta.lineaTotal : 0;
-      const excede = saldoOcupado > tarjeta.lineaTotal;
-      const pagoDelCiclo = (resultado.contribucionesTarjeta && resultado.contribucionesTarjeta[tarjeta.id]) || 0;
-      const itemTarjetaReal = itemsDeTarjetaReal.find(function (i) { return i.origenId === tarjeta.id; });
-      const filaEditable = itemTarjetaReal ? construirFilaCompromisoSimulado(itemTarjetaReal, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) : "";
-      const detalle = "<p class=\"detalle\">Pago proyectado este ciclo: " + formatearMoneda(pagoDelCiclo) + "</p>";
-      return construirTarjetaDeDeudaOTarjeta(tarjeta.nombre, porcentajeOcupado, formatearMoneda(saldoOcupado) + " de " + formatearMoneda(tarjeta.lineaTotal), detalle, filaEditable, excede);
-    }).join("");
-
-    if (proyeccion.advertenciasFueraDeHorizonte.length > 0) {
-      html += "<div class=\"aviso\">" + proyeccion.advertenciasFueraDeHorizonte.map(function (advertencia) {
-        return escaparHTML(advertencia.nombre) + ": " + formatearMoneda(advertencia.montoFuera) + " de " +
-          advertencia.mesesFuera + (advertencia.mesesFuera === 1 ? " mes" : " meses") +
-          " no se reflejan en ningún ciclo proyectado — cae fuera del horizonte de 7 ciclos.";
-      }).join("<br>") + "</div>";
-    }
-
-    contenedor.innerHTML = html;
-
-    conectarEventosDeFilaCompromisoSimulado(contenedor);
   }
 
   // ============================================================
