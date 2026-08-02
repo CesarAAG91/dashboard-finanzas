@@ -39,6 +39,159 @@
 // Depende de motor.js.
 
 // ============================================================
+// ESTUDIO — ESTADO DE LA PANTALLA
+// ============================================================
+//
+// Dos cosas que el usuario elige y que mandan sobre todo lo demás: qué
+// ciclo está viendo y con qué lente. Viven en variables de este archivo
+// y no en localStorage porque no son datos suyos, son cómo está parado
+// mirándolos ahora mismo. Sobreviven a renderizarTodo() sin más.
+
+// null significa "el ciclo de hoy". Se guarda así, y no el id del ciclo
+// actual, para que al pasar la medianoche del último día del ciclo la
+// pantalla salte sola al nuevo en vez de quedarse clavada en el viejo.
+let cicloIdEnfocadoDelEstudio = null;
+
+// Consumo es el default porque esta pantalla existe para responder "¿en
+// qué se me va?", y esa pregunta es de consumo. La caja ya la responde
+// la primera pantalla, con el saldo y el disponible.
+let lenteDelEstudio = LENTE_CONSUMO;
+
+// El ciclo que se está estudiando. Si el enfocado ya no existe (por una
+// importación de respaldo, o porque se limpiaron los datos) se cae al
+// ciclo de hoy en vez de tronar.
+function obtenerCicloDelEstudio() {
+  const datos = leerDatos();
+
+  if (cicloIdEnfocadoDelEstudio !== null) {
+    const enfocado = datos.ciclos.find(function (ciclo) {
+      return ciclo.id === cicloIdEnfocadoDelEstudio;
+    });
+    if (enfocado) {
+      return enfocado;
+    }
+    cicloIdEnfocadoDelEstudio = null;
+  }
+
+  return asegurarCicloActual();
+}
+
+// Mueve el enfoque un ciclo hacia atrás (-1) o hacia adelante (+1) sobre
+// los ciclos que existen de verdad. No crea ciclos nuevos: si no hay
+// nada más hacia ese lado, no pasa nada — el botón se dibuja apagado.
+function cambiarCicloDelEstudio(delta) {
+  const datos = leerDatos();
+  const ciclos = obtenerCiclosDelEstudio(datos);
+  const cicloActual = obtenerCicloDelEstudio();
+
+  const posicionActual = ciclos.findIndex(function (ciclo) {
+    return ciclo.id === cicloActual.id;
+  });
+  const posicionNueva = posicionActual + delta;
+
+  if (posicionNueva < 0 || posicionNueva >= ciclos.length) {
+    return;
+  }
+
+  cicloIdEnfocadoDelEstudio = ciclos[posicionNueva].id;
+  renderizarTodo();
+}
+
+function cambiarLenteDelEstudio(lente) {
+  if (lente !== LENTE_CAJA && lente !== LENTE_CONSUMO) {
+    return;
+  }
+  lenteDelEstudio = lente;
+  renderizarTodo();
+}
+
+// ============================================================
+// ESTUDIO — BARRA DE CONTROL
+// ============================================================
+//
+// Dice de qué ciclo y con qué lente son todas las cifras de abajo. Es
+// lo primero que se dibuja y lo único que se queda fijo al hacer scroll.
+
+// Cómo se nombra un ciclo en pantalla. El id ("2026-08") es correcto pero
+// no se lee: nadie piensa en su dinero por id. Se muestra el mes y el año
+// del cierre, que es como el usuario lo llama cuando habla de él.
+const NOMBRES_DE_MES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+];
+
+function nombrarCicloDelEstudio(ciclo) {
+  const fin = crearFechaLocal(ciclo.fechaFin);
+  return NOMBRES_DE_MES[fin.getMonth()] + " " + fin.getFullYear();
+}
+
+// El renglón de estado: en qué punto del ciclo estamos. Un ciclo cerrado
+// ya no tiene "día X de Y" que dar, tiene un veredicto; uno en curso sí,
+// y ese número es el que hace que una proyección se pueda juzgar.
+function describirSituacionDelCiclo(ciclo) {
+  const situacion = calcularSituacionDelCiclo(ciclo);
+  const rango = calcularRangoDeDiasDelCiclo(ciclo);
+
+  if (situacion === "cerrado") {
+    return "cerrado · " + rango.diasTotales + " días · " + ciclo.fechaInicio + " a " + ciclo.fechaFin;
+  }
+  if (situacion === "porVenir") {
+    return "por venir · empieza el " + ciclo.fechaInicio;
+  }
+  return "en curso · día " + rango.diasTranscurridos + " de " + rango.diasTotales +
+    " · " + ciclo.fechaInicio + " a " + ciclo.fechaFin;
+}
+
+function renderizarBarraDelEstudio() {
+  const datos = leerDatos();
+  const ciclo = obtenerCicloDelEstudio();
+  const ciclos = obtenerCiclosDelEstudio(datos);
+  const posicion = ciclos.findIndex(function (c) { return c.id === ciclo.id; });
+
+  document.getElementById("nombreCicloEstudio").textContent = nombrarCicloDelEstudio(ciclo);
+  document.getElementById("estadoCicloEstudio").textContent = describirSituacionDelCiclo(ciclo);
+
+  // Los botones se apagan en los extremos en vez de desaparecer: un
+  // control que se va y vuelve mueve todo lo que tiene al lado.
+  document.getElementById("cicloEstudioAnterior").disabled = posicion <= 0;
+  document.getElementById("cicloEstudioSiguiente").disabled = posicion >= ciclos.length - 1;
+
+  document.querySelectorAll("#zonaAnalisis .opcion-lente").forEach(function (boton) {
+    const estaActiva = boton.getAttribute("data-lente") === lenteDelEstudio;
+    boton.classList.toggle("activa", estaActiva);
+    boton.setAttribute("aria-pressed", estaActiva ? "true" : "false");
+  });
+
+  document.getElementById("explicacionLente").textContent = EXPLICACION_DE_LA_LENTE[lenteDelEstudio];
+
+  // Arriba se puede estar simulando un pago a meses. El estudio no lo
+  // mide — mide lo que pasó — así que se avisa en vez de dejar que los
+  // números de las dos pantallas se contradigan en silencio.
+  //
+  // La pregunta NO es haySimulacionEnCurso(): esa siempre es verdadera,
+  // porque la primera pantalla mantiene una simulación viva de base. Lo
+  // que importa es si algo se movió, que es la misma cuenta que decide
+  // si aparece la barra de simulación de arriba.
+  const aviso = document.getElementById("avisoSimulacionEstudio");
+  if (calcularCambiosDeLaSimulacion().total > 0) {
+    aviso.innerHTML = "<p class=\"aviso-estudio\">Arriba hay una simulación abierta. El estudio mide lo real, no lo simulado.</p>";
+  } else {
+    aviso.innerHTML = "";
+  }
+}
+
+// El dibujado completo de la segunda pantalla. arranque.js llama a esta
+// y solo a esta: qué secciones existen es asunto de este archivo.
+function renderizarEstudioDelCiclo() {
+  renderizarBarraDelEstudio();
+  renderizarBalanceDelCiclo();
+  renderizarTrayectoriaSemaforo();
+  renderizarProximosPagosAnalisis();
+  renderizarMovimientosDelCiclo();
+  renderizarEstadoDeDeudaAnalisis();
+}
+
+// ============================================================
 // ESTUDIO — BALANCE Y PRÓXIMOS PAGOS
 // ============================================================
 

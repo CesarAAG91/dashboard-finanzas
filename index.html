@@ -205,8 +205,43 @@
 
     </div>
 
-    <!-- ANÁLISIS: debajo, al hacer scroll ------------------------- -->
+    <!-- ESTUDIO DEL CICLO: debajo, al hacer scroll ---------------- -->
+    <!-- La segunda pantalla. Arriba responde "¿qué pago y cuánto me queda?";
+         aquí se responde en qué se va, cuándo, a quién, y si el ciclo va
+         mejor o peor que el anterior. El render vive en estudio.js. -->
     <div id="zonaAnalisis">
+
+      <!-- Barra de control. Se queda pegada arriba al hacer scroll porque
+           dice de qué ciclo y con qué lente son TODAS las cifras de abajo:
+           si se pierde de vista, cualquier número se lee fuera de contexto. -->
+      <div id="barraEstudio">
+        <div class="identidad-estudio">
+          <span class="etiqueta-ancha">Estudio del ciclo</span>
+          <div class="navegacion-estudio">
+            <button type="button" id="cicloEstudioAnterior" title="Ciclo anterior">‹</button>
+            <span id="nombreCicloEstudio"></span>
+            <button type="button" id="cicloEstudioSiguiente" title="Ciclo siguiente">›</button>
+          </div>
+          <span id="estadoCicloEstudio"></span>
+        </div>
+
+        <!-- Caja o consumo. No es una preferencia de vista: son dos
+             preguntas contables distintas, y mezclarlas contaría dos veces
+             la misma compra a crédito. Ver la sección "LA LENTE" en
+             motor.js. -->
+        <div class="lente-estudio" role="group" aria-label="Con qué lente se miden las cifras">
+          <button type="button" class="opcion-lente" data-lente="caja">Caja</button>
+          <button type="button" class="opcion-lente" data-lente="consumo">Consumo</button>
+        </div>
+      </div>
+
+      <!-- Qué mide la lente activa, en una frase. Sin esto, dos totales
+           distintos para el mismo ciclo se leen como un error de la app. -->
+      <p class="explicacion-lente" id="explicacionLente"></p>
+
+      <!-- Aviso de que arriba hay una simulación abierta y esto no la mide. -->
+      <div id="avisoSimulacionEstudio"></div>
+
       <section id="seccionBalanceCiclo">
         <h2>Balance del ciclo</h2>
         <div id="contenedorBalanceCiclo"></div>

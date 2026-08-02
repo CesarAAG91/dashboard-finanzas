@@ -34,11 +34,9 @@ function renderizarTodo() {
   renderizarPresupuestoSemanal();
   renderizarCompromisos();
   renderizarTicket();
-  renderizarBalanceDelCiclo();
-  renderizarTrayectoriaSemaforo();
-  renderizarProximosPagosAnalisis();
-  renderizarMovimientosDelCiclo();
-  renderizarEstadoDeDeudaAnalisis();
+  // La segunda pantalla entera, con una sola llamada: qué secciones tiene
+  // por dentro es asunto de estudio.js, no de aquí.
+  renderizarEstudioDelCiclo();
   // La primera pantalla siempre trabaja sobre la simulación, así que se
   // asegura antes de dibujar cualquier parte de ella — y se sincroniza con
   // los datos reales, que pudieron cambiar desde Ajustes o desde Captura.
@@ -72,6 +70,21 @@ document.getElementById("cicloAnterior").addEventListener("click", function () {
 });
 document.getElementById("cicloSiguiente").addEventListener("click", function () {
   cambiarCicloEnfocadoSimulacion(1);
+});
+
+// La segunda pantalla tiene su propia navegación de ciclos, aparte de la de
+// arriba: arriba se explora el futuro para decidir cómo pagar algo, abajo se
+// revisa un ciclo que ya pasó.
+document.getElementById("cicloEstudioAnterior").addEventListener("click", function () {
+  cambiarCicloDelEstudio(-1);
+});
+document.getElementById("cicloEstudioSiguiente").addEventListener("click", function () {
+  cambiarCicloDelEstudio(1);
+});
+document.querySelectorAll("#zonaAnalisis .opcion-lente").forEach(function (boton) {
+  boton.addEventListener("click", function () {
+    cambiarLenteDelEstudio(boton.getAttribute("data-lente"));
+  });
 });
 
 document.getElementById("asaCajon").addEventListener("click", alternarCajonDeCalendario);

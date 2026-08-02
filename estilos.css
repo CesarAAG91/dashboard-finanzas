@@ -2129,10 +2129,124 @@ details summary {
   cursor: pointer;
 }
 #vistaAncha .boton-marcar-pagado:hover { border-color: var(--texto-3a); }
-/* ---------- Análisis, debajo ---------- */
+/* ============================================================ */
+/* VISTA ANCHA — ESTUDIO DEL CICLO (la segunda pantalla)         */
+/* ============================================================ */
+/*
+   Lo que se ve al hacer scroll debajo del muro. Cuelga de las mismas
+   variables de #vistaAncha que la primera pantalla — no hay paleta
+   nueva — y respeta los mismos antipatrones ya descartados: sin donas
+   ni pastel, sin iconos por categoría, sin degradados, sin sombras,
+   radio máximo 10px.
+*/
 #zonaAnalisis {
-  padding: 26px 22px;
-  max-width: 1100px;
+  padding: 0 22px 60px;
+  max-width: 1240px;
+}
+
+/* ---------- Barra de control ---------- */
+/* Pegada arriba al hacer scroll: dice de qué ciclo y con qué lente son
+   TODAS las cifras de abajo, así que si se pierde de vista, cualquier
+   número queda leyéndose fuera de contexto. */
+#barraEstudio {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0 13px;
+  margin-bottom: 4px;
+  background-color: var(--fondo-a);
+  border-bottom: 1px solid var(--borde-sutil-a);
+}
+
+#vistaAncha .identidad-estudio {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+#vistaAncha .identidad-estudio .navegacion-estudio {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+#vistaAncha .navegacion-estudio button {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-a);
+  color: var(--texto-2a);
+  border-radius: 6px;
+  width: 24px;
+  height: 22px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+#vistaAncha .navegacion-estudio button:hover:not(:disabled) { color: var(--texto-a); }
+#vistaAncha .navegacion-estudio button:disabled { opacity: 0.3; cursor: default; }
+
+#nombreCicloEstudio {
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.005em;
+  min-width: 7.5em;
+  text-align: center;
+}
+
+#estadoCicloEstudio {
+  font-size: 12px;
+  color: var(--texto-3a);
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- El control de lente ---------- */
+/* Marca de "control segmentado" del sistema: la opción activa se
+   distingue por superficie e intensidad de texto, nunca por color —
+   el color en esta app significa estado financiero, no selección. */
+#vistaAncha .lente-estudio {
+  margin-left: auto;
+  display: flex;
+  border: 1px solid var(--borde-a);
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+#vistaAncha .opcion-lente {
+  border: 0;
+  background-color: transparent;
+  color: var(--texto-3a);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 15px;
+  cursor: pointer;
+}
+#vistaAncha .opcion-lente + .opcion-lente { border-left: 1px solid var(--borde-a); }
+#vistaAncha .opcion-lente:hover { color: var(--texto-2a); }
+#vistaAncha .opcion-lente.activa {
+  background-color: var(--superficie-alta-a);
+  color: var(--texto-a);
+}
+
+#vistaAncha .explicacion-lente {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--texto-2a);
+  max-width: 68ch;
+}
+
+#vistaAncha .aviso-estudio {
+  margin: 14px 0 0;
+  padding: 9px 13px;
+  border: 1px dashed var(--borde-a);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--texto-2a);
 }
 
 /* ---------- Acción ---------- */

@@ -2565,3 +2565,156 @@ function conectarEventosDeFilaCompromisoSimulado(contenedor) {
     });
   });
 }
+
+// ============================================================
+// ESTUDIO DEL CICLO — LA LENTE: CAJA O CONSUMO
+// ============================================================
+//
+// Todo lo que dibuja estudio.js empieza aquí, y hay una razón contable
+// de peso para que así sea.
+//
+// El resto del motor cuenta CAJA: una compra a crédito no sale del banco
+// hasta que se paga la tarjeta, así que calcularGastosDebitoDelCiclo
+// filtra por fuente "debito" y ya. Es la lente correcta para responder
+// "¿cuánto tengo?".
+//
+// Pero un análisis por categoría no puede usar esa lente. Si un súper de
+// $2,000 se pagó con tarjeta, bajo caja el mes en que se compró aparece
+// $0 de Comida, y tres semanas después aparecen $2,000 sin categoría
+// dentro del pago de la tarjeta. La comida se vuelve invisible.
+//
+// La lente de CONSUMO responde la otra pregunta: "¿cuánto gasté, sin
+// importar cuándo lo pago?". La compra cuenta el día que se hizo.
+//
+// Lo que NO se puede hacer nunca es mezclarlas en un mismo total: la
+// compra se contaría dos veces, primero en su categoría y después dentro
+// del pago de la tarjeta. Por eso la lente es un parámetro explícito que
+// atraviesa todas las funciones de esta sección, en vez de una decisión
+// escondida en cada una.
+//
+//                         CAJA                    CONSUMO
+//   Gasto de débito       cuenta                  cuenta
+//   Compra a crédito      NO (no salió del banco) cuenta el día de la compra
+//   Pago de tarjeta       cuenta                  NO (ya se contaron las compras)
+//   Pago de deuda         cuenta                  cuenta
+//
+// El pago de deuda cuenta en las dos a propósito. Su "compra" nunca se
+// registró como gasto — montoSolicitado no entra al flujo de efectivo —
+// así que sacarlo de consumo lo haría desaparecer de todas las vistas, y
+// es una obligación mensual tan real como la luz.
+
+const LENTE_CAJA = "caja";
+const LENTE_CONSUMO = "consumo";
+
+// Qué mide cada lente, en una frase. Se muestra en pantalla junto al
+// control: sin esto, dos totales distintos para el mismo ciclo se leen
+// como un error de la app en vez de como dos preguntas distintas.
+const EXPLICACION_DE_LA_LENTE = {
+  caja: "Lo que salió del banco en este ciclo. Una compra a crédito no cuenta hasta que se paga la tarjeta.",
+  consumo: "Lo que gastaste en este ciclo, sin importar cuándo lo pagas. La compra a crédito cuenta el día que la hiciste."
+};
+
+// Un gasto es el pago de una tarjeta cuando cierra un compromiso de
+// origen "tarjeta". Es la única marca confiable: por monto no se puede
+// (cambia cada ciclo) y por categoría tampoco (no tiene).
+//
+// Si alguien pagara la tarjeta a mano, sin marcar el compromiso, ese
+// gasto quedaría contado como consumo. No se defiende contra eso porque
+// la app genera los compromisos de tarjeta sola y el camino normal es
+// marcarlos.
+function esPagoDeTarjeta(gasto, datos) {
+  if (!gasto.compromisoId) {
+    return false;
+  }
+  const compromiso = datos.compromisos.find(function (c) { return c.id === gasto.compromisoId; });
+  return Boolean(compromiso) && compromiso.origen === "tarjeta";
+}
+
+// Los movimientos de un ciclo bajo la lente pedida. De aquí sale TODO lo
+// demás del estudio: categorías, semanas, destinatarios y comparativos
+// no vuelven a filtrar datos.gastos por su cuenta, para que no puedan
+// discrepar entre secciones.
+function calcularMovimientosDelCicloSegunLente(ciclo, datos, lente) {
+  const gastosDelCiclo = datos.gastos.filter(function (gasto) {
+    return gasto.cicloId === ciclo.id;
+  });
+
+  if (lente === LENTE_CAJA) {
+    return gastosDelCiclo.filter(function (gasto) { return gasto.fuente === "debito"; });
+  }
+
+  return gastosDelCiclo.filter(function (gasto) { return !esPagoDeTarjeta(gasto, datos); });
+}
+
+// Suma los montos de una lista de gastos. Existe como función con nombre
+// porque se repite en cada sección y un reduce suelto en diez lugares es
+// diez lugares donde puede escribirse distinto.
+function sumarMontosDeGastos(gastos) {
+  return gastos.reduce(function (suma, gasto) { return suma + Number(gasto.monto); }, 0);
+}
+
+// La diferencia entre las dos lentes, explicada en sus dos piezas. Sirve
+// para dos cosas: mostrarle al usuario por qué los totales no coinciden,
+// y como prueba de que no hay doble conteo — tiene que cumplirse siempre
+//
+//   consumo − caja = compras a crédito del ciclo − pagos de tarjeta del ciclo
+//
+// Si esa identidad falla, alguna compra se está contando dos veces.
+function calcularPuenteEntreLentes(ciclo, datos) {
+  const gastosDelCiclo = datos.gastos.filter(function (gasto) {
+    return gasto.cicloId === ciclo.id;
+  });
+
+  const comprasACredito = gastosDelCiclo.filter(function (gasto) {
+    return gasto.fuente === "credito";
+  });
+  const pagosDeTarjeta = gastosDelCiclo.filter(function (gasto) {
+    return esPagoDeTarjeta(gasto, datos);
+  });
+
+  return {
+    comprasACredito: sumarMontosDeGastos(comprasACredito),
+    pagosDeTarjeta: sumarMontosDeGastos(pagosDeTarjeta),
+    diferencia: sumarMontosDeGastos(comprasACredito) - sumarMontosDeGastos(pagosDeTarjeta)
+  };
+}
+
+// ============================================================
+// ESTUDIO DEL CICLO — QUÉ CICLOS HAY Y EN CUÁL ESTAMOS
+// ============================================================
+//
+// El estudio navega los ciclos REALES (los que existen en datos.ciclos),
+// no los siete simulados del muro de la primera pantalla. Son dos
+// navegaciones con dos propósitos: arriba se explora el futuro para
+// decidir cómo pagar algo, aquí se revisa lo que ya pasó.
+
+// Los ciclos ordenados del más viejo al más nuevo. Se ordena por
+// fechaInicio y no por id porque el id se deriva de la fecha de fin, y
+// aunque hoy los dos ordenan igual, la fecha es la que manda de verdad.
+function obtenerCiclosDelEstudio(datos) {
+  return datos.ciclos.slice().sort(function (a, b) {
+    return crearFechaLocal(a.fechaInicio) - crearFechaLocal(b.fechaInicio);
+  });
+}
+
+// En qué situación está un ciclo respecto de hoy. El estudio cambia lo
+// que muestra según esto: un ciclo cerrado tiene remanente real, uno en
+// curso solo tiene proyección, y uno por venir no tiene ni gastos.
+function calcularSituacionDelCiclo(ciclo) {
+  const hoy = truncarAMedianoche(new Date());
+  const inicio = crearFechaLocal(ciclo.fechaInicio);
+  const fin = crearFechaLocal(ciclo.fechaFin);
+
+  if (hoy > fin) { return "cerrado"; }
+  if (hoy < inicio) { return "porVenir"; }
+  return "enCurso";
+}
+
+// Solo los ciclos que ya terminaron. Es la base de todo lo comparativo:
+// un ciclo en curso no se puede comparar contra uno completo sin mentir,
+// porque le faltan días de gasto por suceder.
+function obtenerCiclosCerrados(datos) {
+  return obtenerCiclosDelEstudio(datos).filter(function (ciclo) {
+    return calcularSituacionDelCiclo(ciclo) === "cerrado";
+  });
+}
