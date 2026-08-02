@@ -2731,3 +2731,153 @@ details summary {
   outline: 2px solid var(--texto-2a);
   outline-offset: 1px;
 }
+
+/* ---------- §2 Estructura: el reparto en tres ---------- */
+#vistaAncha .reparto-en-tres {
+  display: flex;
+  gap: 38px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+#vistaAncha .pedazo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 26ch;
+}
+#vistaAncha .cifra-pedazo {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1.15;
+}
+#vistaAncha .pista-pedazo {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--texto-3a);
+}
+
+/* ---------- Tablas del estudio ---------- */
+/* Sin bordes de celda ni fondos alternados: las columnas se separan solas
+   con alineación y espacio. Una retícula dibujada compite con los datos. */
+#vistaAncha .tabla-estudio {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+#vistaAncha .tabla-estudio th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+  padding: 0 12px 9px 0;
+  border-bottom: 1px solid var(--borde-sutil-a);
+  white-space: nowrap;
+}
+#vistaAncha .tabla-estudio td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--borde-sutil-a);
+  vertical-align: middle;
+}
+#vistaAncha .tabla-estudio .celda-cifra {
+  text-align: right;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#vistaAncha .tabla-estudio th.celda-cifra { text-align: right; }
+#vistaAncha .tabla-estudio .celda-cifra.fuerte { color: var(--texto-a); }
+#vistaAncha .tabla-estudio .celda-cifra.secundaria { color: var(--texto-3a); }
+#vistaAncha .tabla-estudio .celda-barra { width: 34%; padding-right: 0; }
+#vistaAncha .tabla-estudio th.celda-barra { text-align: left; }
+
+/* ---------- Filas de categoría, desplegables ---------- */
+#vistaAncha .fila-categoria { cursor: pointer; }
+#vistaAncha .fila-categoria:hover td { background-color: var(--superficie-a); }
+#vistaAncha .fila-categoria .celda-nombre {
+  color: var(--texto-a);
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+#vistaAncha .chevron-categoria {
+  display: inline-block;
+  color: var(--texto-3a);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.12s ease;
+}
+#vistaAncha .fila-categoria.abierta .chevron-categoria { transform: rotate(90deg); }
+#vistaAncha .parte-del-ingreso {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+
+#vistaAncha .fila-subcategoria td {
+  color: var(--texto-2a);
+  border-bottom-color: transparent;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+#vistaAncha .fila-subcategoria .celda-nombre { padding-left: 23px; }
+#vistaAncha .fuera-de-bolsa {
+  margin-left: 9px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+  border: 1px solid var(--borde-a);
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* ---------- Barra de presupuesto con marca de ritmo ---------- */
+/* La marca es lo que hace juzgable la barra: al 60% el día 5 es una
+   alarma y el día 25 es ir bien, y sin la marca las dos se ven igual. */
+#vistaAncha .barra-presupuesto {
+  position: relative;
+  height: 8px;
+  background-color: var(--superficie-alta-a);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+#vistaAncha .relleno-presupuesto {
+  height: 100%;
+  background-color: #837c90;
+}
+#vistaAncha .barra-presupuesto.se-excedio .relleno-presupuesto { background-color: #fca5a5; }
+#vistaAncha .marca-ritmo {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 0;
+  border-left: 2px solid var(--texto-a);
+  opacity: 0.75;
+}
+#vistaAncha .cifra-presupuesto {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+#vistaAncha .cifra-presupuesto.en-rojo { color: #fca5a5; }
+#vistaAncha .sin-presupuesto {
+  font-size: 11px;
+  color: var(--texto-3a);
+  opacity: 0.6;
+}
+
+#vistaAncha .nota-de-bolsa {
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto-3a);
+  max-width: 72ch;
+}

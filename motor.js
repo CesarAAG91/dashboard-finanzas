@@ -2927,3 +2927,167 @@ function calcularSerieDeCiclosCerrados(datos, lente) {
     return resumirCicloCompleto(ciclo, datos, lente);
   });
 }
+
+// ============================================================
+// ESTUDIO DEL CICLO — EL DESGLOSE POR CATEGORÍA
+// ============================================================
+//
+// La tabla del §2: en qué se fue el dinero, ordenado por monto. El orden
+// no es una preferencia, es el análisis — la primera fila es siempre la
+// que hay que mirar.
+//
+// Se cuentan cuatro cosas por categoría, y las cuatro juntas dicen algo
+// que ninguna dice sola:
+//
+//   TOTAL             cuánto.
+//   MOVIMIENTOS       en cuántas veces. $3,000 de comida en 30 compras
+//                     de $100 y en 2 de $1,500 son problemas distintos,
+//                     y el total solo los muestra iguales.
+//   TICKET PROMEDIO   total ÷ movimientos.
+//   CONTRA EL         solo las categorías con bolsa semanal. Es lo que
+//   PRESUPUESTO       dice si el presupuesto está bien puesto.
+//
+// Los gastos sin categoría (el pago de una deuda, el de una tarjeta, una
+// compra suelta) no se esconden: van a un grupo propio donde el nombre
+// de la fila es su descripción. Esconderlos haría que la tabla no sumara
+// el total del ciclo, y una tabla que no suma no sirve.
+
+const CATEGORIA_SIN_CLASIFICAR = "__sin_categoria__";
+
+// El presupuesto de una categoría para el ciclo completo: la suma de sus
+// cuatro bolsas semanales. Se calcula sumando y no multiplicando por
+// cuatro porque las bolsas no son iguales entre sí — una semana de 8
+// días necesita ocho días de comida, y la gasolina es tope fijo. La
+// regla de cuál es cuál ya vive en calcularBolsaSemanalDeCategoria.
+function calcularPresupuestoDelCicloParaCategoria(categoria, ciclo, datos) {
+  let total = 0;
+  for (let semana = 1; semana <= SEMANAS_POR_CICLO; semana++) {
+    total += calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, semana);
+  }
+  return total;
+}
+
+// Cómo se llama la fila de un gasto sin categoría. Se busca el nombre
+// más informativo que exista: el del compromiso que cerró, si no su
+// descripción, y si no queda nada, una etiqueta genérica.
+function nombrarGastoSinCategoria(gasto, datos) {
+  if (gasto.compromisoId) {
+    const compromiso = datos.compromisos.find(function (c) { return c.id === gasto.compromisoId; });
+    if (compromiso) {
+      return compromiso.nombre;
+    }
+  }
+  if (gasto.descripcion) {
+    return gasto.descripcion;
+  }
+  return "Sin descripción";
+}
+
+// El desglose completo, ordenado de mayor a menor. Cada categoría trae
+// sus subcategorías dentro, también ordenadas.
+function calcularGastoPorCategoriaDelCiclo(ciclo, datos, lente) {
+  const movimientos = calcularMovimientosDelCicloSegunLente(ciclo, datos, lente);
+  const ingreso = calcularIngresosDelCiclo(ciclo, datos);
+  const grupos = {};
+
+  movimientos.forEach(function (gasto) {
+    const claveCategoria = gasto.categoriaId || CATEGORIA_SIN_CLASIFICAR;
+    const categoria = datos.config.categorias.find(function (c) { return c.id === gasto.categoriaId; });
+
+    if (!grupos[claveCategoria]) {
+      grupos[claveCategoria] = {
+        categoriaId: gasto.categoriaId || null,
+        nombre: categoria ? categoria.nombre : "Sin categoría",
+        esVariableSemanal: Boolean(categoria && categoria.esVariableSemanal),
+        categoria: categoria || null,
+        total: 0,
+        conteo: 0,
+        gastadoDeLaBolsa: 0,
+        subcategorias: {}
+      };
+    }
+    const grupo = grupos[claveCategoria];
+
+    // El nombre de la fila de adentro: la subcategoría cuando existe, y
+    // si no, lo que mejor describa al gasto.
+    const nombreDeFila = categoria
+      ? (gasto.subcategoria || "Sin subcategoría")
+      : nombrarGastoSinCategoria(gasto, datos);
+
+    if (!grupo.subcategorias[nombreDeFila]) {
+      grupo.subcategorias[nombreDeFila] = {
+        nombre: nombreDeFila,
+        total: 0,
+        conteo: 0,
+        // Si esta subcategoría es la que consume la bolsa de su
+        // categoría. Sirve para marcar en pantalla al Didi como "no toca
+        // el presupuesto" sin tener que explicarlo cada vez.
+        consumeLaBolsa: Boolean(categoria) && (
+          !categoria.subcategoriaQueConsumeElPresupuesto ||
+          categoria.subcategoriaQueConsumeElPresupuesto === gasto.subcategoria
+        )
+      };
+    }
+
+    const monto = Number(gasto.monto);
+    grupo.total += monto;
+    grupo.conteo += 1;
+    grupo.subcategorias[nombreDeFila].total += monto;
+    grupo.subcategorias[nombreDeFila].conteo += 1;
+
+    // Lo que de verdad descuenta de la bolsa semanal. No es lo mismo que
+    // el total de la categoría: una comida pagada con tarjeta es comida,
+    // pero no toca el presupuesto (ver elGastoConsumeLaBolsa). Bajo la
+    // lente de consumo esa diferencia se vuelve visible, y se muestra en
+    // vez de taparse.
+    if (categoria && elGastoConsumeLaBolsa(gasto, categoria)) {
+      grupo.gastadoDeLaBolsa += monto;
+    }
+  });
+
+  return Object.keys(grupos).map(function (clave) {
+    const grupo = grupos[clave];
+    const presupuesto = grupo.categoria && grupo.esVariableSemanal
+      ? calcularPresupuestoDelCicloParaCategoria(grupo.categoria, ciclo, datos)
+      : null;
+
+    return {
+      categoriaId: grupo.categoriaId,
+      nombre: grupo.nombre,
+      esVariableSemanal: grupo.esVariableSemanal,
+      total: grupo.total,
+      conteo: grupo.conteo,
+      ticketPromedio: grupo.conteo > 0 ? grupo.total / grupo.conteo : 0,
+      parteDelIngreso: ingreso > 0 ? grupo.total / ingreso : null,
+      presupuestoDelCiclo: presupuesto,
+      gastadoDeLaBolsa: grupo.gastadoDeLaBolsa,
+      // Lo que se gastó en la categoría sin tocar su bolsa. Es el Didi, y
+      // la comida a crédito: gasto real que ningún presupuesto cubre.
+      fueraDeLaBolsa: grupo.total - grupo.gastadoDeLaBolsa,
+      subcategorias: Object.keys(grupo.subcategorias)
+        .map(function (nombre) {
+          const fila = grupo.subcategorias[nombre];
+          return {
+            nombre: fila.nombre,
+            total: fila.total,
+            conteo: fila.conteo,
+            ticketPromedio: fila.conteo > 0 ? fila.total / fila.conteo : 0,
+            consumeLaBolsa: fila.consumeLaBolsa
+          };
+        })
+        .sort(function (a, b) { return b.total - a.total; })
+    };
+  }).sort(function (a, b) { return b.total - a.total; });
+}
+
+// Qué tan avanzado va el ciclo, de 0 a 1. Es la marca de ritmo de las
+// barras de presupuesto: sin ella, una barra al 60% no se puede juzgar
+// — el día 5 es una alarma y el día 25 es ir bien.
+function calcularAvanceDelCiclo(ciclo) {
+  const situacion = calcularSituacionDelCiclo(ciclo);
+  if (situacion === "cerrado") { return 1; }
+  if (situacion === "porVenir") { return 0; }
+
+  const rango = calcularRangoDeDiasDelCiclo(ciclo);
+  return rango.diasTranscurridos / rango.diasTotales;
+}

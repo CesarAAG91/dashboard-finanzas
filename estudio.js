@@ -185,6 +185,7 @@ function renderizarBarraDelEstudio() {
 function renderizarEstudioDelCiclo() {
   renderizarBarraDelEstudio();
   renderizarCierreDelCiclo();
+  renderizarEstructuraDelCiclo();
   renderizarTrayectoriaSemaforo();
   renderizarProximosPagosAnalisis();
   renderizarMovimientosDelCiclo();
@@ -469,6 +470,181 @@ function renderizarCierreDelCiclo() {
       htmlDeLasComparaciones(resumen, ciclo, datos) +
     "</div>";
 }
+
+// ============================================================
+// ESTUDIO — §2 ESTRUCTURA
+// ============================================================
+//
+// La tabla de en qué se fue el dinero, ordenada de mayor a menor. La
+// primera fila es siempre la que hay que mirar, y eso lo hace el orden,
+// no un color ni un icono.
+//
+// Cada categoría se puede desplegar para ver sus subcategorías dentro.
+// Cerrada por default: la pregunta "¿en qué se me va?" se contesta
+// primero con cuatro renglones, no con veinte.
+
+// Qué categorías están desplegadas. Vive fuera de la función de dibujado
+// para que sobreviva a renderizarTodo() — si no, cada gasto capturado
+// cerraría todo lo que el usuario había abierto.
+const categoriasDesplegadasDelEstudio = {};
+
+function alternarCategoriaDelEstudio(claveCategoria) {
+  categoriasDesplegadasDelEstudio[claveCategoria] = !categoriasDesplegadasDelEstudio[claveCategoria];
+  renderizarEstructuraDelCiclo();
+}
+
+// La barra de presupuesto de una categoría variable, con su marca de
+// ritmo. Es el componente que dice si el presupuesto está bien puesto:
+// la barra es lo gastado contra la bolsa del ciclo, y la marca es en qué
+// día del ciclo vamos. Barra por delante de la marca = vas más rápido
+// que el calendario.
+function htmlDeBarraDePresupuesto(fila, avanceDelCiclo) {
+  if (fila.presupuestoDelCiclo === null || fila.presupuestoDelCiclo <= 0) {
+    return "<span class=\"sin-presupuesto\">sin presupuesto</span>";
+  }
+
+  const proporcion = fila.gastadoDeLaBolsa / fila.presupuestoDelCiclo;
+  const seExcedio = proporcion > 1;
+  // La barra se acota al 100% del contenedor; el exceso se dice con
+  // número y color, no estirando la barra fuera de su caja.
+  const ancho = Math.min(proporcion, 1) * 100;
+
+  return "<div class=\"barra-presupuesto" + (seExcedio ? " se-excedio" : "") + "\">" +
+      "<div class=\"relleno-presupuesto\" style=\"width: " + ancho.toFixed(2) + "%;\"></div>" +
+      "<div class=\"marca-ritmo\" style=\"left: " + (avanceDelCiclo * 100).toFixed(2) + "%;\"" +
+        " title=\"Día " + Math.round(avanceDelCiclo * 100) + "% del ciclo\"></div>" +
+    "</div>" +
+    "<span class=\"cifra-presupuesto" + (seExcedio ? " en-rojo" : "") + "\">" +
+      formatearPorcentaje(proporcion) + " de " + formatearMoneda(fila.presupuestoDelCiclo) +
+    "</span>";
+}
+
+// El renglón de una categoría. Es un botón entero, no un enlace chiquito
+// al final: lo que se quiere tocar es la fila, y así no hay que apuntarle.
+function htmlDeFilaDeCategoria(fila, avanceDelCiclo) {
+  const clave = fila.categoriaId || CATEGORIA_SIN_CLASIFICAR;
+  const estaAbierta = Boolean(categoriasDesplegadasDelEstudio[clave]);
+
+  const subfilas = fila.subcategorias.map(function (sub) {
+    // El aviso de "no toca el presupuesto" solo aparece donde significa
+    // algo: dentro de una categoría que sí tiene bolsa.
+    const marcaFueraDeBolsa = (fila.esVariableSemanal && !sub.consumeLaBolsa)
+      ? "<span class=\"fuera-de-bolsa\" title=\"Se registra y se analiza, pero no consume la bolsa semanal de esta categoría\">fuera del presupuesto</span>"
+      : "";
+
+    return "<tr class=\"fila-subcategoria\">" +
+      "<td class=\"celda-nombre\">" + escaparHTML(sub.nombre) + marcaFueraDeBolsa + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(sub.total) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + sub.conteo + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + formatearMoneda(sub.ticketPromedio) + "</td>" +
+      "<td class=\"celda-barra\"></td>" +
+    "</tr>";
+  }).join("");
+
+  return "<tr class=\"fila-categoria" + (estaAbierta ? " abierta" : "") + "\"" +
+      " data-categoria=\"" + escaparHTML(clave) + "\">" +
+      "<td class=\"celda-nombre\">" +
+        "<span class=\"chevron-categoria\" aria-hidden=\"true\">›</span>" +
+        escaparHTML(fila.nombre) +
+        "<span class=\"parte-del-ingreso\">" + formatearPorcentaje(fila.parteDelIngreso) + " del ingreso</span>" +
+      "</td>" +
+      "<td class=\"celda-cifra fuerte\">" + formatearMoneda(fila.total) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + fila.conteo + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + formatearMoneda(fila.ticketPromedio) + "</td>" +
+      "<td class=\"celda-barra\">" +
+        (fila.esVariableSemanal ? htmlDeBarraDePresupuesto(fila, avanceDelCiclo) : "") +
+      "</td>" +
+    "</tr>" +
+    (estaAbierta ? subfilas : "");
+}
+
+// El reparto en tres, arriba de la tabla. Son los mismos tres pedazos de
+// la regla del §1, en números: aquí se ven en pesos, allá en proporción.
+function htmlDelRepartoEnTres(resumen) {
+  const pedazos = [
+    { nombre: "Fijo", monto: resumen.fijo + resumen.fijoPendiente,
+      pista: "Compromisos del ciclo, pagados y por pagar" },
+    { nombre: "Variable presupuestado", monto: resumen.variablePresupuestado,
+      pista: "Gasto libre que consume una bolsa semanal" },
+    { nombre: "Discrecional", monto: resumen.discrecional,
+      pista: "Gasto libre que ninguna bolsa cubre" }
+  ];
+
+  return "<div class=\"reparto-en-tres\">" + pedazos.map(function (pedazo) {
+    return "<div class=\"pedazo\">" +
+      "<span class=\"etiqueta-ancha\">" + pedazo.nombre + "</span>" +
+      "<span class=\"cifra-pedazo\">" + formatearMoneda(pedazo.monto) + "</span>" +
+      "<span class=\"pista-pedazo\">" + escaparHTML(pedazo.pista) + "</span>" +
+    "</div>";
+  }).join("") + "</div>";
+}
+
+// Cuando el total de una categoría no coincide con lo que descontó de su
+// bolsa, hay que decir por qué. Si no, la barra y la cifra de al lado se
+// contradicen y parece un error de la app.
+function htmlDeLaNotaDeBolsa(filas) {
+  const conDiferencia = filas.filter(function (fila) {
+    return fila.esVariableSemanal && fila.fueraDeLaBolsa > 0.005;
+  });
+
+  if (conDiferencia.length === 0) {
+    return "";
+  }
+
+  const detalle = conDiferencia.map(function (fila) {
+    return escaparHTML(fila.nombre) + " " + formatearMoneda(fila.fueraDeLaBolsa);
+  }).join(" · ");
+
+  return "<p class=\"nota-de-bolsa\">La barra mide solo lo que descuenta de la bolsa semanal. " +
+    "Queda fuera lo pagado con tarjeta y las subcategorías que no consumen el presupuesto: " +
+    detalle + ".</p>";
+}
+
+function renderizarEstructuraDelCiclo() {
+  const datos = leerDatos();
+  const ciclo = obtenerCicloDelEstudio();
+  const seccion = document.getElementById("seccionEstructura");
+
+  const resumen = resumirCicloCompleto(ciclo, datos, lenteDelEstudio);
+  const filas = calcularGastoPorCategoriaDelCiclo(ciclo, datos, lenteDelEstudio);
+  const avance = calcularAvanceDelCiclo(ciclo);
+
+  const encabezado = htmlDeEncabezadoDeSeccion("02", "Estructura", "¿En qué se me va?");
+
+  if (filas.length === 0) {
+    seccion.innerHTML = encabezado +
+      htmlDeEstadoVacio("Todavía no hay gastos registrados en este ciclo.");
+    return;
+  }
+
+  seccion.innerHTML = encabezado +
+    htmlDelRepartoEnTres(resumen) +
+    "<table class=\"tabla-estudio tabla-categorias\">" +
+      "<thead><tr>" +
+        "<th>Categoría</th>" +
+        "<th class=\"celda-cifra\">Gastado</th>" +
+        "<th class=\"celda-cifra\" title=\"Cuántos movimientos\">Movs.</th>" +
+        "<th class=\"celda-cifra\" title=\"Gastado entre movimientos\">Ticket prom.</th>" +
+        "<th class=\"celda-barra\">Contra el presupuesto</th>" +
+      "</tr></thead>" +
+      "<tbody>" + filas.map(function (fila) {
+        return htmlDeFilaDeCategoria(fila, avance);
+      }).join("") + "</tbody>" +
+    "</table>" +
+    htmlDeLaNotaDeBolsa(filas);
+
+  // El cableado va aquí y no en arranque.js porque las filas se crean y
+  // se destruyen en cada dibujado: un listener puesto una sola vez al
+  // arrancar apuntaría a filas que ya no existen.
+  seccion.querySelectorAll(".fila-categoria").forEach(function (filaHTML) {
+    filaHTML.addEventListener("click", function () {
+      alternarCategoriaDelEstudio(filaHTML.getAttribute("data-categoria"));
+    });
+  });
+}
+
+// ============================================================
+// ESTUDIO — GRÁFICA DE TRAYECTORIA DEL SEMÁFORO
 // ============================================================
 //
 // Dibuja calcularTrayectoriaDelSemaforo como una línea SVG hecha a mano
