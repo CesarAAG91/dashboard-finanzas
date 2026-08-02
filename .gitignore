@@ -8,8 +8,8 @@ PROMPT-INICIAL.md
 
 # Imágenes de referencia y capturas de trabajo: se quedan locales. El repo solo
 # lleva los archivos que la app necesita para correr: index.html, estilos.css,
-# los cinco .js (motor, ajustes, captura, analisis, arranque), manifest.json e
-# icon.png.
+# los seis .js (motor, ajustes, captura, analisis, estudio, arranque),
+# manifest.json e icon.png.
 *.png
 *.jpeg
 *.jpg
