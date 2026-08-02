@@ -188,6 +188,7 @@ function renderizarEstudioDelCiclo() {
   renderizarEstructuraDelCiclo();
   // El ritmo dibuja la trayectoria por dentro: es su tercera pieza.
   renderizarRitmoDelCiclo();
+  renderizarFrentesDelCiclo();
   renderizarProximosPagosAnalisis();
   renderizarMovimientosDelCiclo();
   renderizarEstadoDeDeudaAnalisis();
@@ -1072,4 +1073,97 @@ function renderizarEstadoDeDeudaAnalisis() {
       "<p class=\"pista\">Se liquida aprox. el " + formatearFechaISO(estado.fechaLiquidacion) + "</p>" +
     "</div>";
   }).join("");
+}
+
+// ============================================================
+// ESTUDIO — §4 FRENTES
+// ============================================================
+//
+// A quién le estoy pagando. Va a todo lo ancho porque es una tabla por
+// derecho propio y porque, para quien sostiene más de una casa, es la
+// sección que más se va a mirar.
+
+// La barra de un frente: lo gastado sólido, lo que falta por pagar
+// rayado. Los dos contra el mismo máximo de la tabla, para que las
+// barras de distintos frentes se puedan comparar entre sí de un vistazo.
+function htmlDeBarraDeFrente(frente, maximo) {
+  if (maximo <= 0) {
+    return "";
+  }
+  const anchoGastado = (frente.gastado / maximo) * 100;
+  const anchoPorPagar = (frente.porPagar / maximo) * 100;
+
+  return "<div class=\"barra-frente\">" +
+      "<div class=\"parte-gastada\" style=\"width: " + anchoGastado.toFixed(2) + "%;\"></div>" +
+      "<div class=\"parte-por-pagar\" style=\"width: " + anchoPorPagar.toFixed(2) + "%;\"></div>" +
+    "</div>";
+}
+
+function renderizarFrentesDelCiclo() {
+  const datos = leerDatos();
+  const ciclo = obtenerCicloDelEstudio();
+  const seccion = document.getElementById("seccionFrentes");
+  const frentes = calcularGastoPorDestinatario(ciclo, datos, lenteDelEstudio);
+
+  const encabezado = htmlDeEncabezadoDeSeccion("04", "Frentes", "¿A quién le estoy pagando?");
+
+  // Con todo sin etiquetar no hay nada que analizar todavía, y decirlo
+  // es más útil que dibujar una tabla de un solo renglón: el campo
+  // existe desde hace tiempo y quizá nadie sabe que está ahí.
+  const hayFrentesDeVerdad = frentes.some(function (f) { return !f.esSinAsignar; });
+  if (!hayFrentesDeVerdad) {
+    seccion.innerHTML = encabezado + htmlDeEstadoVacio(
+      "Ningún gasto de este ciclo tiene destinatario. El destinatario es a quién o a qué " +
+      "corresponde un gasto — la casa de tu abuela, el celular de tu mamá — y se captura " +
+      "al registrar el monto, o se hereda del recurrente. En cuanto etiquetes uno, esta " +
+      "sección suma cuánto cuesta cada frente."
+    );
+    return;
+  }
+
+  const maximo = frentes.reduce(function (max, f) { return Math.max(max, f.total); }, 0);
+
+  const filas = frentes.map(function (frente) {
+    const conceptos = frente.conceptos.map(function (concepto) {
+      const suma = concepto.gastado + concepto.porPagar;
+      const marcaPorPagar = concepto.porPagar > 0 && concepto.gastado === 0
+        ? "<span class=\"marca-por-pagar\">por pagar</span>"
+        : "";
+      return "<tr class=\"fila-subcategoria\">" +
+        "<td class=\"celda-nombre\">" + escaparHTML(concepto.nombre) + marcaPorPagar + "</td>" +
+        "<td class=\"celda-cifra\">" + formatearMoneda(suma) + "</td>" +
+        "<td class=\"celda-cifra secundaria\">" + (concepto.conteo > 0 ? concepto.conteo : "—") + "</td>" +
+        "<td class=\"celda-barra\"></td>" +
+      "</tr>";
+    }).join("");
+
+    const detallePorPagar = frente.porPagar > 0
+      ? "<span class=\"detalle-frente\">" + formatearMoneda(frente.gastado) + " gastados · " +
+        formatearMoneda(frente.porPagar) + " por pagar</span>"
+      : "";
+
+    return "<tr class=\"fila-frente" + (frente.esSinAsignar ? " sin-asignar" : "") + "\">" +
+        "<td class=\"celda-nombre\">" +
+          escaparHTML(frente.nombre) +
+          "<span class=\"parte-del-ingreso\">" + formatearPorcentaje(frente.parteDelIngreso) + " del ingreso</span>" +
+        "</td>" +
+        "<td class=\"celda-cifra fuerte\">" + formatearMoneda(frente.total) + "</td>" +
+        "<td class=\"celda-cifra secundaria\">" + (frente.conteo > 0 ? frente.conteo : "—") + "</td>" +
+        "<td class=\"celda-barra\">" + htmlDeBarraDeFrente(frente, maximo) + detallePorPagar + "</td>" +
+      "</tr>" + conceptos;
+  }).join("");
+
+  seccion.innerHTML = encabezado +
+    "<table class=\"tabla-estudio tabla-frentes\">" +
+      "<thead><tr>" +
+        "<th>Frente</th>" +
+        "<th class=\"celda-cifra\">Total del ciclo</th>" +
+        "<th class=\"celda-cifra\">Movs.</th>" +
+        "<th class=\"celda-barra\">Gastado y por pagar</th>" +
+      "</tr></thead>" +
+      "<tbody>" + filas + "</tbody>" +
+    "</table>" +
+    "<p class=\"nota-de-bolsa\">La parte sólida ya salió; la rayada son compromisos del ciclo " +
+      "que todavía no se pagan. «Sin asignar» va siempre al final: no es un frente, es lo que " +
+      "falta por etiquetar.</p>";
 }

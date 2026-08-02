@@ -3026,3 +3026,48 @@ details summary {
   flex-direction: column;
   gap: 12px;
 }
+
+/* ---------- §4 Frentes ---------- */
+#vistaAncha .tabla-frentes .celda-barra { width: 38%; }
+#vistaAncha .fila-frente .celda-nombre {
+  color: var(--texto-a);
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+/* "Sin asignar" no es un frente, es lo que falta por etiquetar: se
+   apaga para que no compita con los frentes de verdad. */
+#vistaAncha .fila-frente.sin-asignar .celda-nombre,
+#vistaAncha .fila-frente.sin-asignar .celda-cifra { color: var(--texto-3a); }
+
+#vistaAncha .barra-frente {
+  display: flex;
+  height: 9px;
+  background-color: var(--superficie-a);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+#vistaAncha .parte-gastada { background-color: #837c90; }
+/* Rayado: es una promesa, no un hecho. Mismo trato que el fijo por pagar
+   de la regla del ingreso. */
+#vistaAncha .parte-por-pagar {
+  background-image: repeating-linear-gradient(-45deg, #6f6a7c 0 4px, transparent 4px 8px);
+  background-color: rgba(111, 106, 124, 0.3);
+}
+#vistaAncha .detalle-frente {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+#vistaAncha .marca-por-pagar {
+  margin-left: 9px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+  border: 1px dashed var(--borde-a);
+  border-radius: 4px;
+  padding: 1px 6px;
+}

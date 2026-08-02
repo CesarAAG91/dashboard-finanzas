@@ -3212,3 +3212,121 @@ function calcularGastoPorDiaDeLaSemana(ciclo, datos, lente) {
 
   return { montos: porDia, conteos: conteoPorDia };
 }
+
+// ============================================================
+// ESTUDIO DEL CICLO — LOS FRENTES: A QUIÉN LE ESTOY PAGANDO
+// ============================================================
+//
+// destinatario es la tercera dimensión de un gasto, ortogonal a la
+// categoría (qué función cumple) y a la subcategoría (por qué medio):
+// a quién o a qué corresponde. "Casa de mi abuela", "Celular de mi mamá".
+//
+// Se captura desde la Etapa 3 y hasta ahora no se sumaba en ningún lado.
+// Para quien sostiene más de una casa es el número más importante de
+// todos: dos recibos de luz en propiedades distintas son la misma
+// subcategoría "Luz" — para poder sumar el total de luz sin pensarlo —
+// y el destinatario es lo que permite además sumar todo lo de una casa
+// sin importar de qué servicio venga.
+//
+// Se cuentan dos cosas por frente, y por separado:
+//
+//   GASTADO    lo que ya salió, bajo la lente activa.
+//   POR PAGAR  los compromisos del ciclo que todavía no se pagan y que
+//              corresponden a ese frente. Es una promesa, no un hecho,
+//              y se dibuja distinto — pero esconderlo haría que un
+//              frente cuyos pagos caen a fin de mes se viera en cero.
+
+const DESTINATARIO_SIN_ASIGNAR = "__sin_asignar__";
+const ETIQUETA_SIN_ASIGNAR = "Sin asignar";
+
+function calcularGastoPorDestinatario(ciclo, datos, lente) {
+  const movimientos = calcularMovimientosDelCicloSegunLente(ciclo, datos, lente);
+  const ingreso = calcularIngresosDelCiclo(ciclo, datos);
+  const frentes = {};
+
+  function asegurarFrente(clave, nombre) {
+    if (!frentes[clave]) {
+      frentes[clave] = {
+        clave: clave,
+        nombre: nombre,
+        gastado: 0,
+        porPagar: 0,
+        conteo: 0,
+        conceptos: {}
+      };
+    }
+    return frentes[clave];
+  }
+
+  movimientos.forEach(function (gasto) {
+    const clave = gasto.destinatario || DESTINATARIO_SIN_ASIGNAR;
+    const frente = asegurarFrente(clave, gasto.destinatario || ETIQUETA_SIN_ASIGNAR);
+    const categoria = datos.config.categorias.find(function (c) { return c.id === gasto.categoriaId; });
+
+    // El concepto: en qué se le fue a ESE frente. La subcategoría cuando
+    // hay categoría, y si no, lo que mejor lo describa.
+    const concepto = categoria
+      ? (categoria.nombre + " · " + (gasto.subcategoria || "sin subcategoría"))
+      : nombrarGastoSinCategoria(gasto, datos);
+
+    if (!frente.conceptos[concepto]) {
+      frente.conceptos[concepto] = { nombre: concepto, gastado: 0, porPagar: 0, conteo: 0 };
+    }
+
+    frente.gastado += Number(gasto.monto);
+    frente.conteo += 1;
+    frente.conceptos[concepto].gastado += Number(gasto.monto);
+    frente.conceptos[concepto].conteo += 1;
+  });
+
+  // Los compromisos que faltan por pagar. Se resuelve su destinatario con
+  // la función que ya existe: un compromiso generado desde un recurrente
+  // hereda el destinatario del recurrente, no lo lleva escrito encima.
+  datos.compromisos
+    .filter(function (compromiso) {
+      if (compromiso.cicloId !== ciclo.id || compromiso.pagado) { return false; }
+      if (lente === LENTE_CONSUMO && compromiso.origen === "tarjeta") { return false; }
+      return true;
+    })
+    .forEach(function (compromiso) {
+      const destinatario = resolverDestinatarioDeCompromiso(compromiso, datos);
+      const clave = destinatario || DESTINATARIO_SIN_ASIGNAR;
+      const frente = asegurarFrente(clave, destinatario || ETIQUETA_SIN_ASIGNAR);
+      const concepto = compromiso.nombre;
+
+      if (!frente.conceptos[concepto]) {
+        frente.conceptos[concepto] = { nombre: concepto, gastado: 0, porPagar: 0, conteo: 0 };
+      }
+
+      frente.porPagar += Number(compromiso.montoEstimado);
+      frente.conceptos[concepto].porPagar += Number(compromiso.montoEstimado);
+    });
+
+  return Object.keys(frentes).map(function (clave) {
+    const frente = frentes[clave];
+    const total = frente.gastado + frente.porPagar;
+    return {
+      clave: frente.clave,
+      nombre: frente.nombre,
+      esSinAsignar: frente.clave === DESTINATARIO_SIN_ASIGNAR,
+      gastado: frente.gastado,
+      porPagar: frente.porPagar,
+      total: total,
+      conteo: frente.conteo,
+      parteDelIngreso: ingreso > 0 ? total / ingreso : null,
+      conceptos: Object.keys(frente.conceptos)
+        .map(function (nombre) { return frente.conceptos[nombre]; })
+        .sort(function (a, b) {
+          return (b.gastado + b.porPagar) - (a.gastado + a.porPagar);
+        })
+    };
+  }).sort(function (a, b) {
+    // "Sin asignar" siempre al final, por grande que sea: no es un
+    // frente, es lo que todavía no se ha etiquetado, y encabezar la
+    // tabla con él escondería los frentes de verdad.
+    if (a.esSinAsignar !== b.esSinAsignar) {
+      return a.esSinAsignar ? 1 : -1;
+    }
+    return b.total - a.total;
+  });
+}
