@@ -2881,3 +2881,148 @@ details summary {
   color: var(--texto-3a);
   max-width: 72ch;
 }
+
+/* ---------- §3 Ritmo: las cuatro semanas ---------- */
+#vistaAncha .cuatro-semanas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 30px;
+}
+#vistaAncha .columna-semana {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+#vistaAncha .tubo-semana {
+  height: 96px;
+  display: flex;
+  align-items: flex-end;
+  background-color: var(--superficie-a);
+  border-radius: 6px;
+  overflow: hidden;
+}
+#vistaAncha .relleno-semana {
+  width: 100%;
+  background-color: #837c90;
+  border-radius: 6px 6px 0 0;
+}
+#vistaAncha .pie-semana {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+#vistaAncha .nombre-semana {
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+}
+#vistaAncha .monto-semana {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 300;
+}
+#vistaAncha .detalle-semana,
+#vistaAncha .fechas-semana {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  color: var(--texto-3a);
+}
+#vistaAncha .fechas-semana { opacity: 0.7; }
+
+/* ---------- La matriz semana × categoría ---------- */
+#vistaAncha .tabla-matriz .celda-semana {
+  width: 17%;
+  text-align: center;
+  vertical-align: bottom;
+}
+#vistaAncha .tabla-matriz th.celda-semana { text-align: center; }
+#vistaAncha .tubo-celda {
+  position: relative;
+  height: 46px;
+  display: flex;
+  align-items: flex-end;
+  background-color: var(--superficie-a);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+#vistaAncha .relleno-celda {
+  width: 100%;
+  background-color: #6f6a7c;
+}
+#vistaAncha .relleno-celda.se-excedio { background-color: #fca5a5; }
+/* La bolsa de esa semana, dentro del tubo: lo que se podía gastar. */
+#vistaAncha .marca-bolsa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed rgba(246, 243, 239, 0.55);
+}
+#vistaAncha .cifra-celda {
+  display: block;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+#vistaAncha .nota-matriz {
+  margin: 14px 0 30px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto-3a);
+  max-width: 72ch;
+}
+
+/* ---------- Días de la semana ---------- */
+#vistaAncha .bloque-dias {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+#vistaAncha .barras-dias {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+#vistaAncha .columna-dia {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+#vistaAncha .tubo-dia {
+  height: 58px;
+  display: flex;
+  align-items: flex-end;
+  background-color: var(--superficie-a);
+  border-radius: 5px;
+  overflow: hidden;
+}
+#vistaAncha .relleno-dia {
+  width: 100%;
+  background-color: #6f6a7c;
+}
+#vistaAncha .nombre-dia {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+}
+#vistaAncha .monto-dia {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-2a);
+}
+
+#vistaAncha .bloque-trayectoria {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

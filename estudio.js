@@ -186,7 +186,8 @@ function renderizarEstudioDelCiclo() {
   renderizarBarraDelEstudio();
   renderizarCierreDelCiclo();
   renderizarEstructuraDelCiclo();
-  renderizarTrayectoriaSemaforo();
+  // El ritmo dibuja la trayectoria por dentro: es su tercera pieza.
+  renderizarRitmoDelCiclo();
   renderizarProximosPagosAnalisis();
   renderizarMovimientosDelCiclo();
   renderizarEstadoDeDeudaAnalisis();
@@ -644,8 +645,162 @@ function renderizarEstructuraDelCiclo() {
 }
 
 // ============================================================
+// ESTUDIO — §3 RITMO
+// ============================================================
+//
+// Cuándo se va el dinero dentro del ciclo. Tres piezas que responden lo
+// mismo a tres resoluciones distintas: por semana, por día de la semana,
+// y día por día en la gráfica de trayectoria.
+
+// Los días de la semana en el orden en que se leen, no en el de
+// getDay(). Lunes primero: la semana de gasto de una persona empieza en
+// lunes, aunque el calendario diga otra cosa.
+const DIAS_EN_ORDEN_DE_LECTURA = [
+  { indice: 1, nombre: "Lun" },
+  { indice: 2, nombre: "Mar" },
+  { indice: 3, nombre: "Mié" },
+  { indice: 4, nombre: "Jue" },
+  { indice: 5, nombre: "Vie" },
+  { indice: 6, nombre: "Sáb" },
+  { indice: 0, nombre: "Dom" }
+];
+
+// La fila de las cuatro semanas, que es el titular de la sección. Las
+// barras se escalan contra la semana más cara, y debajo va el gasto por
+// día — que es lo único comparable cuando las semanas miden distinto.
+function htmlDeLasCuatroSemanas(totalesPorSemana) {
+  const maximo = totalesPorSemana.reduce(function (max, s) { return Math.max(max, s.total); }, 0);
+
+  return "<div class=\"cuatro-semanas\">" + totalesPorSemana.map(function (semana) {
+    const alto = maximo > 0 ? (semana.total / maximo) * 100 : 0;
+    return "<div class=\"columna-semana\">" +
+        "<div class=\"tubo-semana\">" +
+          "<div class=\"relleno-semana\" style=\"height: " + alto.toFixed(2) + "%;\"></div>" +
+        "</div>" +
+        "<div class=\"pie-semana\">" +
+          "<span class=\"nombre-semana\">Semana " + semana.numero + "</span>" +
+          "<span class=\"monto-semana\">" + formatearMoneda(semana.total) + "</span>" +
+          "<span class=\"detalle-semana\">" + formatearMoneda(semana.porDia) + " al día · " +
+            semana.dias + " días</span>" +
+          "<span class=\"fechas-semana\">" + semana.fechaInicio + " a " + semana.fechaFin + "</span>" +
+        "</div>" +
+      "</div>";
+  }).join("") + "</div>";
+}
+
+// La matriz por categoría. Cada renglón se escala contra su propia
+// semana más cara, no contra la matriz entera: la pregunta aquí es
+// "¿cuándo se va ESTA categoría?", y comparar categorías entre sí ya lo
+// hace el §2.
+function htmlDeLaMatrizDeSemanas(filas) {
+  const encabezado = "<tr><th>Categoría</th>" +
+    [1, 2, 3, 4].map(function (n) { return "<th class=\"celda-semana\">Sem " + n + "</th>"; }).join("") +
+    "</tr>";
+
+  const cuerpo = filas.map(function (fila) {
+    const maximoDeLaFila = fila.semanas.reduce(function (max, v) { return Math.max(max, v); }, 0);
+
+    const celdas = fila.semanas.map(function (monto, indice) {
+      const alto = maximoDeLaFila > 0 ? (monto / maximoDeLaFila) * 100 : 0;
+      const bolsa = fila.bolsas[indice];
+      // La marca de la bolsa solo se dibuja si cabe dentro de la escala
+      // de la fila. Si la bolsa es mayor que el gasto más alto, la marca
+      // saldría fuera del tubo y no diría nada.
+      const marca = (bolsa !== null && bolsa > 0 && maximoDeLaFila > 0 && bolsa <= maximoDeLaFila)
+        ? "<div class=\"marca-bolsa\" style=\"bottom: " + ((bolsa / maximoDeLaFila) * 100).toFixed(2) + "%;\"" +
+          " title=\"Bolsa de la semana: " + escaparHTML(formatearMoneda(bolsa)) + "\"></div>"
+        : "";
+
+      // El rojo compara contra la bolsa lo que DE VERDAD la consume, no
+      // el total de la categoría. Si comparara el total, el Didi pondría
+      // en rojo una semana de Transporte que no se pasó de gasolina.
+      const deLaBolsa = fila.semanasDeLaBolsa[indice];
+      const seExcedio = bolsa !== null && bolsa > 0 && deLaBolsa > bolsa;
+
+      const explicacion = formatearMoneda(monto) +
+        (bolsa !== null && bolsa > 0
+          ? " · " + formatearMoneda(deLaBolsa) + " de la bolsa de " + formatearMoneda(bolsa)
+          : "");
+
+      return "<td class=\"celda-semana\">" +
+          "<div class=\"tubo-celda\" title=\"" + escaparHTML(explicacion) + "\">" +
+            "<div class=\"relleno-celda" + (seExcedio ? " se-excedio" : "") + "\"" +
+              " style=\"height: " + alto.toFixed(2) + "%;\"></div>" + marca +
+          "</div>" +
+          "<span class=\"cifra-celda\">" + (monto > 0 ? formatearMoneda(monto) : "—") + "</span>" +
+        "</td>";
+    }).join("");
+
+    return "<tr><td class=\"celda-nombre\">" + escaparHTML(fila.nombre) + "</td>" + celdas + "</tr>";
+  }).join("");
+
+  return "<table class=\"tabla-estudio tabla-matriz\">" +
+      "<thead>" + encabezado + "</thead><tbody>" + cuerpo + "</tbody>" +
+    "</table>" +
+    "<p class=\"nota-matriz\">Cada renglón se escala contra su propia semana más cara. " +
+      "La línea clara dentro del tubo es la bolsa de esa semana, donde hay presupuesto.</p>";
+}
+
+function htmlDeLosDiasDeLaSemana(distribucion) {
+  const maximo = distribucion.montos.reduce(function (max, v) { return Math.max(max, v); }, 0);
+
+  if (maximo <= 0) {
+    return "";
+  }
+
+  return "<div class=\"bloque-dias\">" +
+      "<span class=\"etiqueta-ancha\">Por día de la semana</span>" +
+      "<div class=\"barras-dias\">" + DIAS_EN_ORDEN_DE_LECTURA.map(function (dia) {
+        const monto = distribucion.montos[dia.indice];
+        const alto = (monto / maximo) * 100;
+        return "<div class=\"columna-dia\" title=\"" +
+            escaparHTML(dia.nombre + ": " + formatearMoneda(monto) + " en " + distribucion.conteos[dia.indice] + " movimientos") + "\">" +
+            "<div class=\"tubo-dia\"><div class=\"relleno-dia\" style=\"height: " + alto.toFixed(2) + "%;\"></div></div>" +
+            "<span class=\"nombre-dia\">" + dia.nombre + "</span>" +
+            "<span class=\"monto-dia\">" + (monto > 0 ? formatearMoneda(monto) : "—") + "</span>" +
+          "</div>";
+      }).join("") + "</div>" +
+    "</div>";
+}
+
+function renderizarRitmoDelCiclo() {
+  const datos = leerDatos();
+  const ciclo = obtenerCicloDelEstudio();
+  const seccion = document.getElementById("seccionRitmo");
+
+  const matriz = calcularGastoPorSemanaYCategoria(ciclo, datos, lenteDelEstudio);
+  const distribucion = calcularGastoPorDiaDeLaSemana(ciclo, datos, lenteDelEstudio);
+
+  const encabezado = htmlDeEncabezadoDeSeccion("03", "Ritmo", "¿Cuándo se me va?");
+
+  if (matriz.filas.length === 0) {
+    seccion.innerHTML = encabezado +
+      htmlDeEstadoVacio("Todavía no hay gastos registrados en este ciclo.") +
+      "<div id=\"contenedorTrayectoriaSemaforo\"></div>";
+    renderizarTrayectoriaSemaforo();
+    return;
+  }
+
+  seccion.innerHTML = encabezado +
+    htmlDeLasCuatroSemanas(matriz.totalesPorSemana) +
+    htmlDeLaMatrizDeSemanas(matriz.filas) +
+    htmlDeLosDiasDeLaSemana(distribucion) +
+    "<div class=\"bloque-trayectoria\">" +
+      "<span class=\"etiqueta-ancha\">Día por día</span>" +
+      "<div id=\"contenedorTrayectoriaSemaforo\"></div>" +
+    "</div>";
+
+  // La gráfica se dibuja después de que su contenedor existe: este
+  // innerHTML acaba de destruir el anterior.
+  renderizarTrayectoriaSemaforo();
+}
+
+// ============================================================
 // ESTUDIO — GRÁFICA DE TRAYECTORIA DEL SEMÁFORO
 // ============================================================
+//
+// La tercera pieza del §3, y la de mayor resolución: el ciclo día por
+// día. Se dibuja dentro de la sección de Ritmo.
 //
 // Dibuja calcularTrayectoriaDelSemaforo como una línea SVG hecha a mano
 // (sin librerías de gráficas, por las restricciones del proyecto): un
@@ -695,7 +850,9 @@ function construirTramosDeTrayectoria(trayectoria) {
 
 function renderizarTrayectoriaSemaforo() {
   const datos = leerDatos();
-  const ciclo = asegurarCicloActual();
+  // El ciclo que se está estudiando, no el de hoy: si el usuario navegó
+  // a mayo, la gráfica tiene que ser la de mayo.
+  const ciclo = obtenerCicloDelEstudio();
   const contenedor = document.getElementById("contenedorTrayectoriaSemaforo");
   const ingresosDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
 
@@ -821,10 +978,10 @@ function renderizarTrayectoriaSemaforo() {
 // pantalla ancha.
 function renderizarProximosPagosAnalisis() {
   const datos = leerDatos();
-  const cicloActual = asegurarCicloActual();
+  const ciclo = obtenerCicloDelEstudio();
   const lista = document.getElementById("listaProximosPagosAnalisis");
 
-  const pendientes = obtenerPendientesDelCiclo(datos, cicloActual.id);
+  const pendientes = obtenerPendientesDelCiclo(datos, ciclo.id);
 
   if (pendientes.length === 0) {
     lista.innerHTML = "<li class=\"vacio\">No hay pendientes en este ciclo.</li>";
@@ -858,9 +1015,9 @@ function obtenerMovimientosDelCiclo(datos, cicloId) {
 
 function renderizarMovimientosDelCiclo() {
   const datos = leerDatos();
-  const cicloActual = asegurarCicloActual();
+  const ciclo = obtenerCicloDelEstudio();
   const lista = document.getElementById("listaMovimientosCiclo");
-  const movimientos = obtenerMovimientosDelCiclo(datos, cicloActual.id);
+  const movimientos = obtenerMovimientosDelCiclo(datos, ciclo.id);
 
   if (movimientos.length === 0) {
     lista.innerHTML = "<li class=\"vacio\">Todavía no hay gastos registrados en este ciclo.</li>";

@@ -3091,3 +3091,124 @@ function calcularAvanceDelCiclo(ciclo) {
   const rango = calcularRangoDeDiasDelCiclo(ciclo);
   return rango.diasTranscurridos / rango.diasTotales;
 }
+
+// ============================================================
+// ESTUDIO DEL CICLO — EL RITMO: CUÁNDO SE VA EL DINERO
+// ============================================================
+//
+// El §2 dice en qué se va. Este dice cuándo, que es una pregunta
+// distinta y a veces más útil: dos ciclos con el mismo total de comida
+// pueden ser uno tranquilo y otro donde la primera semana se comió el
+// mes y las últimas dos fueron de aguantar.
+//
+// Las cuatro semanas ya son ciudadanas de primera en los datos: cada
+// gasto guarda su semana (1 a 4), calculada por el motor y recalculada
+// al cargar. Aquí solo se agrupan.
+
+// La matriz semana × categoría. Cada celda trae lo gastado y, cuando la
+// categoría tiene presupuesto, la bolsa de ESA semana — que no es la
+// misma en las cuatro: una semana de 8 días necesita ocho días de
+// comida, mientras que la gasolina es tope fijo.
+function calcularGastoPorSemanaYCategoria(ciclo, datos, lente) {
+  const movimientos = calcularMovimientosDelCicloSegunLente(ciclo, datos, lente);
+  const diasPorSemana = calcularDiasDeCadaSemanaDelCiclo(ciclo);
+  const grupos = {};
+
+  movimientos.forEach(function (gasto) {
+    const clave = gasto.categoriaId || CATEGORIA_SIN_CLASIFICAR;
+    const categoria = datos.config.categorias.find(function (c) { return c.id === gasto.categoriaId; });
+
+    if (!grupos[clave]) {
+      grupos[clave] = {
+        categoriaId: gasto.categoriaId || null,
+        nombre: categoria ? categoria.nombre : "Sin categoría",
+        esVariableSemanal: Boolean(categoria && categoria.esVariableSemanal),
+        categoria: categoria || null,
+        total: 0,
+        semanas: [0, 0, 0, 0],
+        // Lo mismo, pero contando solo lo que descuenta de la bolsa. Se
+        // lleva aparte porque comparar el TOTAL contra el presupuesto
+        // marca en rojo semanas que no se pasaron: el Didi suma al total
+        // de Transporte pero no toca sus $500 de gasolina.
+        semanasDeLaBolsa: [0, 0, 0, 0]
+      };
+    }
+
+    // La semana viene guardada en el gasto, pero un respaldo viejo podría
+    // traerla fuera de rango. Se acota en vez de escribir fuera del
+    // arreglo y perder el gasto en silencio.
+    const semana = Math.min(Math.max(Number(gasto.semana) || 1, 1), SEMANAS_POR_CICLO);
+    grupos[clave].semanas[semana - 1] += Number(gasto.monto);
+    grupos[clave].total += Number(gasto.monto);
+
+    if (categoria && elGastoConsumeLaBolsa(gasto, categoria)) {
+      grupos[clave].semanasDeLaBolsa[semana - 1] += Number(gasto.monto);
+    }
+  });
+
+  const filas = Object.keys(grupos).map(function (clave) {
+    const grupo = grupos[clave];
+    const bolsas = [];
+    for (let semana = 1; semana <= SEMANAS_POR_CICLO; semana++) {
+      bolsas.push(grupo.categoria && grupo.esVariableSemanal
+        ? calcularBolsaSemanalDeCategoria(grupo.categoria, ciclo, datos, semana)
+        : null);
+    }
+    return {
+      categoriaId: grupo.categoriaId,
+      nombre: grupo.nombre,
+      esVariableSemanal: grupo.esVariableSemanal,
+      total: grupo.total,
+      semanas: grupo.semanas,
+      semanasDeLaBolsa: grupo.semanasDeLaBolsa,
+      bolsas: bolsas
+    };
+  }).sort(function (a, b) { return b.total - a.total; });
+
+  // Los totales por semana y el contexto de cada una: cuántos días tiene
+  // y de qué fecha a qué fecha va. Sin los días, comparar una semana de
+  // 9 contra una de 7 sería comparar peras con manzanas.
+  // Las fechas de cada semana se calculan aquí y no se leen de
+  // calcularRangoDeLaSemanaActual: esa función devuelve conteos de días
+  // (transcurridos, totales, restantes), no las fechas mismas.
+  const inicioDelCiclo = crearFechaLocal(ciclo.fechaInicio);
+  const totalesPorSemana = [];
+  for (let semana = 1; semana <= SEMANAS_POR_CICLO; semana++) {
+    const diasAntes = calcularDiaDelCicloEnQueEmpiezaLaSemana(ciclo, semana);
+    const inicioSemana = sumarDias(inicioDelCiclo, diasAntes);
+    const finSemana = sumarDias(inicioSemana, diasPorSemana[semana - 1] - 1);
+    const total = filas.reduce(function (suma, fila) { return suma + fila.semanas[semana - 1]; }, 0);
+
+    totalesPorSemana.push({
+      numero: semana,
+      total: total,
+      dias: diasPorSemana[semana - 1],
+      // El gasto por día es lo único comparable entre semanas de distinta
+      // longitud, y es lo que revela que la semana del depósito quema más.
+      porDia: diasPorSemana[semana - 1] > 0 ? total / diasPorSemana[semana - 1] : 0,
+      fechaInicio: formatearFechaISO(inicioSemana),
+      fechaFin: formatearFechaISO(finSemana)
+    });
+  }
+
+  return { filas: filas, totalesPorSemana: totalesPorSemana };
+}
+
+// En qué día de la semana se gasta. Es descriptivo y barato, y contesta
+// una pregunta que nadie se hace hasta que ve la respuesta.
+//
+// El índice 0 es domingo, como en getDay() de JavaScript. Se deja así y
+// se reordena al dibujar, para no tener dos convenciones peleándose.
+function calcularGastoPorDiaDeLaSemana(ciclo, datos, lente) {
+  const movimientos = calcularMovimientosDelCicloSegunLente(ciclo, datos, lente);
+  const porDia = [0, 0, 0, 0, 0, 0, 0];
+  const conteoPorDia = [0, 0, 0, 0, 0, 0, 0];
+
+  movimientos.forEach(function (gasto) {
+    const dia = crearFechaLocal(gasto.fecha).getDay();
+    porDia[dia] += Number(gasto.monto);
+    conteoPorDia[dia] += 1;
+  });
+
+  return { montos: porDia, conteos: conteoPorDia };
+}
