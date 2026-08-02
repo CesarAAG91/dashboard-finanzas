@@ -439,19 +439,6 @@ function etiquetaCompletaDeCompromiso(compromiso, datos) {
 // de atajos que hay que leer con cuidado ya no es un atajo.
 const MAXIMO_DE_ATAJOS = 4;
 
-// El tope de alto de un botón del muro. Es tan grande a propósito: casi
-// nunca manda, porque dos renglones de este tamaño ya llenan la pantalla de
-// un teléfono y entonces los botones se encogen solos hasta caber. Solo
-// actúa en el caso raro de un único atajo configurado, para que no salga un
-// botón del alto del teléfono entero.
-const ALTO_MAXIMO_DE_ATAJO = 340;
-
-// Hasta tres atajos van en una sola columna: botones anchos de lado a
-// lado, que es lo que hace imposible fallarles con el pulgar. Con tres en
-// dos columnas el tercero quedaba solo, con un hueco al lado. El cuarto es
-// el que obliga a partir en dos.
-const ATAJOS_PARA_DOS_COLUMNAS = 4;
-
 // Los atajos configurados que todavía apuntan a algo que existe.
 //
 // Un atajo se puede romper solo: basta con renombrar o borrar la
@@ -664,7 +651,12 @@ const PASO_PAGO = "pago";
 // Cuántos vencimientos se ven completos antes de resumir el resto en una
 // línea. Los primeros son los más viejos: lo vencido pesa más que lo que
 // apenas vence hoy.
-const VENCIMIENTOS_VISIBLES_AL_FRENTE = 4;
+//
+// Son dos y no más porque la pantalla de entrada ya no es solo esto: abajo
+// van los últimos movimientos y las cuatro burbujas, y todo tiene que caber
+// sin scroll en un iPhone. El resto de lo vencido no se pierde — se resume
+// en una línea aquí y está completo detrás de "Adelantar un pago".
+const VENCIMIENTOS_VISIBLES_AL_FRENTE = 2;
 
 // A partir de cuántas opciones la rejilla pasa de dos a tres columnas. Con
 // más de doce en dos columnas, los botones quedan demasiado bajos para el
@@ -901,19 +893,14 @@ function htmlCabeceraDelTicket(titulo, color, conFlecha) {
 const ALTO_MAXIMO_DE_RENGLON = 88;
 const SEPARACION_ENTRE_RENGLONES = 7;
 
-// El segundo parámetro es opcional y solo lo usa el muro de atajos, que
-// necesita botones más altos y su propio número de columnas. Los demás
-// pasos la llaman con un solo argumento y se acomodan como siempre.
-function htmlRejillaDeOpciones(opciones, acomodo) {
-  const columnas = (acomodo && acomodo.columnas) ||
-    (opciones.length > OPCIONES_PARA_TRES_COLUMNAS ? 3 : 2);
+function htmlRejillaDeOpciones(opciones) {
+  const columnas = opciones.length > OPCIONES_PARA_TRES_COLUMNAS ? 3 : 2;
   const filas = Math.ceil(opciones.length / columnas);
-  const alto = (acomodo && acomodo.altoMaximoDeRenglon) || ALTO_MAXIMO_DE_RENGLON;
 
   // El tope de alto se calcula aquí porque el CSS no sabe cuántas filas
   // hay. Si el tope no cabe en la pantalla, la rejilla se encoge sola: el
   // tope es un máximo, nunca un mínimo.
-  const topeDeAlto = (filas * alto) + ((filas - 1) * SEPARACION_ENTRE_RENGLONES);
+  const topeDeAlto = (filas * ALTO_MAXIMO_DE_RENGLON) + ((filas - 1) * SEPARACION_ENTRE_RENGLONES);
 
   const botones = opciones.map(function (opcion) {
     const atributos = Object.keys(opcion.datos || {}).map(function (nombre) {
@@ -929,8 +916,7 @@ function htmlRejillaDeOpciones(opciones, acomodo) {
     "</button>";
   }).join("");
 
-  return "<div class=\"rejilla-ticket" + (acomodo ? " rejilla-atajos" : "") +
-    "\" style=\"--columnas-ticket: " + columnas +
+  return "<div class=\"rejilla-ticket\" style=\"--columnas-ticket: " + columnas +
     "; max-height: " + topeDeAlto + "px;\">" + botones + "</div>";
 }
 
@@ -952,27 +938,36 @@ function htmlPasoOpciones() {
     return htmlPasoCategorias();
   }
 
-  const opciones = atajos.map(function (atajo) {
-    return {
-      nombre: etiquetaDeAtajo(atajo.categoria, atajo.subcategoria),
-      // El color es el de la categoría a la que pertenece: en el muro se
-      // pierde de vista a cuál es, y el color es lo que lo recuerda.
-      color: obtenerColorDeCategoria(atajo.categoria.id, datos),
-      datos: {
-        accion: "atajo",
-        categoria: atajo.categoria.id,
-        subcategoria: atajo.subcategoria
-      }
-    };
-  });
-
+  // El orden de la pantalla no es casual: primero lo que hay que saber (lo
+  // que vence, lo último capturado) y hasta abajo lo que se toca. Los
+  // atajos quedan cerca del pulgar, que es donde tienen que estar cuando se
+  // captura de pie y con una mano.
   return htmlCabeceraDelTicket("Ciclo", null, false) +
     htmlVencimientosAlFrente(datos) +
-    htmlRejillaDeOpciones(opciones, {
-      altoMaximoDeRenglon: ALTO_MAXIMO_DE_ATAJO,
-      columnas: opciones.length >= ATAJOS_PARA_DOS_COLUMNAS ? 2 : 1
-    }) +
+    htmlUltimosMovimientos(datos) +
+    htmlBurbujasDeAtajos(atajos, datos) +
     htmlDeLasDosPuertas(datos);
+}
+
+// Los atajos como burbujas en lista: una por renglón, redondeadas, con el
+// color de su categoría como punto.
+//
+// Antes eran tarjetas grandes en cuadrícula y llenaban la pantalla ellas
+// solas. Se compactaron para dejarle sitio a los últimos movimientos, que
+// es lo que se viene a ver antes de capturar. Siguen siendo del ancho
+// completo, que es lo que hace imposible fallarles con el pulgar.
+function htmlBurbujasDeAtajos(atajos, datos) {
+  const burbujas = atajos.map(function (atajo) {
+    return "<button type=\"button\" class=\"burbuja-atajo\"" +
+      " style=\"--color-categoria: " + obtenerColorDeCategoria(atajo.categoria.id, datos) + ";\"" +
+      " data-accion=\"atajo\"" +
+      " data-categoria=\"" + escaparHTML(atajo.categoria.id) + "\"" +
+      " data-subcategoria=\"" + escaparHTML(atajo.subcategoria) + "\">" +
+      escaparHTML(etiquetaDeAtajo(atajo.categoria, atajo.subcategoria)) +
+    "</button>";
+  }).join("");
+
+  return "<div class=\"burbujas-atajos\">" + burbujas + "</div>";
 }
 
 // Las dos salidas al pie del muro, para todo lo que no es del día a día.
@@ -1101,6 +1096,50 @@ function htmlPasoCategorias() {
     ) +
     (esLaPrimeraPantalla ? htmlVencimientosAlFrente(datos) : "") +
     htmlRejillaDeOpciones(opciones);
+}
+
+// Cuántos movimientos recientes se asoman en la pantalla de entrada. Dos
+// bastan para reconocer si lo que se viene a capturar ya está — que es la
+// única pregunta que se hace aquí — y es lo que cabe sin empujar las
+// burbujas fuera de la pantalla. Para ver más está la puerta.
+const ULTIMOS_EN_LA_ENTRADA = 2;
+
+// Lo último capturado, asomado en la primera pantalla.
+//
+// Existe para responder "¿ya lo registré?" ANTES de capturar, que es cuando
+// sirve. La misma lista completa vive detrás de la puerta "Lo registrado",
+// pero llegar hasta allá y volver es justo lo que no se hace cuando se está
+// parado en la caja del súper.
+//
+// No se puede tocar: es para mirar. Borrar y revisar días anteriores se
+// hacen adentro, donde hay espacio para hacerlo con cuidado.
+function htmlUltimosMovimientos(datos) {
+  const ultimos = obtenerMovimientosRecientes(datos).slice(0, ULTIMOS_EN_LA_ENTRADA);
+
+  if (ultimos.length === 0) {
+    return "";
+  }
+
+  const hoyTexto = formatearFechaISO(new Date());
+
+  const filas = ultimos.map(function (gasto) {
+    // La hora sola basta para lo de hoy. Para lo de antes hace falta el día,
+    // o "08:40" mentiría diciendo que fue esta mañana.
+    const cuando = gasto.fecha === hoyTexto
+      ? gasto.hora
+      : nombreDelDiaDeMovimientos(gasto.fecha);
+
+    return "<div class=\"fila-ultimo\">" +
+      "<span class=\"cuando mono\">" + escaparHTML(cuando) + "</span>" +
+      "<span class=\"que\">" + escaparHTML(etiquetaDeMovimiento(gasto, datos)) + "</span>" +
+      "<span class=\"monto mono\">" + formatearMoneda(gasto.monto) + "</span>" +
+    "</div>";
+  }).join("");
+
+  return "<div class=\"ultimos-ticket\">" +
+    "<p class=\"rotulo-ultimos\">Lo último</p>" +
+    filas +
+  "</div>";
 }
 
 // Lo vencido y lo que vence hoy, arriba de las categorías. No tapa nada ni

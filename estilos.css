@@ -642,8 +642,8 @@ details summary {
 /* ---------- Vencimientos al frente (pantalla 1) ---------- */
 #vistaCaptura .vencimientos-ticket {
   flex: 0 0 auto;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
   border-bottom: 1px dashed var(--papel-linea-c);
 }
 #vistaCaptura .fila-vencimiento {
@@ -655,7 +655,7 @@ details summary {
   border: 0;
   border-left: 3px solid var(--ambar-papel-c);
   border-radius: 0;
-  padding: 8px 0 8px 9px;
+  padding: 6px 0 6px 9px;
   font-family: inherit;
   text-align: left;
   color: var(--tinta-c);
@@ -768,32 +768,95 @@ details summary {
   color: var(--tinta-ter-c);
 }
 
-/* El muro de atajos no se pega arriba como las demás rejillas: se centra en
-   el alto que le sobra. Son tres o cuatro botones, no doce, y el sobrante
-   pegado abajo dejaba media pantalla vacía. Centrados caen además donde el
-   pulgar alcanza sin recorrer el teléfono. */
-#vistaCaptura .rejilla-atajos {
+/* ---------- Los atajos, como burbujas en lista ---------- */
+/* Se pegan al pie (margin-top: auto) para quedar bajo el pulgar, que es
+   donde se captura de pie y con una mano. Arriba de ellas queda lo que hay
+   que leer; aquí abajo, lo que se toca. */
+#vistaCaptura .burbujas-atajos {
+  flex: 0 1 auto;
+  min-height: 0;
   margin-top: auto;
-  align-content: center;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
-/* El nombre se va al pie del botón en vez de flotar en el centro: con la
-   marca de color arriba y el nombre abajo, el botón se lee como una tarjeta
-   y no como un recuadro con texto suelto en medio. */
-#vistaCaptura .rejilla-atajos .boton-ticket {
-  justify-content: flex-end;
-  border-radius: 18px;
-  padding: 18px 20px;
-  font-size: 17px;
+/* Se estiran con el espacio que sobre, pero nunca bajan de 46px: es el
+   mínimo con el que un botón sigue siendo cómodo para el pulgar. En una
+   pantalla alta quedan holgadas; en una chica se comprimen hasta ahí y ya. */
+#vistaCaptura .burbuja-atajo {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 46px;
+  max-height: 62px;
+  background-color: var(--papel-relleno-c);
+  border: 0;
+  border-radius: 999px;
+  padding: 0 22px;
+  color: var(--tinta-c);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
 }
-/* Aquí sí hay espacio para que la marca vaya arriba, como una pestaña de
-   color, en vez de de canto. Es lo que hace que cada atajo se reconozca por
-   su color antes de leer el nombre. */
-#vistaCaptura .rejilla-atajos .boton-ticket::before {
-  top: 18px;
-  bottom: auto;
-  left: 20px;
-  width: 26px;
-  height: 4px;
+/* El punto de color dice de qué categoría es sin gastar una palabra. En una
+   burbuja no cabe una barra como en los botones cuadrados. */
+#vistaCaptura .burbuja-atajo::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background-color: var(--color-categoria, var(--tinta-ter-c));
+}
+#vistaCaptura .burbuja-atajo:active {
+  background-color: var(--papel-toque-c);
+  transform: scale(0.98);
+}
+
+/* ---------- Lo último capturado (pantalla 1) ---------- */
+/* Para mirar, no para tocar: responde "¿ya lo registré?" justo antes de
+   capturar. La lista completa, y el borrar, viven detrás de su puerta. */
+#vistaCaptura .ultimos-ticket {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+}
+#vistaCaptura .rotulo-ultimos {
+  margin: 0 0 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--tinta-ter-c);
+}
+#vistaCaptura .fila-ultimo {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 3px 0;
+}
+#vistaCaptura .fila-ultimo .cuando {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--tinta-ter-c);
+}
+#vistaCaptura .fila-ultimo .que {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--tinta-sec-c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#vistaCaptura .fila-ultimo .monto {
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--tinta-c);
 }
 
 /* ---------- Las dos puertas al pie del muro (pantalla 1) ---------- */
@@ -802,8 +865,8 @@ details summary {
    porque la rejilla de arriba lleva margin-bottom: auto. */
 #vistaCaptura .puertas-ticket {
   flex: 0 0 auto;
-  margin-top: 12px;
-  padding-top: 8px;
+  margin-top: 10px;
+  padding-top: 6px;
   border-top: 1px dashed var(--papel-linea-c);
 }
 #vistaCaptura .puerta-ticket {
@@ -813,7 +876,7 @@ details summary {
   gap: 8px;
   background: transparent;
   border: 0;
-  padding: 7px 2px;
+  padding: 5px 2px;
   font-family: inherit;
   font-size: 13px;
   text-align: left;
