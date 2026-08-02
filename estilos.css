@@ -334,6 +334,10 @@ details summary {
   --papel-c: #f7f4ec;
   --papel-linea-c: #d9d3c4;
   --papel-toque-c: #eae4d6;
+  /* El relleno de los botones. Un solo escalón por encima del papel: lo
+     suficiente para que se lea "esto se toca" sin necesidad de un borde, que
+     es lo que hace que los botones de iOS se vean limpios. */
+  --papel-relleno-c: #efeade;
   /* La tinta, en tres niveles */
   --tinta-c: #17161a;
   --tinta-sec-c: #5b564d;
@@ -566,6 +570,25 @@ details summary {
   .ticket-fantasma { display: none; }
 }
 
+/* ---------- Cómo responde al dedo ---------- */
+/* Safari en iOS espera ~300ms después de cada toque para averiguar si viene
+   un segundo toque (el doble tap que hace zoom). Eso se sentía como que el
+   número tardaba en aparecer al teclear, y tocar Borrar dos veces seguidas
+   —para corregir dos dígitos— disparaba el zoom sobre la tecla.
+   `manipulation` le dice que aquí no hay doble tap que interpretar: deja el
+   desplazamiento y el pellizco, quita el zoom por doble toque. */
+#vistaCaptura button,
+#vistaCaptura input,
+#vistaCaptura select {
+  touch-action: manipulation;
+}
+/* El recuadro gris que Safari pinta encima de lo que se toca. Estorba: cada
+   botón ya marca el toque con su propio :active, y el destello del sistema
+   se queda pegado un instante de más. */
+#vistaCaptura button {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ---------- Cabecera del ticket ---------- */
 #vistaCaptura .ticket-cabecera {
   flex: 0 0 auto;
@@ -578,9 +601,9 @@ details summary {
 }
 #vistaCaptura .boton-atras {
   flex: 0 0 auto;
-  background: transparent;
-  border: 1px solid var(--papel-linea-c);
-  border-radius: 3px;
+  background-color: var(--papel-relleno-c);
+  border: 0;
+  border-radius: 999px;
   color: var(--tinta-c);
   font-family: inherit;
   font-size: 15px;
@@ -684,7 +707,12 @@ details summary {
   grid-auto-rows: minmax(0, 1fr);
   gap: 7px;
 }
+/* Relleno y esquinas redondeadas en vez de borde delgado: es lo que hace que
+   se sienta de iPhone. El color de la categoría deja de ser el borde
+   izquierdo y pasa a ser una barra corta, que sobre un fondo relleno se lee
+   mejor que una línea al ras. */
 #vistaCaptura .boton-ticket {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -692,11 +720,10 @@ details summary {
   gap: 2px;
   min-height: 0;
   overflow: hidden;
-  background-color: transparent;
-  border: 1px solid var(--papel-linea-c);
-  border-left: 4px solid var(--color-categoria, var(--tinta-ter-c));
-  border-radius: 3px;
-  padding: 8px 10px;
+  background-color: var(--papel-relleno-c);
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 14px 10px 22px;
   color: var(--tinta-c);
   font-family: inherit;
   font-size: 15px;
@@ -705,14 +732,34 @@ details summary {
   line-height: 1.15;
   cursor: pointer;
 }
-#vistaCaptura .boton-ticket:active { background-color: var(--papel-toque-c); }
+/* La marca de categoría. En las rejillas normales, donde los botones pueden
+   quedar muy bajitos, va de canto y ocupa el alto que haya; en el muro pasa
+   arriba (ver más abajo), que es donde hay espacio de sobra. */
+#vistaCaptura .boton-ticket::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 10px;
+  width: 4px;
+  border-radius: 2px;
+  background-color: var(--color-categoria, var(--tinta-ter-c));
+}
+/* Hundirse un poco al tocarse es la respuesta táctil de iOS. Es lo que
+   convence de que el toque se registró, sin esperar a que cambie la
+   pantalla. */
+#vistaCaptura .boton-ticket:active {
+  background-color: var(--papel-toque-c);
+  transform: scale(0.98);
+}
 /* Una opción apagada no es un error: es que ahí no hay nada que pagar hoy.
    Se sigue viendo, para que la pantalla no cambie de forma según el día. */
 #vistaCaptura .boton-ticket:disabled {
   color: var(--tinta-ter-c);
-  border-color: var(--papel-linea-c);
-  border-left-color: var(--papel-linea-c);
   cursor: default;
+}
+#vistaCaptura .boton-ticket:disabled::before {
+  background-color: var(--papel-linea-c);
 }
 /* El dato de apoyo: cuánto se debe, o por qué el botón está apagado. */
 #vistaCaptura .apoyo-boton-ticket {
@@ -729,8 +776,24 @@ details summary {
   margin-top: auto;
   align-content: center;
 }
+/* El nombre se va al pie del botón en vez de flotar en el centro: con la
+   marca de color arriba y el nombre abajo, el botón se lee como una tarjeta
+   y no como un recuadro con texto suelto en medio. */
 #vistaCaptura .rejilla-atajos .boton-ticket {
+  justify-content: flex-end;
+  border-radius: 18px;
+  padding: 18px 20px;
   font-size: 17px;
+}
+/* Aquí sí hay espacio para que la marca vaya arriba, como una pestaña de
+   color, en vez de de canto. Es lo que hace que cada atajo se reconozca por
+   su color antes de leer el nombre. */
+#vistaCaptura .rejilla-atajos .boton-ticket::before {
+  top: 18px;
+  bottom: auto;
+  left: 20px;
+  width: 26px;
+  height: 4px;
 }
 
 /* ---------- Las dos puertas al pie del muro (pantalla 1) ---------- */
@@ -766,6 +829,86 @@ details summary {
   color: var(--tinta-ter-c);
 }
 #vistaCaptura .puerta-ticket .cuantos {
+  font-size: 11px;
+  color: var(--tinta-ter-c);
+}
+
+/* ---------- Lo registrado (detrás de la tercera puerta) ---------- */
+/* La lista de lo capturado, agrupada por día. El total del día va en su
+   encabezado y no al final, porque es lo que se viene a ver: primero cuánto,
+   después en qué. */
+#vistaCaptura .movimientos-ticket {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: auto;
+}
+#vistaCaptura .dia-movimientos {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin: 15px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--tinta-ter-c);
+}
+#vistaCaptura .dia-movimientos:first-child { margin-top: 0; }
+#vistaCaptura .dia-movimientos .total {
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--tinta-c);
+}
+#vistaCaptura .fila-movimiento {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--papel-relleno-c);
+}
+#vistaCaptura .fila-movimiento .hora {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--tinta-ter-c);
+}
+#vistaCaptura .fila-movimiento .que {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#vistaCaptura .fila-movimiento .monto {
+  flex: 0 0 auto;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+/* Discreto a propósito: borrar es lo único de esta app que destruye algo, y
+   no debe competir por el dedo con el resto de la fila. */
+#vistaCaptura .borrar-movimiento {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 26px;
+  height: 26px;
+  background-color: var(--papel-relleno-c);
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  color: var(--tinta-ter-c);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+#vistaCaptura .borrar-movimiento:active {
+  background-color: var(--rojo-papel-c);
+  color: var(--papel-c);
+  transform: scale(0.92);
+}
+#vistaCaptura .movimientos-de-mas {
+  margin: 10px 0 0;
   font-size: 11px;
   color: var(--tinta-ter-c);
 }
@@ -826,18 +969,23 @@ details summary {
 #vistaCaptura .monto-ticket .cifra.en-espera { color: var(--tinta-ter-c); }
 
 /* ---------- Débito / Crédito ---------- */
+/* El selector de Débito / Crédito, con la forma del segmented control de
+   iOS: una cápsula rellena, y la opción activa como una pastilla encima. */
 #vistaCaptura .pestanas-fuente {
   flex: 0 0 auto;
   display: flex;
-  border: 1px solid var(--papel-linea-c);
-  border-radius: 3px;
+  gap: 3px;
+  background-color: var(--papel-relleno-c);
+  border: 0;
+  border-radius: 12px;
+  padding: 3px;
   overflow: hidden;
 }
 #vistaCaptura .pestana-fuente {
   flex: 1 1 0;
   background: transparent;
   border: 0;
-  border-radius: 0;
+  border-radius: 10px;
   padding: 9px 0;
   font-family: inherit;
   font-size: 13px;
@@ -938,17 +1086,20 @@ details summary {
   gap: 6px;
 }
 #vistaCaptura .tecla {
-  background: transparent;
-  border: 1px solid var(--papel-linea-c);
-  border-radius: 3px;
+  background-color: var(--papel-relleno-c);
+  border: 0;
+  border-radius: 14px;
   padding: 0;
   color: var(--tinta-c);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 600;
   cursor: pointer;
 }
-#vistaCaptura .tecla:active { background-color: var(--papel-toque-c); }
+#vistaCaptura .tecla:active {
+  background-color: var(--papel-toque-c);
+  transform: scale(0.96);
+}
 #vistaCaptura .tecla.tecla-borrar { font-size: 17px; }
 
 /* El campo de texto ocupa el hueco del teclado mientras se escribe. */
@@ -1001,7 +1152,7 @@ details summary {
   background-color: var(--tinta-c);
   color: var(--papel-c);
   border: 0;
-  border-radius: 3px;
+  border-radius: 16px;
   padding: 17px 0;
   font-family: inherit;
   font-size: 16px;
@@ -1010,7 +1161,10 @@ details summary {
   text-transform: uppercase;
   cursor: pointer;
 }
-#vistaCaptura .boton-guardar-ticket:active { background-color: #33313a; }
+#vistaCaptura .boton-guardar-ticket:active {
+  background-color: #33313a;
+  transform: scale(0.99);
+}
 #vistaCaptura .boton-guardar-ticket:disabled {
   background-color: var(--papel-linea-c);
   color: var(--tinta-ter-c);

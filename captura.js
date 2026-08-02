@@ -247,6 +247,55 @@ function registrarPagoDeCompromiso(compromisoId, montoReal, fuente) {
   return { guardado: true, aviso: aviso };
 }
 
+// Borra un movimiento mal capturado y deshace todo lo que provocó.
+//
+// Un gasto no siempre es un solo registro. Hay dos casos, y el segundo es el
+// que puede corromper los datos si se atiende a medias:
+//
+//   - **Gasto libre** (compromisoId en null): basta con quitarlo. Una compra
+//     a meses sin intereses tampoco deja nada que limpiar: el reparto entre
+//     los cortes de la tarjeta se calcula al vuelo desde el propio gasto
+//     (ver calcularAporteDeGastoAlPagoDeTarjeta), no se guarda en ningún
+//     lado, así que desaparece con él.
+//   - **Pago de un compromiso**: al registrarlo se marcó el compromiso como
+//     pagado, se le guardó el montoReal, y si venía de una deuda se le sumó
+//     uno a pagosRealizados. Borrar solo el gasto dejaría el recibo marcado
+//     como pagado para siempre: no volvería a aparecer en Pendientes y no
+//     habría forma de recuperarlo desde el teléfono. Por eso se revierten
+//     las tres cosas, y el pendiente vuelve a estar donde estaba.
+function borrarMovimiento(gastoId) {
+  const datos = leerDatos();
+  const gasto = datos.gastos.find(function (g) { return g.id === gastoId; });
+
+  if (!gasto) {
+    return;
+  }
+
+  datos.gastos = datos.gastos.filter(function (g) { return g.id !== gastoId; });
+
+  if (gasto.compromisoId) {
+    const compromiso = datos.compromisos.find(function (c) { return c.id === gasto.compromisoId; });
+
+    if (compromiso) {
+      compromiso.pagado = false;
+      compromiso.montoReal = null;
+
+      // El contador de la deuda tiene que retroceder igual que avanzó. Si no,
+      // la deuda creería tener un pago de más y dejaría de generar el
+      // compromiso que sí le toca en algún ciclo futuro.
+      if (compromiso.origen === "deuda") {
+        const deuda = datos.deudas.find(function (d) { return d.id === compromiso.origenId; });
+        if (deuda && deuda.pagosRealizados > 0) {
+          deuda.pagosRealizados = deuda.pagosRealizados - 1;
+        }
+      }
+    }
+  }
+
+  guardarDatos(datos);
+  renderizarTodo();
+}
+
 // ============================================================
 // CAPTURA — LA CATEGORÍA "OTROS"
 // ============================================================
@@ -588,6 +637,8 @@ function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEst
 //                  la puerta "Otra categoría".
 //   "pendientes"   Todo lo que falta pagar en el ciclo, por fecha. Detrás de
 //                  la puerta "Adelantar un pago".
+//   "movimientos"  Lo ya capturado, hoy arriba y los días anteriores debajo.
+//                  Detrás de la puerta "Lo registrado".
 //   "subcategoria" Las subcategorías de la categoría elegida (o la lista de
 //                  tarjetas, o la de deudas).
 //   "monto"        Teclado propio, débito/crédito y Guardar. Es el paso de
@@ -605,6 +656,7 @@ function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEst
 const PASO_OPCIONES = "opciones";
 const PASO_CATEGORIAS = "categorias";
 const PASO_PENDIENTES = "pendientes";
+const PASO_MOVIMIENTOS = "movimientos";
 const PASO_SUBCATEGORIA = "subcategoria";
 const PASO_MONTO = "monto";
 const PASO_PAGO = "pago";
@@ -940,11 +992,27 @@ function htmlDeLasDosPuertas(datos) {
       "</button>"
     : "";
 
+  // Lo registrado lleva el total de hoy en la propia puerta. Es el dato que
+  // casi siempre se venía a buscar, así que muchas veces se responde sin
+  // entrar. Si hoy no se ha capturado nada, la puerta se ve pero sin cifra.
+  const hoyTexto = formatearFechaISO(new Date());
+  const totalDeHoy = datos.gastos
+    .filter(function (gasto) { return gasto.fecha === hoyTexto; })
+    .reduce(function (suma, gasto) { return suma + Number(gasto.monto); }, 0);
+
+  const puertaDeMovimientos = datos.gastos.length > 0
+    ? "<button type=\"button\" class=\"puerta-ticket\" data-accion=\"ir-a-paso\" data-paso=\"" + PASO_MOVIMIENTOS + "\">" +
+        "<span>Lo registrado</span>" +
+        (totalDeHoy > 0 ? "<span class=\"cuantos mono\">hoy " + formatearMoneda(totalDeHoy) + "</span>" : "") +
+      "</button>"
+    : "";
+
   return "<div class=\"puertas-ticket\">" +
     "<button type=\"button\" class=\"puerta-ticket\" data-accion=\"ir-a-paso\" data-paso=\"" + PASO_CATEGORIAS + "\">" +
       "<span>Otra categoría</span>" +
     "</button>" +
     puertaDePagos +
+    puertaDeMovimientos +
   "</div>";
 }
 
@@ -1117,6 +1185,117 @@ function htmlPasoPendientes() {
 
   return htmlCabeceraDelTicket("Adelantar un pago", null, true) +
     htmlRejillaDeOpciones(opciones);
+}
+
+// ---------- Detrás de la puerta: lo registrado ----------
+
+// Cuántos movimientos se ven antes de resumir el resto en una línea. El
+// ticket no tiene scroll, así que la lista tiene que caber: los primeros son
+// los más recientes, que son los que se quieren revisar.
+const MOVIMIENTOS_VISIBLES = 12;
+
+// Todos los gastos capturados, de lo más reciente a lo más viejo. Incluye
+// tanto los gastos libres como los que cerraron un compromiso: para revisar
+// "qué llevo hoy" los dos cuentan igual, y separarlos obligaría a mirar en
+// dos lados lo que salió de la misma cuenta.
+function obtenerMovimientosRecientes(datos) {
+  return datos.gastos.slice().sort(function (a, b) {
+    if (a.fecha !== b.fecha) {
+      return a.fecha < b.fecha ? 1 : -1;
+    }
+    return a.hora < b.hora ? 1 : -1;
+  });
+}
+
+// Cómo se llama un movimiento en la lista.
+//
+// Un gasto libre se identifica por dónde se clasificó ("Comida · Súper").
+// Un pago de tarjeta o de deuda no tiene categoría — su gasto es saldo, no
+// presupuesto — y para esos el nombre del compromiso quedó guardado en la
+// descripción al registrarlos.
+function etiquetaDeMovimiento(gasto, datos) {
+  const categoria = datos.config.categorias.find(function (c) {
+    return c.id === gasto.categoriaId;
+  });
+
+  if (categoria) {
+    return categoria.nombre + (gasto.subcategoria ? " · " + gasto.subcategoria : "");
+  }
+
+  return gasto.descripcion || "Pago";
+}
+
+// El nombre del día que encabeza cada grupo. "Hoy" y "Ayer" se dicen así
+// porque es como se piensan; de ahí para atrás va la fecha, que es lo único
+// que ya distingue un jueves de otro.
+function nombreDelDiaDeMovimientos(fechaTexto) {
+  const hoyTexto = formatearFechaISO(new Date());
+  const ayerTexto = formatearFechaISO(sumarDias(new Date(), -1));
+
+  if (fechaTexto === hoyTexto) {
+    return "Hoy";
+  }
+  if (fechaTexto === ayerTexto) {
+    return "Ayer";
+  }
+
+  const fecha = crearFechaLocal(fechaTexto);
+  return DIAS_SEMANA_ABREVIADOS[fecha.getDay()].toLowerCase() + " " +
+    fecha.getDate() + " " + MESES_ABREVIADOS[fecha.getMonth()];
+}
+
+// La pantalla de lo registrado: hoy arriba con su total, y los días
+// anteriores debajo, cada uno con el suyo. Responde dos preguntas de un
+// vistazo — "¿ya lo capturé?" y "¿cuánto llevo hoy?" — sin tener que
+// recordar ni abrir la laptop.
+function htmlPasoMovimientos() {
+  const datos = leerDatos();
+  const todos = obtenerMovimientosRecientes(datos);
+
+  if (todos.length === 0) {
+    return htmlCabeceraDelTicket("Lo registrado", null, true) +
+      "<p class=\"ticket-vacio\">Todavía no has capturado nada.<br>" +
+      "Lo que registres aparece aquí, del más reciente al más viejo.</p>";
+  }
+
+  const visibles = todos.slice(0, MOVIMIENTOS_VISIBLES);
+  const resto = todos.length - visibles.length;
+
+  // Se agrupan recorriendo la lista ya ordenada y abriendo un encabezado
+  // cada vez que cambia la fecha. No hace falta agrupar antes: viene
+  // ordenada, así que los de un mismo día ya están juntos.
+  let fechaDelGrupoAbierto = null;
+  const filas = visibles.map(function (gasto) {
+    let encabezado = "";
+
+    if (gasto.fecha !== fechaDelGrupoAbierto) {
+      fechaDelGrupoAbierto = gasto.fecha;
+      const totalDelDia = todos
+        .filter(function (otro) { return otro.fecha === gasto.fecha; })
+        .reduce(function (suma, otro) { return suma + Number(otro.monto); }, 0);
+
+      encabezado = "<p class=\"dia-movimientos\">" +
+        "<span>" + escaparHTML(nombreDelDiaDeMovimientos(gasto.fecha)) + "</span>" +
+        "<span class=\"total mono\">" + formatearMoneda(totalDelDia) + "</span>" +
+      "</p>";
+    }
+
+    return encabezado +
+      "<div class=\"fila-movimiento\">" +
+        "<span class=\"hora mono\">" + escaparHTML(gasto.hora) + "</span>" +
+        "<span class=\"que\">" + escaparHTML(etiquetaDeMovimiento(gasto, datos)) + "</span>" +
+        "<span class=\"monto mono\">" + formatearMoneda(gasto.monto) + "</span>" +
+        "<button type=\"button\" class=\"borrar-movimiento\" data-accion=\"borrar-movimiento\"" +
+          " data-gasto=\"" + gasto.id + "\" aria-label=\"Borrar este registro\">×</button>" +
+      "</div>";
+  }).join("");
+
+  const linea = resto > 0
+    ? "<p class=\"movimientos-de-mas\">y " + resto + " más antes de estos</p>"
+    : "";
+
+  return htmlCabeceraDelTicket("Lo registrado", null, true) +
+    "<div class=\"movimientos-ticket\">" + filas + linea + "</div>";
 }
 
 // ---------- Paso 2: subcategoría, tarjeta o deuda ----------
@@ -1439,6 +1618,8 @@ function renderizarTicket() {
     ticket.innerHTML = htmlPasoCategorias();
   } else if (pasoDelTicket === PASO_PENDIENTES) {
     ticket.innerHTML = htmlPasoPendientes();
+  } else if (pasoDelTicket === PASO_MOVIMIENTOS) {
+    ticket.innerHTML = htmlPasoMovimientos();
   } else if (pasoDelTicket === PASO_SUBCATEGORIA) {
     ticket.innerHTML = htmlPasoSubcategoria();
   } else if (pasoDelTicket === PASO_MONTO && !laCategoriaElegidaEsDeGastoLibre()) {
@@ -1643,6 +1824,27 @@ function manejarToqueEnElTicket(evento) {
     montoEscritoEnElTicket = String(compromiso.montoEstimado);
     fuenteSeleccionadaGasto = "debito";
     avanzarDelTicket(PASO_PAGO);
+    return;
+  }
+
+  // Borrar pide confirmación siempre: es la única acción del teléfono que
+  // destruye algo, y un dedo en la fila equivocada no se deshace.
+  if (accion === "borrar-movimiento") {
+    const gastoId = boton.getAttribute("data-gasto");
+    const gasto = datos.gastos.find(function (g) { return g.id === gastoId; });
+
+    if (!gasto) {
+      return;
+    }
+
+    const aviso = gasto.compromisoId
+      ? "¿Borrar este pago de " + formatearMoneda(gasto.monto) + "?\n\n" +
+        "El recibo vuelve a quedar pendiente."
+      : "¿Borrar este gasto de " + formatearMoneda(gasto.monto) + "?";
+
+    if (confirm(aviso)) {
+      borrarMovimiento(gastoId);
+    }
     return;
   }
 
