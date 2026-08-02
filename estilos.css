@@ -3146,3 +3146,52 @@ details summary {
   opacity: 0.65;
   font-size: 12px;
 }
+
+/* ---------- §6 Comparativo ---------- */
+#vistaAncha .bloque-comparativo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 34px;
+}
+/* Lo proyectado nunca se disfraza de real: el ciclo en curso entra a la
+   tabla, pero a media intensidad y con su marca. */
+#vistaAncha .fila-incompleta td { color: rgba(246, 243, 239, 0.5); }
+#vistaAncha .fila-incompleta .celda-cifra.fuerte { color: rgba(246, 243, 239, 0.55); }
+#vistaAncha .marca-incompleta {
+  margin-left: 9px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+  border: 1px dashed var(--borde-a);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+#vistaAncha .fila-promedio td {
+  border-top: 1px solid var(--borde-a);
+  border-bottom: 0;
+  color: var(--texto-3a);
+}
+#vistaAncha .fila-promedio .celda-nombre {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#vistaAncha .tabla-estudio .celda-cifra.en-rojo { color: #fca5a5; }
+/* La variación no lleva color de semáforo: gastar más no es "malo" por
+   sí mismo, y pintarlo de rojo convertiría la tabla en un regaño. El
+   signo ya dice la dirección. */
+#vistaAncha .tabla-estudio .celda-cifra.variacion { color: var(--texto-a); }
+#vistaAncha .tabla-ciclos { font-size: 12.5px; }
+/* El aviso de que se compara un ciclo a medias contra uno completo. No
+   es decorativo: sin el, toda la tabla se lee al reves. */
+#vistaAncha .aviso-comparacion {
+  margin: 0;
+  padding: 9px 13px;
+  border-left: 2px solid var(--borde-a);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--texto-2a);
+  max-width: 72ch;
+}

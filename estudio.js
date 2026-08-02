@@ -190,6 +190,7 @@ function renderizarEstudioDelCiclo() {
   renderizarRitmoDelCiclo();
   renderizarFrentesDelCiclo();
   renderizarHorizonteDelCiclo();
+  renderizarComparativoDelCiclo();
   renderizarProximosPagosAnalisis();
   renderizarMovimientosDelCiclo();
 }
@@ -1314,4 +1315,223 @@ function renderizarHorizonteDelCiclo() {
   seccion.innerHTML = encabezado + piso + deudas +
     htmlDelCalendarioDeLiberacion(liberacion, compromisoMensual) +
     htmlDeLasTarjetas(tarjetas);
+}
+
+// ============================================================
+// ESTUDIO — §6 COMPARATIVO
+// ============================================================
+//
+// ¿Voy mejor o peor? Es la sección que hoy sale casi vacía, y a
+// propósito se construye completa: cada bloque dice qué le falta y
+// cuándo se llena, en vez de esconderse. Un bloque escondido nunca se
+// descubre.
+//
+// Nada de esto opina. Se dice cuánto cambió cada cosa y en qué
+// dirección; la conclusión la saca quien lo lee.
+
+// La tabla de ciclos. El que está en curso entra como un renglón más,
+// pero marcado: sus cifras están incompletas y no cuentan para ningún
+// promedio, porque le faltan días de gasto por suceder.
+function htmlDeLaTablaDeCiclos(datos) {
+  const cerrados = calcularSerieDeCiclosCerrados(datos, lenteDelEstudio);
+  const cicloEnCurso = obtenerCicloDelEstudio();
+  const resumenEnCurso = calcularSituacionDelCiclo(cicloEnCurso) === "enCurso"
+    ? resumirCicloCompleto(cicloEnCurso, datos, lenteDelEstudio)
+    : null;
+
+  if (cerrados.length === 0) {
+    return htmlDeEstadoVacio(
+      "Todavía no cierra ningún ciclo. La tabla se llena sola cuando termine el actual, " +
+      "y la comparación empieza a valer al segundo."
+    );
+  }
+
+  function filaDe(resumen, ciclo, esIncompleto) {
+    return "<tr class=\"" + (esIncompleto ? "fila-incompleta" : "") + "\">" +
+      "<td class=\"celda-nombre\">" + escaparHTML(nombrarCicloDelEstudio(ciclo)) +
+        (esIncompleto ? "<span class=\"marca-incompleta\">en curso</span>" : "") + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(resumen.ingreso) + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(resumen.fijo + resumen.fijoPendiente) + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(resumen.variablePresupuestado) + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(resumen.discrecional) + "</td>" +
+      "<td class=\"celda-cifra fuerte" + (resumen.remanente < 0 ? " en-rojo" : "") + "\">" +
+        formatearMoneda(resumen.remanente) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + formatearPorcentaje(resumen.tasaDeCompromiso) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + formatearPorcentaje(resumen.tasaDeAhorro) + "</td>" +
+    "</tr>";
+  }
+
+  const datosDeCiclos = obtenerCiclosDelEstudio(datos);
+  const filasCerradas = cerrados.map(function (resumen) {
+    const ciclo = datosDeCiclos.find(function (c) { return c.id === resumen.cicloId; });
+    return filaDe(resumen, ciclo, false);
+  }).join("");
+
+  const filaEnCurso = resumenEnCurso ? filaDe(resumenEnCurso, cicloEnCurso, true) : "";
+
+  // El promedio solo aparece cuando hay datos que lo sostengan.
+  const estadisticaRemanente = calcularEstadisticaDeSerie(
+    cerrados.map(function (r) { return r.remanente; })
+  );
+  const filaPromedio = estadisticaRemanente.promedio !== null
+    ? "<tr class=\"fila-promedio\">" +
+        "<td class=\"celda-nombre\">Promedio de " + estadisticaRemanente.n + " ciclos</td>" +
+        "<td class=\"celda-cifra\" colspan=\"4\"></td>" +
+        "<td class=\"celda-cifra fuerte\">" + formatearMoneda(estadisticaRemanente.promedio) + "</td>" +
+        "<td class=\"celda-cifra\" colspan=\"2\"></td>" +
+      "</tr>"
+    : "";
+
+  const nota = estadisticaRemanente.promedio === null
+    ? "<p class=\"nota-de-bolsa\">El promedio aparece con " + CICLOS_MINIMOS_PARA_PROMEDIO +
+      " ciclos cerrados; van " + estadisticaRemanente.n + ". Con menos, un promedio es la mitad " +
+      "de una anécdota.</p>"
+    : "";
+
+  return "<table class=\"tabla-estudio tabla-ciclos\">" +
+      "<thead><tr>" +
+        "<th>Ciclo</th>" +
+        "<th class=\"celda-cifra\">Ingreso</th>" +
+        "<th class=\"celda-cifra\">Fijo</th>" +
+        "<th class=\"celda-cifra\">Variable</th>" +
+        "<th class=\"celda-cifra\">Discrecional</th>" +
+        "<th class=\"celda-cifra\">Remanente</th>" +
+        "<th class=\"celda-cifra\">T. compromiso</th>" +
+        "<th class=\"celda-cifra\">T. ahorro</th>" +
+      "</tr></thead>" +
+      "<tbody>" + filasCerradas + filaEnCurso + filaPromedio + "</tbody>" +
+    "</table>" + nota;
+}
+
+function htmlDeQueSeMovio(datos) {
+  const ciclo = obtenerCicloDelEstudio();
+  const anterior = obtenerCicloAnteriorCerrado(ciclo, datos);
+
+  if (!anterior) {
+    return "<div class=\"bloque-comparativo\">" +
+        "<span class=\"etiqueta-ancha\">Qué se movió</span>" +
+        htmlDeEstadoVacio(
+          "No hay un ciclo cerrado anterior contra el cual comparar este. " +
+          "Aparece en cuanto haya dos ciclos, uno cerrado y este."
+        ) +
+      "</div>";
+  }
+
+  const movimientos = calcularQueSeMovio(ciclo, anterior, datos, lenteDelEstudio)
+    .filter(function (m) { return Math.abs(m.variacionEnPesos) > 0.005; });
+
+  const filas = movimientos.map(function (m) {
+    const direccion = m.variacionEnPesos > 0 ? "subio" : "bajo";
+    return "<tr>" +
+      "<td class=\"celda-nombre\">" + escaparHTML(m.nombre) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + formatearMoneda(m.antes) + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(m.ahora) + "</td>" +
+      "<td class=\"celda-cifra variacion " + direccion + "\">" + formatearVariacion(m.variacionEnPesos) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" +
+        (m.variacionEnPorcentaje === null ? "nuevo" : formatearPorcentaje(m.variacionEnPorcentaje)) + "</td>" +
+    "</tr>";
+  }).join("");
+
+  return "<div class=\"bloque-comparativo\">" +
+      "<span class=\"etiqueta-ancha\">Qué se movió contra " + escaparHTML(nombrarCicloDelEstudio(anterior)) + "</span>" +
+      "<table class=\"tabla-estudio\">" +
+        "<thead><tr>" +
+          "<th>Categoría</th>" +
+          "<th class=\"celda-cifra\">Antes</th>" +
+          "<th class=\"celda-cifra\">Ahora</th>" +
+          "<th class=\"celda-cifra\">Diferencia</th>" +
+          "<th class=\"celda-cifra\">Cambio</th>" +
+        "</tr></thead>" +
+        "<tbody>" + filas + "</tbody>" +
+      "</table>" +
+      avisoDeCicloIncompleto(ciclo) +
+      "<p class=\"nota-de-bolsa\">Ordenado por el tamaño del movimiento, suba o baje. " +
+        "Una baja grande merece tanta atención como una subida grande.</p>" +
+    "</div>";
+}
+
+// Comparar un ciclo a medias contra uno completo siempre da "bajaste",
+// y no es verdad: es que faltan días por gastar. La comparación se
+// muestra igual, porque a media quincena es cuando más se quiere ver,
+// pero se dice de qué tamaño es la trampa.
+function avisoDeCicloIncompleto(ciclo) {
+  if (calcularSituacionDelCiclo(ciclo) !== "enCurso") {
+    return "";
+  }
+
+  const rango = calcularRangoDeDiasDelCiclo(ciclo);
+  const avance = calcularAvanceDelCiclo(ciclo);
+
+  return "<p class=\"aviso-comparacion\">Cuidado al leer esto: este ciclo va en el día " +
+    rango.diasTranscurridos + " de " + rango.diasTotales + " (" + formatearPorcentaje(avance) +
+    "), y el anterior está completo. Todo va a parecer que bajó hasta que este cierre.</p>";
+}
+
+function htmlDeLaFiabilidadDelPresupuesto(datos) {
+  const fiabilidad = calcularFiabilidadDelPresupuesto(datos, lenteDelEstudio);
+
+  if (fiabilidad.length === 0) {
+    return "";
+  }
+
+  const sinDatos = fiabilidad.every(function (f) { return f.ciclosContados === 0; });
+  if (sinDatos) {
+    return "<div class=\"bloque-comparativo\">" +
+        "<span class=\"etiqueta-ancha\">Si el presupuesto está bien puesto</span>" +
+        htmlDeEstadoVacio(
+          "Necesita ciclos cerrados. Cuando los haya, este bloque compara cuánto " +
+          "presupuestaste contra cuánto gastaste de verdad, categoría por categoría. " +
+          "Suele ser el bloque más útil de la pantalla: casi nunca el problema es " +
+          "haber gastado de más, es que el presupuesto nunca correspondió con la vida real."
+        ) +
+      "</div>";
+  }
+
+  const filas = fiabilidad.map(function (f) {
+    const ultima = f.observaciones[f.observaciones.length - 1];
+    const desviacion = f.desviacionPromedio;
+    const veredicto = desviacion === null
+      ? "faltan ciclos para el promedio"
+      : (desviacion > 0
+        ? "el presupuesto se queda corto"
+        : "el presupuesto alcanza");
+
+    return "<tr>" +
+      "<td class=\"celda-nombre\">" + escaparHTML(f.nombre) + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(ultima.presupuesto) + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(ultima.gastado) + "</td>" +
+      "<td class=\"celda-cifra" + (desviacion !== null && desviacion > 0 ? " en-rojo" : "") + "\">" +
+        (desviacion === null ? "—" : formatearVariacion(desviacion)) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + escaparHTML(veredicto) + "</td>" +
+    "</tr>";
+  }).join("");
+
+  return "<div class=\"bloque-comparativo\">" +
+      "<span class=\"etiqueta-ancha\">Si el presupuesto está bien puesto</span>" +
+      "<table class=\"tabla-estudio\">" +
+        "<thead><tr>" +
+          "<th>Categoría</th>" +
+          "<th class=\"celda-cifra\">Presupuesto</th>" +
+          "<th class=\"celda-cifra\">Gastado</th>" +
+          "<th class=\"celda-cifra\">Desviación promedio</th>" +
+          "<th class=\"celda-cifra\">Lectura</th>" +
+        "</tr></thead>" +
+        "<tbody>" + filas + "</tbody>" +
+      "</table>" +
+      "<p class=\"nota-de-bolsa\">Presupuesto y gastado son del último ciclo cerrado. " +
+        "La desviación promedio necesita " + CICLOS_MINIMOS_PARA_PROMEDIO + " ciclos cerrados " +
+        "para calcularse, y compara solo lo que consume la bolsa: lo pagado con tarjeta " +
+        "no cuenta contra el presupuesto.</p>" +
+    "</div>";
+}
+
+function renderizarComparativoDelCiclo() {
+  const datos = leerDatos();
+  const seccion = document.getElementById("seccionComparativo");
+
+  seccion.innerHTML =
+    htmlDeEncabezadoDeSeccion("06", "Comparativo", "¿Voy mejor o peor que antes?") +
+    htmlDeLaTablaDeCiclos(datos) +
+    htmlDeQueSeMovio(datos) +
+    htmlDeLaFiabilidadDelPresupuesto(datos);
 }

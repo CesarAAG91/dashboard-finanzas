@@ -3462,3 +3462,96 @@ function calcularUtilizacionDeTarjetas(ciclo, datos) {
     };
   });
 }
+
+// ============================================================
+// ESTUDIO DEL CICLO — LO COMPARATIVO
+// ============================================================
+//
+// Todo lo de esta sección compara ciclos CERRADOS. Un ciclo en curso no
+// se puede comparar contra uno completo sin mentir: le faltan días de
+// gasto por suceder, así que siempre saldría "mejor".
+//
+// El ciclo en curso sí aparece, pero marcado como incompleto y sin
+// entrar a ningún promedio.
+
+// Qué categorías se movieron entre dos ciclos, ordenadas por el tamaño
+// del movimiento en pesos. Es aritmética, no juicio: se dice cuánto
+// cambió cada cosa y en qué dirección, y la conclusión la saca quien lo
+// lee.
+//
+// Se ordena por la variación ABSOLUTA porque una baja grande es tan
+// digna de mirarse como una subida grande — y porque ordenar solo por
+// subidas convertiría la tabla en una lista de regaños.
+function calcularQueSeMovio(cicloActual, cicloAnterior, datos, lente) {
+  const ahora = calcularGastoPorCategoriaDelCiclo(cicloActual, datos, lente);
+  const antes = calcularGastoPorCategoriaDelCiclo(cicloAnterior, datos, lente);
+
+  const nombres = {};
+  ahora.forEach(function (fila) { nombres[fila.categoriaId || CATEGORIA_SIN_CLASIFICAR] = fila.nombre; });
+  antes.forEach(function (fila) { nombres[fila.categoriaId || CATEGORIA_SIN_CLASIFICAR] = fila.nombre; });
+
+  function buscarTotal(filas, clave) {
+    const fila = filas.find(function (f) {
+      return (f.categoriaId || CATEGORIA_SIN_CLASIFICAR) === clave;
+    });
+    return fila ? fila.total : 0;
+  }
+
+  return Object.keys(nombres).map(function (clave) {
+    const totalAhora = buscarTotal(ahora, clave);
+    const totalAntes = buscarTotal(antes, clave);
+    const variacion = calcularVariacion(totalAhora, totalAntes);
+    return {
+      clave: clave,
+      nombre: nombres[clave],
+      ahora: totalAhora,
+      antes: totalAntes,
+      variacionEnPesos: variacion.enPesos,
+      variacionEnPorcentaje: variacion.enPorcentaje
+    };
+  }).sort(function (a, b) {
+    return Math.abs(b.variacionEnPesos) - Math.abs(a.variacionEnPesos);
+  });
+}
+
+// Si el presupuesto está bien puesto. Por cada categoría con bolsa
+// semanal, lo presupuestado contra lo que de verdad se gastó, en los
+// ciclos ya cerrados.
+//
+// Es la sección más útil de todas cuando ya hay historia, porque casi
+// nunca el problema es "gasté de más": es que el presupuesto nunca
+// correspondió con la vida real, y nadie lo había medido.
+//
+// Compara contra gastadoDeLaBolsa y no contra el total de la categoría,
+// por la misma razón de siempre: el presupuesto solo cubre lo que
+// consume la bolsa.
+function calcularFiabilidadDelPresupuesto(datos, lente) {
+  const cerrados = obtenerCiclosCerrados(datos);
+
+  return datos.config.categorias
+    .filter(function (categoria) { return categoria.esVariableSemanal; })
+    .map(function (categoria) {
+      const observaciones = cerrados.map(function (ciclo) {
+        const filas = calcularGastoPorCategoriaDelCiclo(ciclo, datos, lente);
+        const fila = filas.find(function (f) { return f.categoriaId === categoria.id; });
+        return {
+          cicloId: ciclo.id,
+          presupuesto: calcularPresupuestoDelCicloParaCategoria(categoria, ciclo, datos),
+          gastado: fila ? fila.gastadoDeLaBolsa : 0
+        };
+      });
+
+      const desviaciones = observaciones.map(function (o) { return o.gastado - o.presupuesto; });
+      const estadistica = calcularEstadisticaDeSerie(desviaciones);
+
+      return {
+        categoriaId: categoria.id,
+        nombre: categoria.nombre,
+        observaciones: observaciones,
+        // El promedio de la desviación: positivo significa que el
+        // presupuesto se queda corto ciclo tras ciclo.
+        desviacionPromedio: estadistica.promedio,
+        ciclosContados: estadistica.n
+      };
+    });
+}
