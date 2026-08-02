@@ -722,81 +722,148 @@ const DIAS_EN_ORDEN_DE_LECTURA = [
   { indice: 0, nombre: "Dom" }
 ];
 
+// Una dona: anillo de segmentos proporcionales, con la cifra en el
+// centro. Se dibuja en SVG a mano, sin librerías, como el resto de las
+// gráficas de la app.
+//
+// Cuándo SÍ va una dona, después de haberlas descartado en julio: aquí
+// la pregunta es de parte sobre todo dentro de UNA semana ("¿de qué
+// está hecha?"), que es justo lo que una dona contesta bien. Lo que una
+// dona hace mal — comparar magnitudes entre varias — aquí no se le
+// pide: eso lo resuelve la cifra del centro, que es un número y se lee
+// exacto.
+//
+// segmentos: [{ fraccion, color, etiqueta }]
+function htmlDeUnaDona(segmentos, cifraCentral, pieCentral) {
+  const RADIO = 40;
+  const CIRCUNFERENCIA = 2 * Math.PI * RADIO;
+
+  // Sin nada que repartir se dibuja el anillo apagado, no un hueco: una
+  // semana en cero es un dato, no un error.
+  if (segmentos.length === 0) {
+    return "<svg class=\"dona\" viewBox=\"0 0 100 100\" role=\"img\">" +
+        "<circle class=\"aro-vacio\" cx=\"50\" cy=\"50\" r=\"" + RADIO + "\" fill=\"none\" stroke-width=\"13\"></circle>" +
+        "<text class=\"cifra-dona apagada\" x=\"50\" y=\"50\">" + escaparHTML(cifraCentral) + "</text>" +
+        (pieCentral ? "<text class=\"pie-dona\" x=\"50\" y=\"62\">" + escaparHTML(pieCentral) + "</text>" : "") +
+      "</svg>";
+  }
+
+  // Los arcos se encadenan con stroke-dasharray: cada uno pinta su
+  // trozo y deja el resto en blanco, y el dashoffset lo empuja a donde
+  // le toca empezar. El grupo va rotado -90° para que el primer
+  // segmento arranque arriba y no a las tres en punto.
+  let recorrido = 0;
+  const arcos = segmentos.map(function (segmento) {
+    const largo = segmento.fraccion * CIRCUNFERENCIA;
+    const arco = "<circle class=\"arco-dona\" cx=\"50\" cy=\"50\" r=\"" + RADIO + "\" fill=\"none\"" +
+      " stroke=\"" + segmento.color + "\" stroke-width=\"13\"" +
+      " stroke-dasharray=\"" + largo.toFixed(3) + " " + (CIRCUNFERENCIA - largo).toFixed(3) + "\"" +
+      " stroke-dashoffset=\"" + (-recorrido).toFixed(3) + "\">" +
+      "<title>" + escaparHTML(segmento.etiqueta) + "</title></circle>";
+    recorrido += largo;
+    return arco;
+  }).join("");
+
+  return "<svg class=\"dona\" viewBox=\"0 0 100 100\" role=\"img\">" +
+      "<circle class=\"aro-vacio\" cx=\"50\" cy=\"50\" r=\"" + RADIO + "\" fill=\"none\" stroke-width=\"13\"></circle>" +
+      "<g transform=\"rotate(-90 50 50)\">" + arcos + "</g>" +
+      "<text class=\"cifra-dona\" x=\"50\" y=\"" + (pieCentral ? 48 : 53) + "\">" + escaparHTML(cifraCentral) + "</text>" +
+      (pieCentral ? "<text class=\"pie-dona\" x=\"50\" y=\"61\">" + escaparHTML(pieCentral) + "</text>" : "") +
+    "</svg>";
+}
+
+// Las cuatro semanas, una dona cada una: el anillo dice de qué está
+// hecha y el centro cuánto fue. La semana en curso se marca con su aro.
 function htmlDeLasCuatroSemanas(matriz, ciclo, datos) {
-  const totales = matriz.totalesPorSemana;
-  const maximo = totales.reduce(function (max, s) { return Math.max(max, s.total); }, 0);
   const semanaDeHoy = calcularSituacionDelCiclo(ciclo) === "enCurso"
     ? calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo)
     : null;
 
-  return "<div class=\"cuatro-semanas\">" + totales.map(function (semana) {
-    const alto = maximo > 0 ? (semana.total / maximo) * 100 : 0;
-
-    // La pila: un tramo por categoría, en su color, dentro de la barra
-    // de la semana. De un vistazo se ve de qué está hecha.
-    const tramos = matriz.filas.map(function (fila) {
-      const monto = fila.semanas[semana.numero - 1];
-      if (monto <= 0 || semana.total <= 0) { return ""; }
-      return "<div class=\"tramo-pila\" style=\"height: " + ((monto / semana.total) * 100).toFixed(2) +
-        "%; background-color: " + obtenerColorDeCategoria(fila.categoriaId, datos) + ";\"" +
-        " title=\"" + escaparHTML(fila.nombre + ": " + formatearMoneda(monto)) + "\"></div>";
-    }).join("");
+  return "<div class=\"cuatro-semanas\">" + matriz.totalesPorSemana.map(function (semana) {
+    const segmentos = semana.total > 0
+      ? matriz.filas
+          .filter(function (fila) { return fila.semanas[semana.numero - 1] > 0; })
+          .map(function (fila) {
+            const monto = fila.semanas[semana.numero - 1];
+            return {
+              fraccion: monto / semana.total,
+              color: obtenerColorDeCategoria(fila.categoriaId, datos),
+              etiqueta: fila.nombre + ": " + formatearMoneda(monto) +
+                " (" + formatearPorcentaje(monto / semana.total) + ")"
+            };
+          })
+      : [];
 
     const esActual = semanaDeHoy === semana.numero;
 
-    return "<div class=\"columna-semana" + (esActual ? " semana-es-actual" : "") + "\">" +
-        "<div class=\"tubo-semana\">" +
-          "<div class=\"pila-semana\" style=\"height: " + alto.toFixed(2) + "%;\">" + tramos + "</div>" +
-        "</div>" +
-        "<div class=\"pie-semana\">" +
-          "<span class=\"nombre-semana\">Semana " + semana.numero + (esActual ? " · vas aquí" : "") + "</span>" +
+    return "<figure class=\"semana" + (esActual ? " es-actual" : "") + "\">" +
+        htmlDeUnaDona(segmentos, formatearMonedaCorta(semana.total), formatearMonedaCorta(semana.porDia) + "/día") +
+        "<figcaption>" +
+          "<span class=\"nombre-semana\">Semana " + semana.numero +
+            (esActual ? " · vas aquí" : "") + "</span>" +
           "<span class=\"monto-semana\">" + formatearMoneda(semana.total) + "</span>" +
-          "<span class=\"detalle-semana\" title=\"" + escaparHTML(semana.fechaInicio + " a " + semana.fechaFin) + "\">" +
-            formatearMoneda(semana.porDia) + "/día · " + semana.dias + " días</span>" +
-        "</div>" +
-      "</div>";
+          "<span class=\"detalle-semana\" title=\"" +
+            escaparHTML(semana.fechaInicio + " a " + semana.fechaFin) + "\">" +
+            semana.dias + " días</span>" +
+        "</figcaption>" +
+      "</figure>";
+  }).join("") + "</div>" + htmlDeLaLeyendaDeCategorias(matriz.filas, datos);
+}
+
+// La leyenda de colores, una sola vez para las cuatro donas. Sin ella,
+// una dona es un adorno: hay que poder saber qué es cada gajo.
+function htmlDeLaLeyendaDeCategorias(filas, datos) {
+  return "<div class=\"leyenda-categorias\">" + filas.map(function (fila) {
+    return "<span class=\"item-leyenda-categoria\">" +
+        htmlDePuntoDeCategoria(fila.categoriaId, datos) +
+        escaparHTML(fila.nombre) +
+      "</span>";
   }).join("") + "</div>";
 }
 
+// La matriz semana × categoría, como mapa de calor. Antes eran tubos
+// con barras adentro, y con pocos datos se veían como una rejilla de
+// cajas vacías. Un mapa de calor no tiene caja que llenar: la celda ES
+// el dato, y la intensidad del color de la categoría dice cuánto.
+//
+// Cada renglón se mide contra su propia semana más cara, porque la
+// pregunta es "¿cuándo se va ESTA categoría?" — con una escala común
+// Transporte quedaría invisible al lado de Comida. El total del renglón
+// va enfrente para que se vea de qué tamaño es esa escala.
 function htmlDeLaMatrizDeSemanas(filas, datos) {
-  // Cada renglón se escala contra su propia semana más cara, porque la
-  // pregunta aquí es "¿cuándo se va ESTA categoría?" — con una escala
-  // común, Transporte quedaría invisible al lado de Comida. El total del
-  // renglón va enfrente para que se vea de qué tamaño es esa escala, y
-  // así la altura de una barra nunca se pueda confundir entre renglones.
   const encabezados = "<th>Categoría</th>" +
     "<th class=\"celda-cifra\">Total</th>" +
-    [1, 2, 3, 4].map(function (n) { return "<th class=\"celda-semana\">Sem " + n + "</th>"; }).join("");
+    [1, 2, 3, 4].map(function (n) { return "<th class=\"celda-mapa\">Sem " + n + "</th>"; }).join("");
 
   const cuerpo = filas.map(function (fila) {
     const maximoDeLaFila = fila.semanas.reduce(function (max, v) { return Math.max(max, v); }, 0);
     const color = obtenerColorDeCategoria(fila.categoriaId, datos);
 
     const celdas = fila.semanas.map(function (monto, indice) {
-      const alto = maximoDeLaFila > 0 ? (monto / maximoDeLaFila) * 100 : 0;
       const bolsa = fila.bolsas[indice];
-
-      const marca = (bolsa !== null && bolsa > 0 && maximoDeLaFila > 0 && bolsa <= maximoDeLaFila)
-        ? "<div class=\"marca-bolsa\" style=\"bottom: " + ((bolsa / maximoDeLaFila) * 100).toFixed(2) + "%;\"></div>"
-        : "";
-
-      // El rojo compara contra la bolsa lo que DE VERDAD la consume, no
-      // el total de la categoría. Si comparara el total, el Didi pondría
-      // en rojo una semana de Transporte que no se pasó de gasolina.
       const deLaBolsa = fila.semanasDeLaBolsa[indice];
+      // El rojo compara contra la bolsa lo que DE VERDAD la consume, no
+      // el total: si comparara el total, el Didi pondría en rojo una
+      // semana de Transporte que no se pasó de gasolina.
       const seExcedio = bolsa !== null && bolsa > 0 && deLaBolsa > bolsa;
 
+      if (monto <= 0) {
+        return "<td class=\"celda-mapa\"><div class=\"casilla vacia\">—</div></td>";
+      }
+
+      // La intensidad arranca en 0.18 y no en 0: una celda con un gasto
+      // chico tiene que verse, no desaparecer contra el fondo.
+      const intensidad = maximoDeLaFila > 0 ? 0.18 + 0.82 * (monto / maximoDeLaFila) : 0.18;
       const explicacion = formatearMoneda(monto) +
         (bolsa !== null && bolsa > 0
           ? " · " + formatearMoneda(deLaBolsa) + " de la bolsa de " + formatearMoneda(bolsa)
           : "");
 
-      return "<td class=\"celda-semana\">" +
-          "<div class=\"tubo-celda\" title=\"" + escaparHTML(explicacion) + "\">" +
-            "<div class=\"relleno-celda" + (seExcedio ? " mal" : "") + "\" style=\"height: " +
-              alto.toFixed(2) + "%; background-color: " + color + ";\"></div>" + marca +
-          "</div>" +
-          "<span class=\"cifra-celda\">" + (monto > 0 ? formatearMonedaCorta(monto) : "—") + "</span>" +
+      return "<td class=\"celda-mapa\">" +
+          "<div class=\"casilla" + (seExcedio ? " se-paso" : "") + "\"" +
+            " style=\"background-color: " + color + "; opacity: " + intensidad.toFixed(3) + ";\"" +
+            " title=\"" + escaparHTML(explicacion) + "\"></div>" +
+          "<span class=\"cifra-casilla\">" + formatearMonedaCorta(monto) + "</span>" +
         "</td>";
     }).join("");
 
@@ -810,18 +877,30 @@ function htmlDeLaMatrizDeSemanas(filas, datos) {
   return htmlDeTabla(encabezados, cuerpo, "tabla-matriz");
 }
 
+// Los siete días. Barras sobre una línea base compartida, sin caja que
+// las contenga: con la caja, un día flojo se veía como un hueco vacío
+// en vez de como una barra chica.
 function htmlDeLosDiasDeLaSemana(distribucion) {
   const maximo = distribucion.montos.reduce(function (max, v) { return Math.max(max, v); }, 0);
   if (maximo <= 0) { return ""; }
 
   return "<div class=\"barras-dias\">" + DIAS_EN_ORDEN_DE_LECTURA.map(function (dia) {
     const monto = distribucion.montos[dia.indice];
-    const esPico = monto === maximo;
+    const esPico = monto === maximo && monto > 0;
+    // Mínimo visible: un día con gasto siempre deja marca, aunque sea
+    // el 1% del pico. Un día en cero no dibuja nada, que es lo correcto.
+    const alto = monto > 0 ? Math.max((monto / maximo) * 100, 3) : 0;
+
+    // Un día sin gasto no dibuja barra. Con una barra mínima parecería
+    // que algo pasó ese día, y no pasó nada.
+    const barra = monto > 0
+      ? "<div class=\"relleno-dia\" style=\"height: " + alto.toFixed(2) + "%;\"></div>"
+      : "";
+
     return "<div class=\"columna-dia" + (esPico ? " es-pico" : "") + "\" title=\"" +
         escaparHTML(dia.nombre + ": " + formatearMoneda(monto) + " en " +
           distribucion.conteos[dia.indice] + " movimientos") + "\">" +
-        "<div class=\"tubo-dia\"><div class=\"relleno-dia\" style=\"height: " +
-          ((monto / maximo) * 100).toFixed(2) + "%;\"></div></div>" +
+        "<div class=\"riel-dia\">" + barra + "</div>" +
         "<span class=\"nombre-dia\">" + dia.nombre + "</span>" +
         "<span class=\"monto-dia\">" + (monto > 0 ? formatearMonedaCorta(monto) : "—") + "</span>" +
       "</div>";

@@ -2714,47 +2714,99 @@ details summary {
 /* ============================================================ */
 /* §3 RITMO                                                      */
 /* ============================================================ */
+/*
+   Segunda pasada (2 ago 2026). Antes eran tubos verticales con una
+   barra adentro, y con pocos datos la sección se veía como una rejilla
+   de cajas vacías. Ahora:
+
+   - Las cuatro semanas son donas: el anillo dice de qué está hecha la
+     semana y el centro cuánto fue. Las donas estaban descartadas para
+     esta app, y aquí aplican porque la pregunta es de parte sobre todo
+     dentro de UNA semana. Comparar entre semanas lo resuelve la cifra
+     del centro, que es un número exacto y no un ángulo.
+   - La matriz es un mapa de calor: la celda ES el dato, no una caja que
+     hay que llenar.
+   - Los días van sobre una línea base compartida, sin caja detrás.
+*/
+
+/* ---------- Las cuatro semanas, en donas ---------- */
 #vistaAncha .cuatro-semanas {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
-#vistaAncha .columna-semana {
+@media (max-width: 780px) {
+  #vistaAncha .cuatro-semanas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+#vistaAncha .semana {
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
 }
-#vistaAncha .tubo-semana {
-  height: 110px;
-  display: flex;
-  align-items: flex-end;
-  background-color: var(--superficie-alta-a);
-  border-radius: 7px;
-  overflow: hidden;
+/* La semana en curso se marca con su recuadro, no con un color dentro
+   de la dona: el color de adentro ya significa categoría. */
+#vistaAncha .semana.es-actual {
+  border-color: rgba(251, 191, 36, 0.4);
+  background-color: rgba(251, 191, 36, 0.04);
 }
-/* Cada semana se apila por categoría, en sus colores: se ve de qué está
-   hecha la semana cara, no solo que es cara. */
-#vistaAncha .pila-semana {
+
+#vistaAncha .dona {
   width: 100%;
+  max-width: 132px;
+  height: auto;
+  display: block;
+}
+#vistaAncha .aro-vacio { stroke: var(--superficie-alta-a); }
+#vistaAncha .arco-dona {
+  stroke-linecap: butt;
+  transition: opacity 0.12s ease;
+}
+#vistaAncha .semana:hover .arco-dona { opacity: 0.55; }
+#vistaAncha .semana .arco-dona:hover { opacity: 1; }
+
+#vistaAncha .cifra-dona {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 300;
+  fill: var(--texto-a);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+#vistaAncha .cifra-dona.apagada { fill: var(--texto-3a); }
+#vistaAncha .pie-dona {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 8px;
+  fill: var(--texto-3a);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+#vistaAncha .semana figcaption {
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  text-align: center;
 }
-#vistaAncha .tramo-pila { width: 100%; }
-#vistaAncha .semana-es-actual .tubo-semana {
-  outline: 1px solid var(--cuidado-e);
-  outline-offset: -1px;
-}
-#vistaAncha .pie-semana { display: flex; flex-direction: column; gap: 2px; }
 #vistaAncha .nombre-semana {
   font-size: 10px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--texto-3a);
 }
+#vistaAncha .semana.es-actual .nombre-semana { color: var(--cuidado-e); }
 #vistaAncha .monto-semana {
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 300;
   color: var(--texto-a);
 }
@@ -2765,33 +2817,53 @@ details summary {
   color: var(--texto-3a);
 }
 
-/* La matriz semana × categoría */
-#vistaAncha .tabla-matriz .celda-semana {
-  width: 17%;
-  text-align: center;
-  vertical-align: bottom;
-}
-#vistaAncha .tabla-matriz th.celda-semana { text-align: center; }
-#vistaAncha .tubo-celda {
-  position: relative;
-  height: 48px;
+/* Una dona sin leyenda es un adorno: hay que poder saber qué es cada
+   gajo. Va una sola vez para las cuatro. */
+#vistaAncha .leyenda-categorias {
   display: flex;
-  align-items: flex-end;
-  background-color: var(--superficie-alta-a);
-  border-radius: 5px;
-  overflow: hidden;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--borde-sutil-a);
+}
+#vistaAncha .item-leyenda-categoria {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--texto-2a);
+}
+
+/* ---------- La matriz, como mapa de calor ---------- */
+#vistaAncha .tabla-matriz .celda-mapa {
+  width: 15%;
+  text-align: center;
+  padding-right: 8px;
+}
+#vistaAncha .tabla-matriz th.celda-mapa { text-align: center; }
+#vistaAncha .casilla {
+  height: 34px;
+  border-radius: 7px;
   margin-bottom: 5px;
 }
-#vistaAncha .relleno-celda { width: 100%; }
-#vistaAncha .relleno-celda.mal { background-color: var(--mal-e) !important; }
-#vistaAncha .marca-bolsa {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 0;
-  border-top: 1px dashed rgba(246, 243, 239, 0.6);
+#vistaAncha .casilla.vacia {
+  background-color: transparent;
+  border: 1px dashed var(--borde-sutil-a);
+  color: var(--texto-3a);
+  opacity: 0.5;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-#vistaAncha .cifra-celda {
+/* Se pasó de su bolsa: aro rojo alrededor, no un relleno rojo — el
+   relleno ya está diciendo de qué categoría es. */
+#vistaAncha .casilla.se-paso {
+  outline: 2px solid var(--mal-e);
+  outline-offset: 1px;
+}
+#vistaAncha .cifra-casilla {
   display: block;
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
@@ -2799,22 +2871,34 @@ details summary {
   color: var(--texto-3a);
 }
 
-/* Días de la semana */
+/* ---------- Los siete días ---------- */
 #vistaAncha .barras-dias {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
+  align-items: end;
 }
-#vistaAncha .columna-dia { display: flex; flex-direction: column; gap: 5px; }
-#vistaAncha .tubo-dia {
-  height: 62px;
+#vistaAncha .columna-dia {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+/* Sin caja detrás: solo el riel invisible que da la altura y la línea
+   base compartida. Con caja, un día flojo se leía como hueco vacío. */
+#vistaAncha .riel-dia {
+  width: 100%;
+  height: 68px;
   display: flex;
   align-items: flex-end;
-  background-color: var(--superficie-alta-a);
-  border-radius: 5px;
-  overflow: hidden;
+  border-bottom: 1px solid var(--borde-a);
 }
-#vistaAncha .relleno-dia { width: 100%; background-color: #3987e5; border-radius: 5px 5px 0 0; }
+#vistaAncha .relleno-dia {
+  width: 100%;
+  background-color: #3987e5;
+  border-radius: 5px 5px 0 0;
+  min-height: 2px;
+}
 #vistaAncha .columna-dia.es-pico .relleno-dia { background-color: var(--cuidado-e); }
 #vistaAncha .nombre-dia {
   font-size: 10px;
@@ -2822,6 +2906,7 @@ details summary {
   text-transform: uppercase;
   color: var(--texto-3a);
 }
+#vistaAncha .columna-dia.es-pico .nombre-dia { color: var(--cuidado-e); }
 #vistaAncha .monto-dia {
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
