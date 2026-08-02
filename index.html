@@ -242,26 +242,41 @@
       <!-- Aviso de que arriba hay una simulación abierta y esto no la mide. -->
       <div id="avisoSimulacionEstudio"></div>
 
-      <section id="seccionBalanceCiclo">
-        <h2>Balance del ciclo</h2>
-        <div id="contenedorBalanceCiclo"></div>
-        <div id="contenedorTrayectoriaSemaforo"></div>
-      </section>
+      <!-- Retícula de dos zonas de peso desigual, no de columnas iguales:
+           columnas iguales producen el efecto "rejilla de widgets", donde
+           todo pesa lo mismo y nada manda. A la izquierda la narrativa que
+           se lee en orden; a la derecha la referencia que se consulta. -->
+      <div class="reticula-estudio">
 
-      <section>
-        <h2>Próximos pagos</h2>
-        <ul class="lista-items" id="listaProximosPagosAnalisis"></ul>
-      </section>
+        <div class="espina-estudio">
+          <section class="seccion-estudio" id="seccionCierre"></section>
+          <section class="seccion-estudio" id="seccionEstructura"></section>
+          <section class="seccion-estudio" id="seccionRitmo">
+            <div id="contenedorTrayectoriaSemaforo"></div>
+          </section>
+        </div>
 
-      <section id="seccionMovimientos">
-        <h2>Movimientos del ciclo</h2>
-        <ul class="lista-items" id="listaMovimientosCiclo"></ul>
-      </section>
+        <aside class="margen-estudio">
+          <section class="seccion-estudio">
+            <h2 class="titulo-seccion">Próximos pagos</h2>
+            <ul class="lista-items" id="listaProximosPagosAnalisis"></ul>
+          </section>
+          <section class="seccion-estudio" id="seccionMovimientos">
+            <h2 class="titulo-seccion">Movimientos del ciclo</h2>
+            <ul class="lista-items" id="listaMovimientosCiclo"></ul>
+          </section>
+        </aside>
 
-      <section id="seccionDeuda">
-        <h2>Deuda</h2>
+      </div>
+
+      <!-- Estas tres son tablas por derecho propio y no caben en la espina:
+           van a todo lo ancho, debajo. -->
+      <section class="seccion-estudio ancha" id="seccionFrentes"></section>
+      <section class="seccion-estudio ancha" id="seccionHorizonte">
         <div id="contenedorDeuda"></div>
       </section>
+      <section class="seccion-estudio ancha" id="seccionComparativo"></section>
+
     </div>
 
     <!-- OPCIONES DE PAGO ------------------------------------------ -->

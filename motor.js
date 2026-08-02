@@ -2718,3 +2718,212 @@ function obtenerCiclosCerrados(datos) {
     return calcularSituacionDelCiclo(ciclo) === "cerrado";
   });
 }
+
+// ============================================================
+// ESTUDIO DEL CICLO — EL REPARTO DEL INGRESO
+// ============================================================
+//
+// Un ciclo se cuenta en cuatro pedazos, y la razón de que sean cuatro y
+// no dos es que "gasto" a secas no se puede accionar: bajarle a la luz,
+// bajarle al súper y no comprar la pantalla son tres decisiones de
+// naturaleza distinta.
+//
+//   FIJO           Lo que cierra un compromiso: recurrentes, deudas,
+//                  el pago de la tarjeta, compromisos únicos. Ya estaba
+//                  decidido antes de que el ciclo empezara.
+//
+//   VARIABLE       Gasto libre que consume una bolsa semanal. Es lo que
+//   PRESUPUESTADO  el usuario planeó gastar: comida, gasolina.
+//
+//   DISCRECIONAL   Gasto libre que NO consume ninguna bolsa. Son dos
+//                  casos y los dos importan: el Didi en una categoría
+//                  cuyo presupuesto es solo de gasolina, y cualquier
+//                  compra sin categoría. Es el pedazo que hoy no se ve
+//                  en ninguna barra de la app y que baja el disponible
+//                  sin que nada lo anuncie.
+//
+//   REMANENTE      Lo que sobra. ingreso − los tres de arriba.
+//
+// La regla de qué consume bolsa NO se reescribe aquí: se llama a
+// elGastoConsumeLaBolsa, que es la misma que usan el teléfono y el
+// disponible. Si esa regla cambia, cambia en un solo lugar.
+
+// Clasifica un gasto en uno de los tres pedazos. Se separa de la suma
+// para que la regla se pueda leer de un golpe, sin el ruido del reduce.
+function clasificarGastoDelEstudio(gasto, datos) {
+  if (gasto.compromisoId) {
+    return "fijo";
+  }
+
+  const categoria = datos.config.categorias.find(function (c) {
+    return c.id === gasto.categoriaId;
+  });
+
+  if (categoria && categoria.esVariableSemanal && elGastoConsumeLaBolsa(gasto, categoria)) {
+    return "variable";
+  }
+
+  return "discrecional";
+}
+
+// Los compromisos del ciclo que todavía no se pagan, bajo la lente
+// pedida. Se cuentan aparte del fijo ya pagado porque no son lo mismo:
+// uno es un hecho y el otro es una promesa, y el diseño no puede
+// dibujarlos iguales.
+//
+// Bajo la lente de consumo se sacan los de tarjeta, por la misma razón
+// que se sacan sus pagos: las compras que ese pago cubre ya se contaron
+// una por una el día que se hicieron.
+function calcularFijoPendienteDelCiclo(ciclo, datos, lente) {
+  return datos.compromisos
+    .filter(function (compromiso) {
+      if (compromiso.cicloId !== ciclo.id || compromiso.pagado) {
+        return false;
+      }
+      if (lente === LENTE_CONSUMO && compromiso.origen === "tarjeta") {
+        return false;
+      }
+      return true;
+    })
+    .reduce(function (suma, compromiso) { return suma + Number(compromiso.montoEstimado); }, 0);
+}
+
+// El resumen completo de un ciclo bajo una lente. Es la base del §1 y
+// también de todo lo comparativo: un ciclo del histórico es exactamente
+// este objeto, calculado para un ciclo viejo.
+function resumirCicloCompleto(ciclo, datos, lente) {
+  const movimientos = calcularMovimientosDelCicloSegunLente(ciclo, datos, lente);
+
+  let fijo = 0;
+  let variablePresupuestado = 0;
+  let discrecional = 0;
+
+  movimientos.forEach(function (gasto) {
+    const pedazo = clasificarGastoDelEstudio(gasto, datos);
+    if (pedazo === "fijo") { fijo += Number(gasto.monto); }
+    else if (pedazo === "variable") { variablePresupuestado += Number(gasto.monto); }
+    else { discrecional += Number(gasto.monto); }
+  });
+
+  const ingreso = calcularIngresosDelCiclo(ciclo, datos);
+  const fijoPendiente = calcularFijoPendienteDelCiclo(ciclo, datos, lente);
+  const gastadoTotal = fijo + variablePresupuestado + discrecional;
+  const remanente = ingreso - gastadoTotal;
+
+  // Sin ingreso capturado no hay contra qué medir nada. Se marca en vez
+  // de devolver ceros o infinitos, para que la pantalla pueda decir
+  // "todavía no se sabe" en lugar de dibujar un 0% que parece un dato.
+  const hayIngreso = ingreso > 0;
+
+  return {
+    cicloId: ciclo.id,
+    situacion: calcularSituacionDelCiclo(ciclo),
+    lente: lente,
+    ingreso: ingreso,
+    hayIngreso: hayIngreso,
+
+    fijo: fijo,
+    fijoPendiente: fijoPendiente,
+    variablePresupuestado: variablePresupuestado,
+    discrecional: discrecional,
+    gastadoTotal: gastadoTotal,
+    remanente: remanente,
+
+    // Cuánto del ingreso ya estaba comprometido antes de empezar,
+    // pagado o no. Es el número que mide libertad: un saldo alto con una
+    // tasa de compromiso del 80% no es holgura, es un respiro de días.
+    //
+    // NO depende de la lente, a propósito, y por eso no se calcula con
+    // fijo + fijoPendiente: se llama a calcularMontoComprometidoTotalDelCiclo,
+    // que cuenta TODOS los compromisos del ciclo incluido el pago de la
+    // tarjeta. Una obligación no deja de existir porque se mire con otra
+    // lente — bajo consumo la tasa salía sin el pago de la tarjeta y
+    // marcaba 12% donde la realidad era el doble.
+    tasaDeCompromiso: hayIngreso ? calcularMontoComprometidoTotalDelCiclo(ciclo, datos) / ingreso : null,
+    montoComprometidoDelCiclo: calcularMontoComprometidoTotalDelCiclo(ciclo, datos),
+    tasaDeAhorro: hayIngreso ? remanente / ingreso : null,
+    // Cuánto del ingreso se ha ido en total. Es lo que dibuja la regla
+    // del ingreso, y por encima de 1 significa que el ciclo se pasó.
+    porcentajeConsumido: hayIngreso ? gastadoTotal / ingreso : null
+  };
+}
+
+// ============================================================
+// ESTUDIO DEL CICLO — ESTADÍSTICA CON PUERTAS
+// ============================================================
+//
+// Con dos ciclos cerrados un promedio no es un promedio, es la mitad de
+// una anécdota. Y una línea de tendencia sobre tres puntos es un dibujo
+// que da confianza sin ninguna razón para darla.
+//
+// Por eso cada medida declara cuántos datos necesita, y si no los hay se
+// devuelve en null para que la pantalla diga qué le falta en vez de
+// inventar un número:
+//
+//   1 ciclo cerrado    variación contra el ciclo anterior
+//   3 ciclos cerrados  promedio
+//   4 ciclos cerrados  mediana y banda mínimo–máximo
+//   nunca              línea de tendencia o regresión
+//
+// El "nunca" es en serio: con los ciclos que un año da (12), cualquier
+// pendiente ajustada estaría dominada por el ruido de dos meses raros.
+
+const CICLOS_MINIMOS_PARA_PROMEDIO = 3;
+const CICLOS_MINIMOS_PARA_MEDIANA = 4;
+
+function calcularEstadisticaDeSerie(valores) {
+  const n = valores.length;
+
+  if (n === 0) {
+    return { n: 0, promedio: null, mediana: null, minimo: null, maximo: null };
+  }
+
+  const ordenados = valores.slice().sort(function (a, b) { return a - b; });
+  const suma = valores.reduce(function (total, v) { return total + v; }, 0);
+
+  // La mediana de un número par de datos es el promedio de los dos de en
+  // medio. Con impar es el de en medio y ya.
+  const mitad = Math.floor(n / 2);
+  const mediana = n % 2 === 0
+    ? (ordenados[mitad - 1] + ordenados[mitad]) / 2
+    : ordenados[mitad];
+
+  return {
+    n: n,
+    promedio: n >= CICLOS_MINIMOS_PARA_PROMEDIO ? suma / n : null,
+    mediana: n >= CICLOS_MINIMOS_PARA_MEDIANA ? mediana : null,
+    minimo: n >= CICLOS_MINIMOS_PARA_MEDIANA ? ordenados[0] : null,
+    maximo: n >= CICLOS_MINIMOS_PARA_MEDIANA ? ordenados[n - 1] : null
+  };
+}
+
+// La variación de un número contra otro, en pesos y en porcentaje. El
+// porcentaje se devuelve en null cuando la base es cero: "subió un
+// infinito por ciento" no le dice nada a nadie, y "de $0 a $500" sí.
+function calcularVariacion(actual, anterior) {
+  const enPesos = actual - anterior;
+  return {
+    enPesos: enPesos,
+    enPorcentaje: anterior === 0 ? null : enPesos / Math.abs(anterior)
+  };
+}
+
+// El ciclo cerrado inmediatamente anterior a uno dado. Es contra el que
+// se compara por default: "el mes pasado" es la referencia que cualquiera
+// usa sin que se la expliquen.
+function obtenerCicloAnteriorCerrado(ciclo, datos) {
+  const cerrados = obtenerCiclosCerrados(datos).filter(function (c) {
+    return crearFechaLocal(c.fechaFin) < crearFechaLocal(ciclo.fechaFin);
+  });
+  return cerrados.length > 0 ? cerrados[cerrados.length - 1] : null;
+}
+
+// El resumen de todos los ciclos cerrados, del más viejo al más nuevo.
+// De aquí salen los promedios, las sparklines y la tabla comparativa —
+// y siempre bajo la misma lente que el usuario tiene puesta, para que la
+// comparación sea contra lo mismo que está viendo arriba.
+function calcularSerieDeCiclosCerrados(datos, lente) {
+  return obtenerCiclosCerrados(datos).map(function (ciclo) {
+    return resumirCicloCompleto(ciclo, datos, lente);
+  });
+}

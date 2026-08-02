@@ -184,7 +184,7 @@ function renderizarBarraDelEstudio() {
 // y solo a esta: qué secciones existen es asunto de este archivo.
 function renderizarEstudioDelCiclo() {
   renderizarBarraDelEstudio();
-  renderizarBalanceDelCiclo();
+  renderizarCierreDelCiclo();
   renderizarTrayectoriaSemaforo();
   renderizarProximosPagosAnalisis();
   renderizarMovimientosDelCiclo();
@@ -192,65 +192,283 @@ function renderizarEstudioDelCiclo() {
 }
 
 // ============================================================
-// ESTUDIO — BALANCE Y PRÓXIMOS PAGOS
+// ESTUDIO — HERRAMIENTAS DE PRESENTACIÓN
 // ============================================================
+//
+// Cuatro funciones chicas que usan todas las secciones. Viven juntas
+// para que un porcentaje se escriba igual en las seis, y no cada una a
+// su manera.
 
-const ETIQUETA_SEMAFORO = {
-  verde: "Vas bien",
-  amarillo: "Al límite",
-  rojo: "Te vas a pasar",
-  gris: "Ningún ingreso cae en este ciclo"
-};
-
-function renderizarBalanceDelCiclo() {
-  const datos = leerDatos();
-  const ciclo = asegurarCicloActual();
-  const contenedor = document.getElementById("contenedorBalanceCiclo");
-
-  const ingresosDelCiclo = calcularIngresosDelCiclo(ciclo, datos);
-  const compromisosPendientes = calcularCompromisosPendientesDelCiclo(ciclo, datos);
-  const disponibleReal = calcularDisponibleReal(ciclo, datos);
-  const proyeccionCierre = calcularProyeccionDeCierre(ciclo, datos);
-  const color = calcularColorDelSemaforo(proyeccionCierre, ingresosDelCiclo);
-  const rango = calcularRangoDeDiasDelCiclo(ciclo);
-
-  // El margen solo tiene sentido con ingreso ya capturado (si no, no hay
-  // nada contra qué medir la holgura). En rojo ya no hay margen que
-  // mostrar hacia adelante, así que se avisa que ya se cruzó el 100%.
-  let margenHTML = "";
-  if (ingresosDelCiclo > 0) {
-    const margen = calcularMargenAntesDeUmbrales(proyeccionCierre, ingresosDelCiclo);
-    if (color === "rojo") {
-      margenHTML = "<p class=\"detalle\">Ya se pasó del 100% del ingreso proyectado.</p>";
-    } else if (color === "amarillo") {
-      margenHTML = "<p class=\"detalle\">Margen antes de rojo: " + formatearMoneda(margen.antesDeRojo) + "</p>";
-    } else {
-      margenHTML = "<p class=\"detalle\">Margen antes de amarillo: " + formatearMoneda(margen.antesDeAmarillo) + "</p>";
-    }
+// Un porcentaje legible. Sin decimales por default: en un tablero de
+// gasto personal, "34.7%" y "35%" llevan a la misma decisión, y el
+// decimal solo hace la cifra más difícil de comparar de un vistazo.
+function formatearPorcentaje(fraccion, decimales) {
+  if (fraccion === null || fraccion === undefined || !isFinite(fraccion)) {
+    return "—";
   }
+  return (fraccion * 100).toFixed(decimales || 0) + "%";
+}
 
-  const proximoCambio = ingresosDelCiclo > 0 ? calcularProximoCambioDeColor(calcularTrayectoriaDelSemaforo(ciclo, datos)) : null;
-  const proximoCambioHTML = proximoCambio
-    ? "<p class=\"pista\">Si sigues a este ritmo, se pondría " + proximoCambio.color + " el " + proximoCambio.fechaISO + ".</p>"
-    : "";
+// Una variación con su signo delante. El signo importa más que el
+// número: es lo que se lee primero.
+function formatearVariacion(monto) {
+  const signo = monto > 0 ? "+" : (monto < 0 ? "−" : "");
+  return signo + formatearMoneda(Math.abs(monto));
+}
 
-  contenedor.innerHTML =
-    "<div class=\"monto-grande\">" + formatearMoneda(disponibleReal) + "</div>" +
-    "<div class=\"semaforo semaforo-" + color + "\">" + ETIQUETA_SEMAFORO[color] + "</div>" +
-    "<p class=\"detalle\">Libre para gastar en lo que queda del ciclo</p>" +
-    "<p class=\"detalle\">Ingresos del ciclo: " + formatearMoneda(ingresosDelCiclo) + "</p>" +
-    "<p class=\"detalle\">Compromisos pendientes: " + formatearMoneda(compromisosPendientes) + "</p>" +
-    "<p class=\"detalle\">Presupuesto variable por gastar: " +
-      formatearMoneda(calcularPresupuestoVariablePendiente(ciclo, datos)) + "</p>" +
-    "<p class=\"detalle\">Proyección de cierre: " + formatearMoneda(proyeccionCierre) + "</p>" +
-    margenHTML +
-    proximoCambioHTML +
-    "<p class=\"pista\">" + ciclo.fechaInicio + " a " + ciclo.fechaFin +
-      " — día " + rango.diasTranscurridos + " de " + rango.diasTotales + "</p>";
+// El encabezado de una sección del estudio: número, nombre y la pregunta
+// que responde. La pregunta no es adorno — es lo que permite saber si
+// una sección sobra, y lo que hace que la pantalla se lea en orden en
+// vez de como un tablero de widgets.
+function htmlDeEncabezadoDeSeccion(numero, nombre, pregunta) {
+  return "<header class=\"encabezado-seccion\">" +
+    "<span class=\"numero-seccion\">" + numero + "</span>" +
+    "<h2 class=\"titulo-seccion\">" + escaparHTML(nombre) + "</h2>" +
+    "<p class=\"pregunta-seccion\">" + escaparHTML(pregunta) + "</p>" +
+  "</header>";
+}
+
+// El estado vacío honesto: qué falta y cuándo se llena. Se usa en todos
+// los bloques comparativos, que hoy no tienen con qué dibujarse. Un
+// bloque que no se puede llenar todavía no se esconde: si desapareciera,
+// el usuario nunca sabría que existe ni qué tiene que pasar para verlo.
+function htmlDeEstadoVacio(queFalta) {
+  return "<p class=\"estado-vacio\">" + escaparHTML(queFalta) + "</p>";
 }
 
 // ============================================================
-// ESTUDIO — GRÁFICA DE TRAYECTORIA DEL SEMÁFORO
+// ESTUDIO — §1 CIERRE
+// ============================================================
+//
+// El veredicto del ciclo. Una sola cifra manda, y debajo la regla del
+// ingreso: una barra cuyo 100% es lo que entró, partida en los tres
+// pedazos del gasto, con la cola vacía como lo que sobra.
+//
+// Es una barra y no una dona a propósito. Una dona obliga a comparar
+// ángulos, que el ojo hace mal; una barra de una sola línea se lee de
+// izquierda a derecha como se lee todo lo demás, y además deja ver de un
+// golpe si el ciclo se pasó — que es cuando la barra se desborda.
+
+// Los tres pedazos, en el orden en que se apilan y con el nombre con el
+// que se muestran. El orden no es cosmético: va de lo menos negociable
+// a lo más, que es el orden en que uno puede hacer algo al respecto.
+const PEDAZOS_DE_LA_REGLA = [
+  { clave: "fijo", nombre: "Fijo", pista: "Compromisos ya pagados de este ciclo" },
+  { clave: "fijoPendiente", nombre: "Fijo por pagar", pista: "Compromisos del ciclo que faltan", esProyectado: true },
+  { clave: "variablePresupuestado", nombre: "Variable", pista: "Gasto libre que consume una bolsa semanal" },
+  { clave: "discrecional", nombre: "Discrecional", pista: "Gasto libre que no consume ninguna bolsa" }
+];
+
+// La barra. Cada tramo se dimensiona contra el ingreso, no contra el
+// total gastado: así el hueco del final ES el remanente, a escala, y no
+// hace falta ninguna leyenda que lo explique.
+function htmlDeLaReglaDelIngreso(resumen) {
+  if (!resumen.hayIngreso) {
+    return htmlDeEstadoVacio("Sin ingreso capturado en este ciclo todavía. La regla del ingreso necesita saber contra qué medir.");
+  }
+
+  const comprometidoTotal = resumen.fijo + resumen.fijoPendiente +
+    resumen.variablePresupuestado + resumen.discrecional;
+  // Cuando el ciclo se pasa, los tramos se escalan contra lo gastado en
+  // vez de contra el ingreso, y aparece la marca del 100%. Si se
+  // escalaran contra el ingreso, la barra se saldría del contenedor y no
+  // se vería cuánto se pasó, que es justo el dato.
+  const base = Math.max(comprometidoTotal, resumen.ingreso);
+
+  const tramos = PEDAZOS_DE_LA_REGLA.map(function (pedazo) {
+    const monto = resumen[pedazo.clave];
+    if (monto <= 0) {
+      return "";
+    }
+    const ancho = (monto / base) * 100;
+    const clases = "tramo-regla tramo-" + pedazo.clave + (pedazo.esProyectado ? " es-proyectado" : "");
+    return "<div class=\"" + clases + "\" style=\"width: " + ancho.toFixed(3) + "%;\"" +
+      " title=\"" + escaparHTML(pedazo.nombre + ": " + formatearMoneda(monto)) + "\"></div>";
+  }).join("");
+
+  // La marca del 100% del ingreso solo se dibuja cuando el ciclo se pasó:
+  // si no, coincide con el final de la barra y solo estorba.
+  const seExcedio = comprometidoTotal > resumen.ingreso;
+  const marcaHTML = seExcedio
+    ? "<div class=\"marca-ingreso\" style=\"left: " + ((resumen.ingreso / base) * 100).toFixed(3) + "%;\">" +
+        "<span>100% del ingreso</span></div>"
+    : "";
+
+  const leyenda = PEDAZOS_DE_LA_REGLA.filter(function (pedazo) {
+    return resumen[pedazo.clave] > 0;
+  }).map(function (pedazo) {
+    return "<div class=\"item-leyenda-regla\" title=\"" + escaparHTML(pedazo.pista) + "\">" +
+      "<span class=\"marca-leyenda marca-" + pedazo.clave + (pedazo.esProyectado ? " es-proyectado" : "") + "\"></span>" +
+      "<span class=\"nombre-leyenda\">" + pedazo.nombre + "</span>" +
+      "<span class=\"monto-leyenda\">" + formatearMoneda(resumen[pedazo.clave]) + "</span>" +
+      "<span class=\"parte-leyenda\">" + formatearPorcentaje(resumen[pedazo.clave] / resumen.ingreso) + "</span>" +
+    "</div>";
+  }).join("");
+
+  return "<div class=\"regla-ingreso\">" +
+      "<div class=\"barra-regla" + (seExcedio ? " se-excedio" : "") + "\">" + tramos + marcaHTML + "</div>" +
+      "<div class=\"leyenda-regla\">" + leyenda + "</div>" +
+    "</div>";
+}
+
+// Las dos razones que acompañan a la cifra. Son porcentajes y no pesos a
+// propósito: $8,000 de remanente no significa lo mismo con un ingreso de
+// $20,000 que con uno de $80,000, y la tasa sí es comparable entre
+// ciclos aunque el ingreso se mueva.
+function htmlDeLasRazones(resumen) {
+  if (!resumen.hayIngreso) {
+    return "";
+  }
+
+  // En un ciclo a medias, "queda sin gastar" todavía no es un resultado:
+  // faltan días de gasto por suceder. Se dice "va" para que no se lea
+  // como un cierre que ya ocurrió.
+  const cerro = resumen.situacion === "cerrado";
+
+  return "<div class=\"razones-cierre\">" +
+    "<div class=\"razon\">" +
+      "<span class=\"etiqueta-ancha\">Tasa de compromiso</span>" +
+      "<span class=\"cifra-razon\">" + formatearPorcentaje(resumen.tasaDeCompromiso) + "</span>" +
+      "<span class=\"pista-razon\">Del ingreso ya estaba comprometido antes de empezar — " +
+        formatearMoneda(resumen.montoComprometidoDelCiclo) + " entre recurrentes, deuda y tarjeta. " +
+        "No cambia con la lente: una obligación es la misma se mire como se mire.</span>" +
+    "</div>" +
+    "<div class=\"razon\">" +
+      "<span class=\"etiqueta-ancha\">" + (cerro ? "Tasa de ahorro" : "Tasa de ahorro, por ahora") + "</span>" +
+      "<span class=\"cifra-razon\">" + formatearPorcentaje(resumen.tasaDeAhorro) + "</span>" +
+      "<span class=\"pista-razon\">" +
+        (cerro
+          ? "Del ingreso quedó sin gastar al cerrar."
+          : "Del ingreso va sin gastar. Todavía faltan días de ciclo, así que va a bajar.") +
+      "</span>" +
+    "</div>" +
+  "</div>";
+}
+
+// Las comparaciones. Cada una declara qué necesita, y si no lo hay dice
+// qué falta en vez de esconderse: así el usuario sabe que el bloque
+// existe y cuándo lo va a poder ver.
+function htmlDeLasComparaciones(resumen, ciclo, datos) {
+  const anterior = obtenerCicloAnteriorCerrado(ciclo, datos);
+  const serie = calcularSerieDeCiclosCerrados(datos, lenteDelEstudio)
+    .filter(function (r) { return r.cicloId !== ciclo.id; });
+
+  const fichas = [];
+
+  if (anterior) {
+    const resumenAnterior = resumirCicloCompleto(anterior, datos, lenteDelEstudio);
+    const variacion = calcularVariacion(resumen.gastadoTotal, resumenAnterior.gastadoTotal);
+    fichas.push(
+      "<div class=\"ficha-comparacion\">" +
+        "<span class=\"etiqueta-ancha\">vs. " + escaparHTML(nombrarCicloDelEstudio(anterior)) + "</span>" +
+        "<span class=\"valor-ficha\">" + formatearVariacion(variacion.enPesos) + "</span>" +
+        "<span class=\"pista-ficha\">" +
+          (variacion.enPorcentaje === null ? "gastado" : formatearPorcentaje(variacion.enPorcentaje) + " en lo gastado") +
+        "</span>" +
+      "</div>"
+    );
+  }
+
+  const estadistica = calcularEstadisticaDeSerie(serie.map(function (r) { return r.gastadoTotal; }));
+  if (estadistica.promedio !== null) {
+    const variacion = calcularVariacion(resumen.gastadoTotal, estadistica.promedio);
+    fichas.push(
+      "<div class=\"ficha-comparacion\">" +
+        "<span class=\"etiqueta-ancha\">vs. promedio</span>" +
+        "<span class=\"valor-ficha\">" + formatearVariacion(variacion.enPesos) + "</span>" +
+        "<span class=\"pista-ficha\">sobre " + estadistica.n + " ciclos cerrados</span>" +
+      "</div>"
+    );
+  }
+
+  if (fichas.length === 0) {
+    const faltan = CICLOS_MINIMOS_PARA_PROMEDIO - estadistica.n;
+    return htmlDeEstadoVacio(
+      estadistica.n === 0
+        ? "Primer ciclo: todavía no hay contra qué compararlo. La comparación aparece sola en cuanto cierre este."
+        : "Faltan " + faltan + " ciclos cerrados para el promedio."
+    );
+  }
+
+  return "<div class=\"comparaciones-cierre\">" + fichas.join("") + "</div>";
+}
+
+// La cifra protagonista y su etiqueta, que cambian según el ciclo haya
+// cerrado o siga en curso.
+//
+// La proyección de cierre solo existe bajo la lente de caja, y con eso
+// se llama a calcularProyeccionDeCierre — la MISMA función que alimenta
+// el semáforo y la primera pantalla. Escribir aquí un segundo pronóstico
+// daría dos números distintos para la misma pregunta en la misma app,
+// que es el error que ya se pagó una vez con la simulación.
+function htmlDelVeredicto(resumen, ciclo, datos) {
+  const esCerrado = resumen.situacion === "cerrado";
+
+  if (resumen.situacion === "porVenir") {
+    return "<div class=\"veredicto-cierre\">" +
+      "<span class=\"etiqueta-ancha\">Ciclo por venir</span>" +
+      "<span class=\"cifra-cierre\">" + formatearMoneda(resumen.ingreso) + "</span>" +
+      "<span class=\"pista-veredicto\">Ingreso previsto. Todavía no hay gasto que medir.</span>" +
+    "</div>";
+  }
+
+  if (esCerrado) {
+    const signo = resumen.remanente < 0 ? " en-rojo" : "";
+    return "<div class=\"veredicto-cierre\">" +
+      "<span class=\"etiqueta-ancha\">Cerró con</span>" +
+      "<span class=\"cifra-cierre" + signo + "\">" + formatearMoneda(resumen.remanente) + "</span>" +
+      "<span class=\"pista-veredicto\">" +
+        (resumen.remanente < 0 ? "Se gastó más de lo que entró." : "Sobró al cerrar el ciclo.") +
+      "</span>" +
+    "</div>";
+  }
+
+  // En curso: lo que va es un hecho, y la proyección es otra cosa. Se
+  // dibujan separadas y la proyectada lleva el trato de proyectada
+  // (punteada y a media intensidad), nunca disfrazada de real.
+  let proyeccionHTML;
+  if (lenteDelEstudio === LENTE_CAJA && resumen.hayIngreso) {
+    const proyeccionDeGasto = calcularProyeccionDeCierre(ciclo, datos);
+    const remanenteProyectado = resumen.ingreso - proyeccionDeGasto;
+    proyeccionHTML = "<div class=\"proyeccion-cierre\">" +
+      "<span class=\"etiqueta-ancha\">Cerraría con</span>" +
+      "<span class=\"cifra-proyectada" + (remanenteProyectado < 0 ? " en-rojo" : "") + "\">" +
+        formatearMoneda(remanenteProyectado) + "</span>" +
+      "<span class=\"pista-veredicto\">Si el ritmo no cambia. Es el mismo cálculo que usa el semáforo de arriba.</span>" +
+    "</div>";
+  } else {
+    // Sin proyección de consumo. Un bloque grande con un guion ocuparía
+    // el mejor lugar de la pantalla para no decir nada: se dice en una
+    // línea y ya.
+    proyeccionHTML = "<p class=\"nota-sin-proyeccion\">" +
+      "Proyectar el cierre es una pregunta de caja. Cambia la lente a " +
+      "<strong>Caja</strong> para ver con cuánto cerrarías." +
+    "</p>";
+  }
+
+  return "<div class=\"veredicto-cierre\">" +
+      "<span class=\"etiqueta-ancha\">Va sobrando</span>" +
+      "<span class=\"cifra-cierre" + (resumen.remanente < 0 ? " en-rojo" : "") + "\">" +
+        formatearMoneda(resumen.remanente) + "</span>" +
+      "<span class=\"pista-veredicto\">De lo que entró, menos lo que ya salió.</span>" +
+    "</div>" + proyeccionHTML;
+}
+
+function renderizarCierreDelCiclo() {
+  const datos = leerDatos();
+  const ciclo = obtenerCicloDelEstudio();
+  const seccion = document.getElementById("seccionCierre");
+  const resumen = resumirCicloCompleto(ciclo, datos, lenteDelEstudio);
+
+  seccion.innerHTML =
+    htmlDeEncabezadoDeSeccion("01", "Cierre", "¿Cómo va a terminar este ciclo?") +
+    "<div class=\"cuerpo-cierre\">" +
+      htmlDelVeredicto(resumen, ciclo, datos) +
+      htmlDeLaReglaDelIngreso(resumen) +
+      htmlDeLasRazones(resumen) +
+      htmlDeLasComparaciones(resumen, ciclo, datos) +
+    "</div>";
+}
 // ============================================================
 //
 // Dibuja calcularTrayectoriaDelSemaforo como una línea SVG hecha a mano
@@ -264,6 +482,15 @@ const COLOR_HEX_SEMAFORO = {
   amarillo: "#fde047",
   rojo: "#fca5a5",
   gris: "#94a3b8"
+};
+
+// Cómo se llama cada color del semáforo en pantalla. El color solo, sin
+// su nombre, obliga a recordar qué significaba cada uno.
+const ETIQUETA_SEMAFORO = {
+  verde: "Vas bien",
+  amarillo: "Al límite",
+  rojo: "Te vas a pasar",
+  gris: "Ningún ingreso cae en este ciclo"
 };
 
 // Agrupa la trayectoria en tramos consecutivos que comparten color y

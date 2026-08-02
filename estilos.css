@@ -2249,6 +2249,274 @@ details summary {
   color: var(--texto-2a);
 }
 
+/* ---------- Retícula: espina y margen ---------- */
+/* Dos zonas de peso desigual, no columnas iguales. Columnas iguales son
+   lo que produce el efecto "rejilla de widgets": todo pesa lo mismo y
+   nada manda. La espina lleva la narrativa que se lee en orden; el
+   margen, la referencia que se consulta. */
+#vistaAncha .reticula-estudio {
+  display: grid;
+  grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);
+  gap: 46px;
+  align-items: start;
+}
+@media (max-width: 1020px) {
+  #vistaAncha .reticula-estudio { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+/* El aire va ENTRE secciones, no dentro de cada renglón: es lo que hace
+   que la pantalla respire sin volverse una lista de tarjetas sueltas. */
+#vistaAncha .seccion-estudio {
+  padding: 34px 0 0;
+}
+#vistaAncha .seccion-estudio.ancha {
+  border-top: 1px solid var(--borde-sutil-a);
+  margin-top: 34px;
+}
+
+#vistaAncha .encabezado-seccion {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  align-items: baseline;
+  margin-bottom: 20px;
+}
+#vistaAncha .numero-seccion {
+  grid-row: span 2;
+  font-family: var(--mono-a);
+  font-size: 11px;
+  color: var(--texto-3a);
+  letter-spacing: 0.1em;
+  padding-top: 3px;
+}
+#vistaAncha .titulo-seccion {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--texto-a);
+}
+#vistaAncha .pregunta-seccion {
+  grid-column: 2;
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--texto-3a);
+}
+
+#vistaAncha .estado-vacio {
+  margin: 0;
+  padding: 15px 16px;
+  border: 1px dashed var(--borde-a);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--texto-3a);
+  max-width: 62ch;
+}
+
+/* ---------- §1 Cierre ---------- */
+#vistaAncha .cuerpo-cierre {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+#vistaAncha .veredicto-cierre {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+/* Peso 300, no negritas: es la decisión que más separa esto de un panel
+   administrativo. La cifra manda por tamaño, no por grosor. */
+#vistaAncha .cifra-cierre {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 46px;
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+#vistaAncha .cifra-cierre.en-rojo { color: #fca5a5; }
+
+/* Lo proyectado nunca se disfraza de real: mismo color a media
+   intensidad, y su propia línea punteada a la izquierda. */
+#vistaAncha .proyeccion-cierre {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 14px;
+  padding-left: 14px;
+  border-left: 2px dashed var(--borde-a);
+}
+#vistaAncha .cifra-proyectada {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 24px;
+  font-weight: 300;
+  color: rgba(246, 243, 239, 0.55);
+}
+#vistaAncha .cifra-proyectada.en-rojo { color: rgba(252, 165, 165, 0.6); }
+#vistaAncha .cifra-proyectada.sin-dato { color: var(--texto-3a); }
+
+#vistaAncha .pista-veredicto {
+  font-size: 12.5px;
+  color: var(--texto-3a);
+}
+
+#vistaAncha .nota-sin-proyeccion {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--texto-3a);
+  max-width: 56ch;
+}
+#vistaAncha .nota-sin-proyeccion strong {
+  font-weight: 500;
+  color: var(--texto-2a);
+}
+
+/* ---------- La regla del ingreso ---------- */
+/* Una barra, no una dona: comparar ángulos el ojo lo hace mal, comparar
+   largos lo hace bien. Los tramos son neutros de distinta intensidad —
+   el color en esta app significa estado financiero, y "en qué se gastó"
+   no es un estado. */
+#vistaAncha .regla-ingreso {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#vistaAncha .barra-regla {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 34px;
+  background-color: var(--superficie-a);
+  border: 1px solid var(--borde-sutil-a);
+  border-radius: 8px;
+  overflow: hidden;
+}
+#vistaAncha .tramo-regla { height: 100%; }
+#vistaAncha .tramo-fijo { background-color: #5a5466; }
+#vistaAncha .tramo-fijoPendiente {
+  /* Rayado, no sólido: es dinero que todavía no se mueve. */
+  background-image: repeating-linear-gradient(
+    -45deg, #4b4655 0 5px, transparent 5px 10px
+  );
+  background-color: rgba(90, 84, 102, 0.35);
+}
+#vistaAncha .tramo-variablePresupuestado { background-color: #837c90; }
+#vistaAncha .tramo-discrecional { background-color: #ada6b8; }
+
+/* La marca del 100% solo aparece cuando el ciclo se pasó: si no,
+   coincide con el final de la barra y solo estorba. */
+#vistaAncha .marca-ingreso {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 2px solid #fca5a5;
+}
+#vistaAncha .marca-ingreso span {
+  position: absolute;
+  top: 100%;
+  left: 4px;
+  white-space: nowrap;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fca5a5;
+  padding-top: 3px;
+}
+#vistaAncha .barra-regla.se-excedio { border-color: rgba(252, 165, 165, 0.4); }
+
+#vistaAncha .leyenda-regla {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+}
+#vistaAncha .item-leyenda-regla {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+#vistaAncha .marca-leyenda {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  align-self: center;
+  flex: 0 0 auto;
+}
+#vistaAncha .marca-fijo { background-color: #5a5466; }
+#vistaAncha .marca-fijoPendiente {
+  background-image: repeating-linear-gradient(-45deg, #4b4655 0 3px, transparent 3px 6px);
+  background-color: rgba(90, 84, 102, 0.35);
+}
+#vistaAncha .marca-variablePresupuestado { background-color: #837c90; }
+#vistaAncha .marca-discrecional { background-color: #ada6b8; }
+#vistaAncha .nombre-leyenda { color: var(--texto-2a); }
+#vistaAncha .monto-leyenda {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-a);
+}
+#vistaAncha .parte-leyenda {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--texto-3a);
+}
+
+/* ---------- Las dos razones ---------- */
+#vistaAncha .razones-cierre {
+  display: flex;
+  gap: 46px;
+  flex-wrap: wrap;
+}
+#vistaAncha .razon {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 30ch;
+}
+#vistaAncha .cifra-razon {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1.1;
+}
+#vistaAncha .pista-razon {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--texto-3a);
+}
+
+/* ---------- Fichas de comparación ---------- */
+#vistaAncha .comparaciones-cierre {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+#vistaAncha .ficha-comparacion {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 15px;
+  border: 1px solid var(--borde-sutil-a);
+  border-radius: 10px;
+  background-color: var(--superficie-a);
+}
+#vistaAncha .valor-ficha {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 300;
+}
+#vistaAncha .pista-ficha {
+  font-size: 11.5px;
+  color: var(--texto-3a);
+}
+
 /* ---------- Acción ---------- */
 /* En el flujo, en su propia fila: así no hay número mágico que mantener
    sincronizado con la altura del cajón, que cambia según su contenido. */
