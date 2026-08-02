@@ -1856,6 +1856,31 @@ function avanzarDelTicket(paso) {
   document.getElementById("ticketCaptura").classList.add("paso-avanza");
 }
 
+// Las teclas del monto responden al bajar el dedo, no al levantarlo.
+//
+// Un "click" en pantalla táctil no se dispara cuando tocas: se dispara cuando
+// SUELTAS. El navegador tiene que esperar a ver si el dedo se va a mover
+// (sería un deslizamiento, no un toque), así que todo el tiempo que el dedo
+// esté sobre la tecla es tiempo en el que el número no aparece. Teclear
+// rápido se siente pegajoso aunque no haya nada lento detrás: el cálculo de
+// un dígito toma menos de un milisegundo.
+//
+// "pointerdown" ocurre en el instante en que el dedo toca el cristal, que es
+// como responde el teclado del sistema. La diferencia es de unas décimas de
+// segundo, pero es justo la que separa "responde" de "va lento".
+//
+// Solo las teclas del monto entran aquí, a propósito. Guardar, las puertas y
+// los atajos siguen esperando al click: en un botón que comete un gasto o
+// cambia de pantalla, poder arrastrar el dedo fuera para arrepentirse vale
+// más que ganar 100 milisegundos.
+function manejarTeclaAlBajarElDedo(evento) {
+  const boton = evento.target.closest("[data-accion=\"tecla\"]");
+  if (!boton) {
+    return;
+  }
+  escribirEnElMontoDelTicket(boton.getAttribute("data-tecla"));
+}
+
 function manejarToqueEnElTicket(evento) {
   const boton = evento.target.closest("[data-accion]");
   if (!boton) {
@@ -1988,7 +2013,12 @@ function manejarToqueEnElTicket(evento) {
   }
 
   if (accion === "tecla") {
-    escribirEnElMontoDelTicket(boton.getAttribute("data-tecla"));
+    // Las teclas del monto no se atienden aquí: ya respondieron al bajar el
+    // dedo (ver manejarTeclaAlBajarElDedo). Este camino solo queda para un
+    // navegador sin Pointer Events, donde el click es lo único que hay.
+    if (!window.PointerEvent) {
+      escribirEnElMontoDelTicket(boton.getAttribute("data-tecla"));
+    }
     return;
   }
 

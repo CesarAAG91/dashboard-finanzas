@@ -138,6 +138,13 @@ document.getElementById("inputArchivo").addEventListener("change", importarJSON)
 // Un solo escucha para todo el ticket: su contenido se reescribe entero en
 // cada paso, pero el contenedor no cambia nunca.
 const ticketCaptura = document.getElementById("ticketCaptura");
+// Las teclas del monto van aparte y antes: responden al bajar el dedo en vez
+// de al soltarlo, que es lo que hace que teclear se sienta instantáneo (ver
+// manejarTeclaAlBajarElDedo). El resto del ticket sigue con el click de
+// siempre.
+if (window.PointerEvent) {
+  ticketCaptura.addEventListener("pointerdown", manejarTeclaAlBajarElDedo);
+}
 ticketCaptura.addEventListener("click", manejarToqueEnElTicket);
 ticketCaptura.addEventListener("input", manejarEscrituraEnElTicket);
 ticketCaptura.addEventListener("change", manejarCambioEnElTicket);
