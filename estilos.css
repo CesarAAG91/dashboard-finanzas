@@ -769,35 +769,45 @@ details summary {
 }
 
 /* ---------- Los atajos, como burbujas en lista ---------- */
-/* Se pegan al pie (margin-top: auto) para quedar bajo el pulgar, que es
-   donde se captura de pie y con una mano. Arriba de ellas queda lo que hay
-   que leer; aquí abajo, lo que se toca. */
+/* El bloque se queda con todo el espacio que sobre en la pantalla, porque
+   los atajos son lo principal: si sobran píxeles, son de ellos. El 0 de en
+   medio (flex: 1 0 auto) es que nunca se encoja por debajo de sus burbujas;
+   sin él se comprimía en silencio y las burbujas se salían por abajo.
+   Si aun así sobra espacio (porque ya tocaron su techo), justify-content:
+   flex-end las deja pegadas al pie, bajo el pulgar, que es donde tienen que
+   estar cuando se captura de pie y con una mano.
+
+   Ojo: aquí NO va margin-top: auto. Un margen automático se come el espacio
+   libre antes de que flex-grow pueda repartirlo, y con él las burbujas nunca
+   crecían — se quedaban en su mínimo hasta en una pantalla enorme. */
 #vistaCaptura .burbujas-atajos {
-  flex: 0 1 auto;
-  min-height: 0;
-  margin-top: auto;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  justify-content: flex-end;
+  gap: 9px;
 }
-/* Se estiran con el espacio que sobre, pero nunca bajan de 46px: es el
-   mínimo con el que un botón sigue siendo cómodo para el pulgar. En una
-   pantalla alta quedan holgadas; en una chica se comprimen hasta ahí y ya. */
+/* Son lo principal de la pantalla, así que se les da todo el espacio que
+   sobre: crecen hasta 104px, que es donde una burbuja ya se lee de un
+   vistazo sin tener que buscarla. El mínimo de 48px es el suelo de
+   emergencia para una pantalla muy corta: por debajo de eso un botón deja
+   de ser cómodo para el pulgar. En cualquier iPhone actual sobra espacio y
+   se van al máximo. */
 #vistaCaptura .burbuja-atajo {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 13px;
   width: 100%;
-  min-height: 46px;
-  max-height: 62px;
+  min-height: 48px;
+  max-height: 104px;
   background-color: var(--papel-relleno-c);
   border: 0;
   border-radius: 999px;
   padding: 0 22px;
   color: var(--tinta-c);
   font-family: inherit;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -807,8 +817,8 @@ details summary {
 #vistaCaptura .burbuja-atajo::before {
   content: "";
   flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   border-radius: 999px;
   background-color: var(--color-categoria, var(--tinta-ter-c));
 }
