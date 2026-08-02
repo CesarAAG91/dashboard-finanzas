@@ -1528,19 +1528,43 @@ function calcularCompromisosPendientesDelCiclo(ciclo, datos) {
 // el disponible SUBIRÍA por haber gastado, que sería absurdo.
 // Cuánto dinero le toca a una categoría en una semana concreta del ciclo.
 //
-// El presupuesto se captura por semana de 7 días ($2,100 de comida), pero
-// las semanas ya no miden todas lo mismo: en un ciclo de 33 días la primera
-// tiene 9 días. Lo que se mantiene fijo es la tasa diaria, así que la bolsa
-// de cada semana es esa tasa por los días que de verdad tenga.
-//
 // Es la ÚNICA definición de "la bolsa de esta semana". La usan el apartado
 // del disponible, el renglón informativo del teléfono y la barra de Captura,
 // y por eso los tres no pueden decir números distintos.
+//
+// Hay dos formas de repartir, y cuál se usa depende de qué clase de gasto es
+// (decisión del usuario, 2 ago 2026, al ver el caso real de la gasolina):
+//
+// **Se reparte por día** cuando el presupuesto lo consumen todas las
+// subcategorías. Es el caso de la comida: se come todos los días, así que una
+// semana de 8 días necesita ocho días de comida. $2,100 semanales son $300
+// diarios, y la bolsa de esa semana es $2,400.
+//
+// **Es un tope fijo** cuando el presupuesto lo consume una sola subcategoría.
+// Es el caso de la gasolina: no se carga "por día", se carga un tanque cada
+// tantos días, y que la semana traiga un día extra no hace falta más gasolina.
+// Sus $500 son $500 en una semana de 7 días y en una de 8.
+//
+// Que la regla se derive de subcategoriaQueConsumeElPresupuesto en vez de
+// tener su propio interruptor es deliberado: designar una subcategoría ya es
+// decir "esto es un gasto puntual y repetible", no un flujo diario. El efecto
+// que hay que tener presente es que marcar "Comida → solo Súper" la volvería
+// tope fijo, que probablemente no sería lo querido.
+//
+// Antes todo se repartía por día, y la gasolina quedaba rara: en una semana
+// de 8 días la bolsa era $571.43, así que cargar los $500 completos dejaba
+// $71.43 "disponibles" que nunca se iban a usar — y el disponible los
+// apartaba como si fueran a gastarse.
 function calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, numeroDeSemana) {
   const presupuesto = obtenerPresupuestoSemanalVigente(ciclo, datos);
-  const tasaDiaria = (Number(presupuesto[categoria.id]) || 0) / 7;
+  const montoSemanal = Number(presupuesto[categoria.id]) || 0;
+
+  if (categoria.subcategoriaQueConsumeElPresupuesto) {
+    return montoSemanal;
+  }
+
   const diasDeLaSemana = calcularDiasDeCadaSemanaDelCiclo(ciclo)[numeroDeSemana - 1];
-  return tasaDiaria * diasDeLaSemana;
+  return (montoSemanal / 7) * diasDeLaSemana;
 }
 
 // Si un gasto consume o no la bolsa semanal de su categoría.
