@@ -2133,79 +2133,126 @@ details summary {
 /* VISTA ANCHA — ESTUDIO DEL CICLO (la segunda pantalla)         */
 /* ============================================================ */
 /*
-   Lo que se ve al hacer scroll debajo del muro. Cuelga de las mismas
-   variables de #vistaAncha que la primera pantalla — no hay paleta
-   nueva — y respeta los mismos antipatrones ya descartados: sin donas
-   ni pastel, sin iconos por categoría, sin degradados, sin sombras,
-   radio máximo 10px.
+   Rediseño del 2 ago 2026, después de la primera versión. El diagnóstico
+   del usuario fue exacto: "se me pierde todo, nada está encerrado, todo
+   es texto mezclado, y llega un momento en que haces scroll y no sabes
+   qué estás viendo".
+
+   La primera versión aplicó al pie de la letra el sistema de la primera
+   pantalla — sin recuadros, densidad honesta, el color solo como
+   semáforo. Ahí funciona, porque esa pantalla es un veredicto: una cifra
+   manda y todo lo demás la acompaña.
+
+   Aquí no. Esta pantalla NO se lee de arriba abajo, se escanea y se
+   opera, y por eso pide lo contrario:
+
+   1. TODO VA ENCERRADO. Cada sección es un panel con borde y fondo
+      propios, y los bloques de adentro también. El aire solo no basta
+      para separar seis secciones largas.
+   2. EL COLOR IDENTIFICA, NO SOLO ALERTA. Se usa PALETA_CATEGORIAS, los
+      ocho tonos que el motor ya asigna y que la vista de Captura ya
+      muestra. Aprendes "azul = Comida" una vez y después lees cualquier
+      gráfica sin leyenda.
+   3. SE VE, NO SE EXPLICA. Fuera los párrafos que describían lo que cada
+      bloque hacía. Lo que necesite explicación va en un title, no
+      ocupando media pantalla.
+   4. SIEMPRE SABES DÓNDE ESTÁS. El índice de secciones vive en la barra
+      pegajosa y se ilumina solo.
+
+   El semáforo (verde/ámbar/rojo) sigue significando estado y nada más:
+   no se usa para identificar categorías. Son dos usos del color que no
+   se pisan.
 */
 #zonaAnalisis {
-  padding: 0 22px 60px;
-  max-width: 1240px;
+  padding: 0 22px 70px;
+  max-width: 1320px;
+
+  /* Color semántico, separado de los tonos de categoría. Solo dice
+     estado: bien, cuidado, se pasó. */
+  --bien-e: #34d399;
+  --cuidado-e: #fbbf24;
+  --mal-e: #f87171;
 }
 
-/* ---------- Barra de control ---------- */
-/* Pegada arriba al hacer scroll: dice de qué ciclo y con qué lente son
-   TODAS las cifras de abajo, así que si se pierde de vista, cualquier
-   número queda leyéndose fuera de contexto. */
+/* ---------- Barra de control pegajosa ---------- */
+/* Lleva las tres cosas que dicen qué estás viendo: qué ciclo, con qué
+   lente, y en qué sección vas. Si se pierde de vista, cualquier número
+   de abajo queda sin contexto. */
 #barraEstudio {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 20;
+  background-color: var(--fondo-a);
+  border-bottom: 1px solid var(--borde-a);
+  padding: 15px 0 0;
+  margin-bottom: 22px;
+}
+
+#vistaAncha .linea-control {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 16px 0 13px;
-  margin-bottom: 4px;
-  background-color: var(--fondo-a);
-  border-bottom: 1px solid var(--borde-sutil-a);
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 13px;
 }
 
 #vistaAncha .identidad-estudio {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 14px;
   flex-wrap: wrap;
 }
-
-#vistaAncha .identidad-estudio .navegacion-estudio {
+#vistaAncha .navegacion-estudio {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
 }
 #vistaAncha .navegacion-estudio button {
   border: 1px solid var(--borde-a);
   background-color: var(--superficie-a);
   color: var(--texto-2a);
-  border-radius: 6px;
-  width: 24px;
-  height: 22px;
-  font-size: 13px;
+  border-radius: 7px;
+  width: 27px;
+  height: 26px;
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
 }
-#vistaAncha .navegacion-estudio button:hover:not(:disabled) { color: var(--texto-a); }
-#vistaAncha .navegacion-estudio button:disabled { opacity: 0.3; cursor: default; }
+#vistaAncha .navegacion-estudio button:hover:not(:disabled) {
+  color: var(--texto-a);
+  border-color: var(--texto-3a);
+}
+#vistaAncha .navegacion-estudio button:disabled { opacity: 0.28; cursor: default; }
 
 #nombreCicloEstudio {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 400;
-  letter-spacing: 0.005em;
   min-width: 7.5em;
   text-align: center;
 }
 
+/* Insignia de estado del ciclo: pastilla, no texto suelto. Que "cerrado"
+   y "en curso" se distingan de un vistazo sin leerlos. */
 #estadoCicloEstudio {
-  font-size: 12px;
-  color: var(--texto-3a);
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--borde-a);
+  color: var(--texto-2a);
+  white-space: nowrap;
+}
+#estadoCicloEstudio.es-cerrado {
+  border-color: rgba(52, 211, 153, 0.32);
+  color: var(--bien-e);
+}
+#estadoCicloEstudio.es-encurso {
+  border-color: rgba(251, 191, 36, 0.3);
+  color: var(--cuidado-e);
 }
 
-/* ---------- El control de lente ---------- */
-/* Marca de "control segmentado" del sistema: la opción activa se
-   distingue por superficie e intensidad de texto, nunca por color —
-   el color en esta app significa estado financiero, no selección. */
+/* ---------- Control de lente ---------- */
 #vistaAncha .lente-estudio {
   margin-left: auto;
   display: flex;
@@ -2222,7 +2269,7 @@ details summary {
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 7px 15px;
+  padding: 8px 16px;
   cursor: pointer;
 }
 #vistaAncha .opcion-lente + .opcion-lente { border-left: 1px solid var(--borde-a); }
@@ -2232,62 +2279,83 @@ details summary {
   color: var(--texto-a);
 }
 
-#vistaAncha .explicacion-lente {
-  margin: 12px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--texto-2a);
-  max-width: 68ch;
+/* ---------- Índice de secciones ---------- */
+/* La respuesta directa a "haces scroll y no sabes qué estás viendo". */
+#vistaAncha .indice-secciones {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#vistaAncha .indice-secciones::-webkit-scrollbar { display: none; }
+#vistaAncha .paso-indice {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--texto-3a);
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 8px 13px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#vistaAncha .paso-indice .cifra-paso {
+  font-family: var(--mono-a);
+  font-size: 10px;
+  opacity: 0.6;
+}
+#vistaAncha .paso-indice:hover { color: var(--texto-2a); }
+#vistaAncha .paso-indice.activo {
+  color: var(--texto-a);
+  border-bottom-color: var(--texto-a);
 }
 
 #vistaAncha .aviso-estudio {
-  margin: 14px 0 0;
-  padding: 9px 13px;
-  border: 1px dashed var(--borde-a);
-  border-radius: 8px;
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 9px;
+  background-color: rgba(251, 191, 36, 0.05);
   font-size: 12.5px;
-  color: var(--texto-2a);
+  color: var(--cuidado-e);
 }
 
-/* ---------- Retícula: espina y margen ---------- */
-/* Dos zonas de peso desigual, no columnas iguales. Columnas iguales son
-   lo que produce el efecto "rejilla de widgets": todo pesa lo mismo y
-   nada manda. La espina lleva la narrativa que se lee en orden; el
-   margen, la referencia que se consulta. */
-#vistaAncha .reticula-estudio {
-  display: grid;
-  grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);
-  gap: 46px;
-  align-items: start;
-}
-@media (max-width: 1020px) {
-  #vistaAncha .reticula-estudio { grid-template-columns: minmax(0, 1fr); gap: 0; }
-}
-
-/* El aire va ENTRE secciones, no dentro de cada renglón: es lo que hace
-   que la pantalla respire sin volverse una lista de tarjetas sueltas. */
+/* ============================================================ */
+/* PANELES: todo va encerrado                                    */
+/* ============================================================ */
 #vistaAncha .seccion-estudio {
-  padding: 34px 0 0;
-}
-#vistaAncha .seccion-estudio.ancha {
-  border-top: 1px solid var(--borde-sutil-a);
-  margin-top: 34px;
+  border: 1px solid var(--borde-a);
+  border-radius: 12px;
+  background-color: var(--superficie-a);
+  padding: 0;
+  margin-bottom: 20px;
+  overflow: hidden;
+  scroll-margin-top: 120px;
 }
 
+/* La cabecera del panel: franja propia, más oscura, con el número en un
+   cuadro. Es lo que hace que al hacer scroll siempre se sepa dónde
+   empieza y dónde acaba cada sección. */
 #vistaAncha .encabezado-seccion {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 12px;
-  align-items: baseline;
-  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background-color: var(--fondo-a);
+  border-bottom: 1px solid var(--borde-a);
 }
 #vistaAncha .numero-seccion {
-  grid-row: span 2;
   font-family: var(--mono-a);
   font-size: 11px;
+  letter-spacing: 0.08em;
   color: var(--texto-3a);
-  letter-spacing: 0.1em;
-  padding-top: 3px;
+  border: 1px solid var(--borde-a);
+  border-radius: 6px;
+  padding: 4px 8px;
+  flex: 0 0 auto;
 }
 #vistaAncha .titulo-seccion {
   margin: 0;
@@ -2297,470 +2365,227 @@ details summary {
   color: var(--texto-a);
 }
 #vistaAncha .pregunta-seccion {
-  grid-column: 2;
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 13px;
   color: var(--texto-3a);
+}
+
+#vistaAncha .cuerpo-seccion { padding: 20px; }
+
+/* Bloque interior con su propio recuadro. Es el segundo nivel de
+   encierro: dentro de una sección, cada cosa distinta va en su caja. */
+#vistaAncha .bloque {
+  border: 1px solid var(--borde-sutil-a);
+  border-radius: 10px;
+  background-color: var(--fondo-a);
+  padding: 16px 18px;
+}
+#vistaAncha .titulo-bloque {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+  margin-bottom: 13px;
+}
+#vistaAncha .rejilla-bloques {
+  display: grid;
+  gap: 16px;
 }
 
 #vistaAncha .estado-vacio {
   margin: 0;
-  padding: 15px 16px;
+  padding: 22px 18px;
   border: 1px dashed var(--borde-a);
   border-radius: 10px;
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--texto-3a);
-  max-width: 62ch;
+  text-align: center;
 }
 
-/* ---------- §1 Cierre ---------- */
+/* ============================================================ */
+/* FICHAS DE CIFRA (KPI)                                         */
+/* ============================================================ */
+/* El patrón que se repite en las seis secciones: etiqueta chica arriba,
+   cifra grande abajo, y nada más. Sin párrafo explicativo. */
+#vistaAncha .fila-fichas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+#vistaAncha .ficha {
+  border: 1px solid var(--borde-sutil-a);
+  border-radius: 10px;
+  background-color: var(--fondo-a);
+  padding: 13px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+#vistaAncha .etiqueta-ficha {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#vistaAncha .valor-ficha {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 21px;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--texto-a);
+}
+#vistaAncha .valor-ficha.chica { font-size: 17px; }
+#vistaAncha .valor-ficha.bien { color: var(--bien-e); }
+#vistaAncha .valor-ficha.cuidado { color: var(--cuidado-e); }
+#vistaAncha .valor-ficha.mal { color: var(--mal-e); }
+#vistaAncha .pie-ficha {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+/* Barra de proporción dentro de la ficha: el KPI se vuelve gráfico sin
+   ocupar más espacio. */
+#vistaAncha .barra-ficha {
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--superficie-alta-a);
+  overflow: hidden;
+  margin-top: 2px;
+}
+#vistaAncha .barra-ficha > div { height: 100%; border-radius: 2px; }
+
+/* ============================================================ */
+/* §1 CIERRE                                                     */
+/* ============================================================ */
 #vistaAncha .cuerpo-cierre {
-  display: flex;
-  flex-direction: column;
-  gap: 26px;
+  display: grid;
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  gap: 18px;
+}
+@media (max-width: 1000px) {
+  #vistaAncha .cuerpo-cierre { grid-template-columns: minmax(0, 1fr); }
 }
 
-#vistaAncha .veredicto-cierre {
+#vistaAncha .panel-veredicto {
+  border: 1px solid var(--borde-sutil-a);
+  border-radius: 10px;
+  background-color: var(--fondo-a);
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  justify-content: center;
 }
-/* Peso 300, no negritas: es la decisión que más separa esto de un panel
-   administrativo. La cifra manda por tamaño, no por grosor. */
 #vistaAncha .cifra-cierre {
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
-  font-size: 46px;
+  font-size: 38px;
   font-weight: 300;
   line-height: 1.05;
   letter-spacing: -0.015em;
+  color: var(--texto-a);
 }
-#vistaAncha .cifra-cierre.en-rojo { color: #fca5a5; }
-
-/* Lo proyectado nunca se disfraza de real: mismo color a media
-   intensidad, y su propia línea punteada a la izquierda. */
-#vistaAncha .proyeccion-cierre {
+#vistaAncha .cifra-cierre.mal { color: var(--mal-e); }
+/* Lo proyectado nunca se disfraza de real: media intensidad y punteado. */
+#vistaAncha .renglon-proyectado {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-top: 14px;
-  padding-left: 14px;
-  border-left: 2px dashed var(--borde-a);
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--borde-a);
 }
 #vistaAncha .cifra-proyectada {
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 300;
   color: rgba(246, 243, 239, 0.55);
 }
-#vistaAncha .cifra-proyectada.en-rojo { color: rgba(252, 165, 165, 0.6); }
-#vistaAncha .cifra-proyectada.sin-dato { color: var(--texto-3a); }
-
-#vistaAncha .pista-veredicto {
-  font-size: 12.5px;
-  color: var(--texto-3a);
-}
-
-#vistaAncha .nota-sin-proyeccion {
-  margin: 12px 0 0;
-  font-size: 12.5px;
-  color: var(--texto-3a);
-  max-width: 56ch;
-}
-#vistaAncha .nota-sin-proyeccion strong {
-  font-weight: 500;
-  color: var(--texto-2a);
-}
+#vistaAncha .cifra-proyectada.mal { color: rgba(248, 113, 113, 0.65); }
 
 /* ---------- La regla del ingreso ---------- */
-/* Una barra, no una dona: comparar ángulos el ojo lo hace mal, comparar
-   largos lo hace bien. Los tramos son neutros de distinta intensidad —
-   el color en esta app significa estado financiero, y "en qué se gastó"
-   no es un estado. */
-#vistaAncha .regla-ingreso {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+/* Una barra apilada: el 100% es lo que entró. La cola vacía ES el
+   remanente, a escala, sin necesidad de leyenda que lo diga. */
 #vistaAncha .barra-regla {
   position: relative;
   display: flex;
   gap: 2px;
-  height: 34px;
-  background-color: var(--superficie-a);
-  border: 1px solid var(--borde-sutil-a);
+  height: 42px;
+  background-color: var(--superficie-alta-a);
   border-radius: 8px;
   overflow: hidden;
 }
-#vistaAncha .tramo-regla { height: 100%; }
-#vistaAncha .tramo-fijo { background-color: #5a5466; }
+#vistaAncha .tramo-regla { height: 100%; min-width: 2px; }
+#vistaAncha .tramo-fijo { background-color: #6d28d9; }
 #vistaAncha .tramo-fijoPendiente {
-  /* Rayado, no sólido: es dinero que todavía no se mueve. */
-  background-image: repeating-linear-gradient(
-    -45deg, #4b4655 0 5px, transparent 5px 10px
-  );
-  background-color: rgba(90, 84, 102, 0.35);
+  background-image: repeating-linear-gradient(-45deg, #6d28d9 0 5px, rgba(109, 40, 217, 0.3) 5px 10px);
 }
-#vistaAncha .tramo-variablePresupuestado { background-color: #837c90; }
-#vistaAncha .tramo-discrecional { background-color: #ada6b8; }
-
-/* La marca del 100% solo aparece cuando el ciclo se pasó: si no,
-   coincide con el final de la barra y solo estorba. */
+#vistaAncha .tramo-variablePresupuestado { background-color: #a78bfa; }
+#vistaAncha .tramo-discrecional { background-color: #ddd6fe; }
 #vistaAncha .marca-ingreso {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 0;
-  border-left: 2px solid #fca5a5;
+  border-left: 2px solid var(--mal-e);
 }
 #vistaAncha .marca-ingreso span {
   position: absolute;
-  top: 100%;
-  left: 4px;
+  top: 3px;
+  left: 5px;
   white-space: nowrap;
-  font-size: 10.5px;
+  font-size: 9.5px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #fca5a5;
-  padding-top: 3px;
+  color: var(--mal-e);
 }
-#vistaAncha .barra-regla.se-excedio { border-color: rgba(252, 165, 165, 0.4); }
 
 #vistaAncha .leyenda-regla {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 26px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 18px;
+  margin-top: 14px;
 }
 #vistaAncha .item-leyenda-regla {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 #vistaAncha .marca-leyenda {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  align-self: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   flex: 0 0 auto;
 }
-#vistaAncha .marca-fijo { background-color: #5a5466; }
+#vistaAncha .marca-fijo { background-color: #6d28d9; }
 #vistaAncha .marca-fijoPendiente {
-  background-image: repeating-linear-gradient(-45deg, #4b4655 0 3px, transparent 3px 6px);
-  background-color: rgba(90, 84, 102, 0.35);
+  background-image: repeating-linear-gradient(-45deg, #6d28d9 0 3px, rgba(109, 40, 217, 0.3) 3px 6px);
 }
-#vistaAncha .marca-variablePresupuestado { background-color: #837c90; }
-#vistaAncha .marca-discrecional { background-color: #ada6b8; }
+#vistaAncha .marca-variablePresupuestado { background-color: #a78bfa; }
+#vistaAncha .marca-discrecional { background-color: #ddd6fe; }
 #vistaAncha .nombre-leyenda { color: var(--texto-2a); }
 #vistaAncha .monto-leyenda {
+  margin-left: auto;
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
   color: var(--texto-a);
 }
-#vistaAncha .parte-leyenda {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  font-size: 11.5px;
-  color: var(--texto-3a);
-}
 
-/* ---------- Las dos razones ---------- */
-#vistaAncha .razones-cierre {
-  display: flex;
-  gap: 46px;
-  flex-wrap: wrap;
+/* ============================================================ */
+/* TABLAS                                                        */
+/* ============================================================ */
+#vistaAncha .envoltura-tabla {
+  overflow-x: auto;
 }
-#vistaAncha .razon {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-width: 30ch;
-}
-#vistaAncha .cifra-razon {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  font-size: 26px;
-  font-weight: 300;
-  line-height: 1.1;
-}
-#vistaAncha .pista-razon {
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--texto-3a);
-}
-
-/* ---------- Fichas de comparación ---------- */
-#vistaAncha .comparaciones-cierre {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-#vistaAncha .ficha-comparacion {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 11px 15px;
-  border: 1px solid var(--borde-sutil-a);
-  border-radius: 10px;
-  background-color: var(--superficie-a);
-}
-#vistaAncha .valor-ficha {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  font-size: 17px;
-  font-weight: 300;
-}
-#vistaAncha .pista-ficha {
-  font-size: 11.5px;
-  color: var(--texto-3a);
-}
-
-/* ---------- Acción ---------- */
-/* En el flujo, en su propia fila: así no hay número mágico que mantener
-   sincronizado con la altura del cajón, que cambia según su contenido. */
-#accionesFlotantes {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 22px 12px;
-}
-/* Con el calendario desplegado no hay dónde ponerlo sin tapar el panel del
-   día. Para dar de alta algo en una fecha concreta el lugar natural es el
-   propio día (pendiente, va con los modales de registro). */
-#primeraPantalla.con-cajon-abierto #accionesFlotantes {
-  display: none;
-}
-/* Inversión neutra: el único elemento de la app con fondo claro sólido, que
-   es lo que lo hace resaltar sin necesidad de color ni de tamaño. Radio 10,
-   como todo el sistema — no un pill, para que no se lea como una insignia. */
-#botonAgregarYAjustar {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border: 0;
-  border-radius: 10px;
-  padding: 11px 16px 11px 13px;
-  background-color: var(--texto-a);
-  color: var(--fondo-a);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-}
-#botonAgregarYAjustar .signo-mas {
-  font-size: 20px;
-  font-weight: 400;
-  line-height: 1;
-  /* El signo carga el peso visual, así que se le da su propio espacio
-     separado del texto por una línea, no por aire. */
-  padding-right: 9px;
-  border-right: 1px solid rgba(24, 22, 28, 0.22);
-}
-#botonAgregarYAjustar:hover { background-color: #ffffff; }
-#botonAgregarYAjustar:active { transform: translateY(1px); }
-
-/* ---------- Marca de crédito y botón de opciones ---------- */
-#vistaAncha .marca-credito {
-  font-family: var(--mono-a);
-  font-size: 0.85em;
-  color: var(--texto-3a);
-  border: 1px solid var(--borde-a);
-  border-radius: 4px;
-  padding: 0 0.3em;
-}
-/* Un pago diferido ya no sale de este ciclo: se atenúa, como los pagados. */
-#vistaAncha .fila-muro.es-credito .nombre-fila-muro,
-#vistaAncha .fila-muro.es-credito .monto-editable-muro { color: var(--texto-3a); }
-
-#vistaAncha .boton-opciones-pago {
-  flex: 0 0 auto;
-  border: 0;
-  background: transparent;
-  color: var(--texto-3a);
-  font-family: inherit;
-  font-size: 1em;
-  line-height: 1;
-  padding: 0 0.15em;
-  cursor: pointer;
-  /* Discreto hasta que se busca: el muro es para leer, no para operar. */
-  opacity: 0;
-}
-#vistaAncha .fila-muro:hover .boton-opciones-pago,
-#vistaAncha .boton-opciones-pago:focus-visible { opacity: 1; }
-#vistaAncha .fila-muro.es-credito .boton-opciones-pago { opacity: 1; }
-#vistaAncha .boton-opciones-pago:hover { color: var(--texto-a); }
-
-/* ---------- Ventana de opciones de pago ---------- */
-#capaOpcionesPago {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(12, 10, 15, 0.72);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  z-index: 60;
-}
-#capaOpcionesPago[hidden] { display: none; }
-#panelOpcionesPago {
-  background-color: var(--fondo-a);
-  border: 1px solid var(--borde-a);
-  border-radius: 10px;
-  width: min(520px, 100%);
-}
-#encabezadoOpcionesPago {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--borde-sutil-a);
-}
-#encabezadoOpcionesPago h2 { margin: 0; font-size: 15px; }
-#botonCerrarOpcionesPago {
-  border: 1px solid var(--borde-a);
-  background-color: var(--superficie-a);
-  color: var(--texto-2a);
-  border-radius: 7px;
-  padding: 6px 12px;
-  font-family: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-#cuerpoOpcionesPago { padding: 14px 16px 18px; }
-#cuerpoOpcionesPago .pista { margin-top: 0; }
-/* La fila de controles viene del motor de simulación; aquí solo se le da
-   aire y se la hace envolver en pantallas angostas. */
-#cuerpoOpcionesPago .fila-compromiso-simulado {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-#cuerpoOpcionesPago input,
-#cuerpoOpcionesPago select {
-  background-color: var(--superficie-alta-a);
-  border: 1px solid var(--borde-a);
-  border-radius: 6px;
-  color: var(--texto-a);
-  font-family: inherit;
-  font-size: 13px;
-  padding: 5px 7px;
-}
-#cuerpoOpcionesPago input {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  width: 7em;
-  text-align: right;
-}
-#cuerpoOpcionesPago .nombre-compromiso-simulado { display: none; }
-#cuerpoOpcionesPago .controles-credito-simulado {
-  display: none;
-  gap: 8px;
-}
-#cuerpoOpcionesPago .marca-modificado {
-  font-size: 11px;
-  color: var(--texto-3a);
-}
-
-/* ---------- Modal de Ajustes ---------- */
-/* Ventana flotante de tamaño contenido, nunca a pantalla completa. */
-#capaModal {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(12, 10, 15, 0.72);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  z-index: 50;
-}
-#capaModal[hidden] { display: none; }
-
-#panelAjustes {
-  background-color: var(--fondo-a);
-  border: 1px solid var(--borde-a);
-  border-radius: 10px;
-  width: min(760px, 100%);
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-#encabezadoAjustes {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--borde-sutil-a);
-}
-#encabezadoAjustes h2 { margin: 0; font-size: 15px; }
-#botonCerrarAjustes {
-  border: 1px solid var(--borde-a);
-  background-color: var(--superficie-a);
-  color: var(--texto-2a);
-  border-radius: 7px;
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
-}
-#contenidoAjustes {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 4px 18px 18px;
-}
-
-/* Los cuatro menús de atajos, en dos columnas: así se ven como el cuadro
-   de botones que van a formar en el teléfono, y no como una lista larga. */
-#listaAtajosDeCaptura {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-#vistaAncha button:focus-visible,
-#vistaAncha input:focus-visible,
-#vistaAncha select:focus-visible {
-  outline: 2px solid var(--texto-2a);
-  outline-offset: 1px;
-}
-
-/* ---------- §2 Estructura: el reparto en tres ---------- */
-#vistaAncha .reparto-en-tres {
-  display: flex;
-  gap: 38px;
-  flex-wrap: wrap;
-  margin-bottom: 26px;
-}
-#vistaAncha .pedazo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-width: 26ch;
-}
-#vistaAncha .cifra-pedazo {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  font-size: 22px;
-  font-weight: 300;
-  line-height: 1.15;
-}
-#vistaAncha .pista-pedazo {
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: var(--texto-3a);
-}
-
-/* ---------- Tablas del estudio ---------- */
-/* Sin bordes de celda ni fondos alternados: las columnas se separan solas
-   con alineación y espacio. Una retícula dibujada compite con los datos. */
 #vistaAncha .tabla-estudio {
   width: 100%;
   border-collapse: collapse;
@@ -2768,20 +2593,21 @@ details summary {
 }
 #vistaAncha .tabla-estudio th {
   text-align: left;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 400;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--texto-3a);
-  padding: 0 12px 9px 0;
-  border-bottom: 1px solid var(--borde-sutil-a);
+  padding: 0 14px 10px 0;
+  border-bottom: 1px solid var(--borde-a);
   white-space: nowrap;
 }
 #vistaAncha .tabla-estudio td {
-  padding: 10px 12px 10px 0;
+  padding: 11px 14px 11px 0;
   border-bottom: 1px solid var(--borde-sutil-a);
   vertical-align: middle;
 }
+#vistaAncha .tabla-estudio tbody tr:last-child td { border-bottom: 0; }
 #vistaAncha .tabla-estudio .celda-cifra {
   text-align: right;
   font-family: var(--mono-a);
@@ -2789,45 +2615,93 @@ details summary {
   white-space: nowrap;
 }
 #vistaAncha .tabla-estudio th.celda-cifra { text-align: right; }
-#vistaAncha .tabla-estudio .celda-cifra.fuerte { color: var(--texto-a); }
-#vistaAncha .tabla-estudio .celda-cifra.secundaria { color: var(--texto-3a); }
-#vistaAncha .tabla-estudio .celda-barra { width: 34%; padding-right: 0; }
-#vistaAncha .tabla-estudio th.celda-barra { text-align: left; }
+#vistaAncha .tabla-estudio .fuerte { color: var(--texto-a); }
+#vistaAncha .tabla-estudio .secundaria { color: var(--texto-3a); }
+#vistaAncha .tabla-estudio .bien { color: var(--bien-e); }
+#vistaAncha .tabla-estudio .mal { color: var(--mal-e); }
 
-/* ---------- Filas de categoría, desplegables ---------- */
+/* El punto de color de la categoría: la pieza que hace legible todo lo
+   demás. Es el mismo tono que ya usa Captura para esa categoría. */
+#vistaAncha .punto-categoria {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+/* ============================================================ */
+/* §2 ESTRUCTURA                                                 */
+/* ============================================================ */
 #vistaAncha .fila-categoria { cursor: pointer; }
-#vistaAncha .fila-categoria:hover td { background-color: var(--superficie-a); }
+#vistaAncha .fila-categoria:hover td { background-color: var(--superficie-alta-a); }
 #vistaAncha .fila-categoria .celda-nombre {
   color: var(--texto-a);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 9px;
 }
 #vistaAncha .chevron-categoria {
-  display: inline-block;
   color: var(--texto-3a);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
   transition: transform 0.12s ease;
+  display: inline-block;
 }
 #vistaAncha .fila-categoria.abierta .chevron-categoria { transform: rotate(90deg); }
-#vistaAncha .parte-del-ingreso {
+
+/* La barra proporcional de la categoría, en su color. Es lo que permite
+   leer el reparto sin comparar cifras una por una. */
+#vistaAncha .celda-proporcion { width: 26%; min-width: 130px; }
+#vistaAncha .barra-proporcion {
+  height: 10px;
+  background-color: var(--superficie-alta-a);
+  border-radius: 5px;
+  overflow: hidden;
+}
+#vistaAncha .barra-proporcion > div { height: 100%; border-radius: 5px; }
+
+/* Barra de presupuesto con marca de ritmo: sin la marca, una barra al
+   60% no se puede juzgar — el día 5 es alarma y el día 25 es ir bien. */
+#vistaAncha .celda-presupuesto { width: 24%; min-width: 130px; }
+#vistaAncha .barra-presupuesto {
+  position: relative;
+  height: 10px;
+  background-color: var(--superficie-alta-a);
+  border-radius: 5px;
+  overflow: hidden;
+}
+#vistaAncha .relleno-presupuesto { height: 100%; background-color: var(--bien-e); border-radius: 5px; }
+#vistaAncha .relleno-presupuesto.cuidado { background-color: var(--cuidado-e); }
+#vistaAncha .relleno-presupuesto.mal { background-color: var(--mal-e); }
+#vistaAncha .marca-ritmo {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 0;
+  border-left: 2px solid var(--texto-a);
+}
+#vistaAncha .pie-barra {
+  display: block;
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--texto-3a);
+  margin-top: 5px;
 }
+#vistaAncha .sin-dato { color: var(--texto-3a); opacity: 0.45; font-size: 11px; }
 
 #vistaAncha .fila-subcategoria td {
   color: var(--texto-2a);
+  background-color: var(--fondo-a);
+  padding-top: 7px;
+  padding-bottom: 7px;
   border-bottom-color: transparent;
-  padding-top: 5px;
-  padding-bottom: 5px;
 }
-#vistaAncha .fila-subcategoria .celda-nombre { padding-left: 23px; }
-#vistaAncha .fuera-de-bolsa {
-  margin-left: 9px;
-  font-size: 10px;
+#vistaAncha .fila-subcategoria .celda-nombre { padding-left: 30px; }
+#vistaAncha .marca-chica {
+  margin-left: 8px;
+  font-size: 9.5px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--texto-3a);
@@ -2837,83 +2711,42 @@ details summary {
   white-space: nowrap;
 }
 
-/* ---------- Barra de presupuesto con marca de ritmo ---------- */
-/* La marca es lo que hace juzgable la barra: al 60% el día 5 es una
-   alarma y el día 25 es ir bien, y sin la marca las dos se ven igual. */
-#vistaAncha .barra-presupuesto {
-  position: relative;
-  height: 8px;
-  background-color: var(--superficie-alta-a);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 5px;
-}
-#vistaAncha .relleno-presupuesto {
-  height: 100%;
-  background-color: #837c90;
-}
-#vistaAncha .barra-presupuesto.se-excedio .relleno-presupuesto { background-color: #fca5a5; }
-#vistaAncha .marca-ritmo {
-  position: absolute;
-  top: -2px;
-  bottom: -2px;
-  width: 0;
-  border-left: 2px solid var(--texto-a);
-  opacity: 0.75;
-}
-#vistaAncha .cifra-presupuesto {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  color: var(--texto-3a);
-}
-#vistaAncha .cifra-presupuesto.en-rojo { color: #fca5a5; }
-#vistaAncha .sin-presupuesto {
-  font-size: 11px;
-  color: var(--texto-3a);
-  opacity: 0.6;
-}
-
-#vistaAncha .nota-de-bolsa {
-  margin: 16px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--texto-3a);
-  max-width: 72ch;
-}
-
-/* ---------- §3 Ritmo: las cuatro semanas ---------- */
+/* ============================================================ */
+/* §3 RITMO                                                      */
+/* ============================================================ */
 #vistaAncha .cuatro-semanas {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 30px;
+  gap: 12px;
 }
 #vistaAncha .columna-semana {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 8px;
 }
 #vistaAncha .tubo-semana {
-  height: 96px;
+  height: 110px;
   display: flex;
   align-items: flex-end;
-  background-color: var(--superficie-a);
-  border-radius: 6px;
+  background-color: var(--superficie-alta-a);
+  border-radius: 7px;
   overflow: hidden;
 }
-#vistaAncha .relleno-semana {
+/* Cada semana se apila por categoría, en sus colores: se ve de qué está
+   hecha la semana cara, no solo que es cara. */
+#vistaAncha .pila-semana {
   width: 100%;
-  background-color: #837c90;
-  border-radius: 6px 6px 0 0;
-}
-#vistaAncha .pie-semana {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: column-reverse;
 }
+#vistaAncha .tramo-pila { width: 100%; }
+#vistaAncha .semana-es-actual .tubo-semana {
+  outline: 1px solid var(--cuidado-e);
+  outline-offset: -1px;
+}
+#vistaAncha .pie-semana { display: flex; flex-direction: column; gap: 2px; }
 #vistaAncha .nombre-semana {
-  font-size: 10.5px;
+  font-size: 10px;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--texto-3a);
@@ -2923,17 +2756,16 @@ details summary {
   font-variant-numeric: tabular-nums;
   font-size: 16px;
   font-weight: 300;
+  color: var(--texto-a);
 }
-#vistaAncha .detalle-semana,
-#vistaAncha .fechas-semana {
+#vistaAncha .detalle-semana {
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
   font-size: 10.5px;
   color: var(--texto-3a);
 }
-#vistaAncha .fechas-semana { opacity: 0.7; }
 
-/* ---------- La matriz semana × categoría ---------- */
+/* La matriz semana × categoría */
 #vistaAncha .tabla-matriz .celda-semana {
   width: 17%;
   text-align: center;
@@ -2942,74 +2774,50 @@ details summary {
 #vistaAncha .tabla-matriz th.celda-semana { text-align: center; }
 #vistaAncha .tubo-celda {
   position: relative;
-  height: 46px;
+  height: 48px;
   display: flex;
   align-items: flex-end;
-  background-color: var(--superficie-a);
-  border-radius: 4px;
+  background-color: var(--superficie-alta-a);
+  border-radius: 5px;
   overflow: hidden;
   margin-bottom: 5px;
 }
-#vistaAncha .relleno-celda {
-  width: 100%;
-  background-color: #6f6a7c;
-}
-#vistaAncha .relleno-celda.se-excedio { background-color: #fca5a5; }
-/* La bolsa de esa semana, dentro del tubo: lo que se podía gastar. */
+#vistaAncha .relleno-celda { width: 100%; }
+#vistaAncha .relleno-celda.mal { background-color: var(--mal-e) !important; }
 #vistaAncha .marca-bolsa {
   position: absolute;
   left: 0;
   right: 0;
   height: 0;
-  border-top: 1px dashed rgba(246, 243, 239, 0.55);
+  border-top: 1px dashed rgba(246, 243, 239, 0.6);
 }
 #vistaAncha .cifra-celda {
   display: block;
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--texto-3a);
-}
-#vistaAncha .nota-matriz {
-  margin: 14px 0 30px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--texto-3a);
-  max-width: 72ch;
 }
 
-/* ---------- Días de la semana ---------- */
-#vistaAncha .bloque-dias {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 30px;
-}
+/* Días de la semana */
 #vistaAncha .barras-dias {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
-#vistaAncha .columna-dia {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: stretch;
-}
+#vistaAncha .columna-dia { display: flex; flex-direction: column; gap: 5px; }
 #vistaAncha .tubo-dia {
-  height: 58px;
+  height: 62px;
   display: flex;
   align-items: flex-end;
-  background-color: var(--superficie-a);
+  background-color: var(--superficie-alta-a);
   border-radius: 5px;
   overflow: hidden;
 }
-#vistaAncha .relleno-dia {
-  width: 100%;
-  background-color: #6f6a7c;
-}
+#vistaAncha .relleno-dia { width: 100%; background-color: #3987e5; border-radius: 5px 5px 0 0; }
+#vistaAncha .columna-dia.es-pico .relleno-dia { background-color: var(--cuidado-e); }
 #vistaAncha .nombre-dia {
-  font-size: 10.5px;
+  font-size: 10px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--texto-3a);
@@ -3017,78 +2825,52 @@ details summary {
 #vistaAncha .monto-dia {
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--texto-2a);
 }
 
-#vistaAncha .bloque-trayectoria {
+/* ============================================================ */
+/* §4 FRENTES                                                    */
+/* ============================================================ */
+#vistaAncha .tabla-frentes .celda-proporcion { width: 34%; min-width: 160px; }
+#vistaAncha .barra-frente {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  height: 12px;
+  background-color: var(--superficie-alta-a);
+  border-radius: 6px;
+  overflow: hidden;
 }
-
-/* ---------- §4 Frentes ---------- */
-#vistaAncha .tabla-frentes .celda-barra { width: 38%; }
+#vistaAncha .parte-gastada { background-color: #199e70; }
+#vistaAncha .parte-por-pagar {
+  background-image: repeating-linear-gradient(-45deg, #199e70 0 4px, rgba(25, 158, 112, 0.25) 4px 8px);
+}
+#vistaAncha .fila-frente { cursor: pointer; }
+#vistaAncha .fila-frente:hover td { background-color: var(--superficie-alta-a); }
 #vistaAncha .fila-frente .celda-nombre {
   color: var(--texto-a);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 9px;
 }
-/* "Sin asignar" no es un frente, es lo que falta por etiquetar: se
-   apaga para que no compita con los frentes de verdad. */
-#vistaAncha .fila-frente.sin-asignar .celda-nombre,
-#vistaAncha .fila-frente.sin-asignar .celda-cifra { color: var(--texto-3a); }
+#vistaAncha .fila-frente.sin-asignar td { color: var(--texto-3a); }
+#vistaAncha .fila-frente.sin-asignar .celda-cifra.fuerte { color: var(--texto-3a); }
 
-#vistaAncha .barra-frente {
-  display: flex;
-  height: 9px;
-  background-color: var(--superficie-a);
-  border-radius: 5px;
-  overflow: hidden;
-  margin-bottom: 5px;
-}
-#vistaAncha .parte-gastada { background-color: #837c90; }
-/* Rayado: es una promesa, no un hecho. Mismo trato que el fijo por pagar
-   de la regla del ingreso. */
-#vistaAncha .parte-por-pagar {
-  background-image: repeating-linear-gradient(-45deg, #6f6a7c 0 4px, transparent 4px 8px);
-  background-color: rgba(111, 106, 124, 0.3);
-}
-#vistaAncha .detalle-frente {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  color: var(--texto-3a);
-}
-#vistaAncha .marca-por-pagar {
-  margin-left: 9px;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--texto-3a);
-  border: 1px dashed var(--borde-a);
-  border-radius: 4px;
-  padding: 1px 6px;
-}
-
-/* ---------- §5 Horizonte ---------- */
-#vistaAncha .piso-mensual { margin-bottom: 30px; }
-#vistaAncha .piso-mensual .razon { max-width: 62ch; }
-
+/* ============================================================ */
+/* §5 HORIZONTE                                                  */
+/* ============================================================ */
 #vistaAncha .lista-deudas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 34px;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 14px;
 }
 #vistaAncha .tarjeta-deuda {
   border: 1px solid var(--borde-sutil-a);
   border-radius: 10px;
-  padding: 16px 18px;
+  background-color: var(--fondo-a);
+  padding: 15px 17px;
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 12px;
 }
 #vistaAncha .cabeza-deuda {
   display: flex;
@@ -3096,7 +2878,7 @@ details summary {
   align-items: baseline;
   gap: 12px;
 }
-#vistaAncha .nombre-deuda { font-size: 14px; }
+#vistaAncha .nombre-deuda { font-size: 14px; color: var(--texto-a); }
 #vistaAncha .pagos-deuda {
   font-family: var(--mono-a);
   font-variant-numeric: tabular-nums;
@@ -3104,20 +2886,17 @@ details summary {
   color: var(--texto-3a);
   white-space: nowrap;
 }
-/* La barra va contra PAGOS, no contra pesos: "voy en el 6 de 24" es lo
-   que el usuario siente, y con saldoManual los dos dejan de ser
-   proporcionales. */
 #vistaAncha .barra-deuda {
-  height: 8px;
+  height: 10px;
   background-color: var(--superficie-alta-a);
-  border-radius: 4px;
+  border-radius: 5px;
   overflow: hidden;
 }
-#vistaAncha .relleno-deuda { height: 100%; background-color: #837c90; }
+#vistaAncha .relleno-deuda { height: 100%; background-color: var(--bien-e); border-radius: 5px; }
 #vistaAncha .datos-deuda {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 #vistaAncha .dato-deuda { display: flex; flex-direction: column; gap: 2px; }
 #vistaAncha .cifra-deuda {
@@ -3125,73 +2904,118 @@ details summary {
   font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-weight: 300;
-}
-#vistaAncha .pista-deuda {
-  font-size: 10.5px;
-  line-height: 1.4;
-  color: var(--texto-3a);
+  color: var(--texto-a);
 }
 
-#vistaAncha .bloque-liberacion,
-#vistaAncha .bloque-tarjetas {
+/* Línea de tiempo de liberación de flujo */
+#vistaAncha .linea-liberacion {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 30px;
+  gap: 10px;
 }
-/* La línea de la tarjeta va en gris chico y al final: es informativa y
-   nunca suma a lo disponible. */
-#vistaAncha .tabla-estudio .celda-cifra.apagada {
-  color: var(--texto-3a);
-  opacity: 0.65;
+#vistaAncha .hito-liberacion {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--borde-sutil-a);
+  border-left: 3px solid var(--bien-e);
+  border-radius: 8px;
+  background-color: var(--fondo-a);
+}
+#vistaAncha .fecha-hito {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
+  color: var(--texto-2a);
+  white-space: nowrap;
+}
+#vistaAncha .nombre-hito { font-size: 13px; color: var(--texto-a); }
+#vistaAncha .suelta-hito {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  color: var(--bien-e);
+  white-space: nowrap;
 }
 
-/* ---------- §6 Comparativo ---------- */
-#vistaAncha .bloque-comparativo {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 34px;
-}
-/* Lo proyectado nunca se disfraza de real: el ciclo en curso entra a la
-   tabla, pero a media intensidad y con su marca. */
-#vistaAncha .fila-incompleta td { color: rgba(246, 243, 239, 0.5); }
-#vistaAncha .fila-incompleta .celda-cifra.fuerte { color: rgba(246, 243, 239, 0.55); }
-#vistaAncha .marca-incompleta {
-  margin-left: 9px;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--texto-3a);
-  border: 1px dashed var(--borde-a);
-  border-radius: 4px;
-  padding: 1px 6px;
-}
+/* ============================================================ */
+/* §6 COMPARATIVO                                                */
+/* ============================================================ */
+#vistaAncha .fila-incompleta td { color: rgba(246, 243, 239, 0.45); }
+#vistaAncha .fila-incompleta .celda-cifra.fuerte { color: rgba(246, 243, 239, 0.5); }
 #vistaAncha .fila-promedio td {
   border-top: 1px solid var(--borde-a);
-  border-bottom: 0;
   color: var(--texto-3a);
+  background-color: var(--fondo-a);
 }
-#vistaAncha .fila-promedio .celda-nombre {
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+
+/* La barra de variación: crece a la derecha si subió, a la izquierda si
+   bajó, desde un eje central. El signo se ve antes de leer la cifra. */
+#vistaAncha .celda-variacion { width: 30%; min-width: 150px; }
+#vistaAncha .barra-variacion {
+  position: relative;
+  height: 14px;
+  background-color: var(--superficie-alta-a);
+  border-radius: 4px;
 }
-#vistaAncha .tabla-estudio .celda-cifra.en-rojo { color: #fca5a5; }
-/* La variación no lleva color de semáforo: gastar más no es "malo" por
-   sí mismo, y pintarlo de rojo convertiría la tabla en un regaño. El
-   signo ya dice la dirección. */
-#vistaAncha .tabla-estudio .celda-cifra.variacion { color: var(--texto-a); }
-#vistaAncha .tabla-ciclos { font-size: 12.5px; }
-/* El aviso de que se compara un ciclo a medias contra uno completo. No
-   es decorativo: sin el, toda la tabla se lee al reves. */
-#vistaAncha .aviso-comparacion {
-  margin: 0;
-  padding: 9px 13px;
-  border-left: 2px solid var(--borde-a);
-  font-size: 12.5px;
-  line-height: 1.5;
+#vistaAncha .eje-variacion {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  border-left: 1px solid var(--borde-a);
+}
+#vistaAncha .parte-variacion {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+#vistaAncha .parte-variacion.subio {
+  left: 50%;
+  background-color: var(--cuidado-e);
+  border-radius: 0 4px 4px 0;
+}
+#vistaAncha .parte-variacion.bajo {
+  right: 50%;
+  background-color: var(--bien-e);
+  border-radius: 4px 0 0 4px;
+}
+
+/* ---------- Movimientos, plegado ---------- */
+/* Es referencia, no análisis: va al final y cerrado. */
+#vistaAncha .movimientos-plegados {
+  border: 1px solid var(--borde-a);
+  border-radius: 12px;
+  background-color: var(--superficie-a);
+  overflow: hidden;
+}
+#vistaAncha .movimientos-plegados > summary {
+  padding: 14px 20px;
+  cursor: pointer;
+  font-size: 13px;
   color: var(--texto-2a);
-  max-width: 72ch;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#vistaAncha .movimientos-plegados > summary::-webkit-details-marker { display: none; }
+#vistaAncha .movimientos-plegados > summary::before {
+  content: "›";
+  color: var(--texto-3a);
+  font-size: 15px;
+  transition: transform 0.12s ease;
+  display: inline-block;
+}
+#vistaAncha .movimientos-plegados[open] > summary::before { transform: rotate(90deg); }
+#vistaAncha .movimientos-plegados[open] > summary { border-bottom: 1px solid var(--borde-a); }
+#vistaAncha .cuenta-movimientos {
+  margin-left: auto;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--texto-3a);
 }

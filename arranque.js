@@ -86,6 +86,9 @@ document.querySelectorAll("#zonaAnalisis .opcion-lente").forEach(function (boton
     cambiarLenteDelEstudio(boton.getAttribute("data-lente"));
   });
 });
+// El índice se engancha a los <section>, que nunca se destruyen (solo cambia
+// su innerHTML), así que basta con activarlo una vez al arrancar.
+activarIndiceDelEstudio();
 
 document.getElementById("asaCajon").addEventListener("click", alternarCajonDeCalendario);
 document.getElementById("mesAnteriorCajon").addEventListener("click", function () {

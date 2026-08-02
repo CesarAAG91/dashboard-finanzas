@@ -212,68 +212,57 @@
     <div id="zonaAnalisis">
 
       <!-- Barra de control. Se queda pegada arriba al hacer scroll porque
-           dice de qué ciclo y con qué lente son TODAS las cifras de abajo:
-           si se pierde de vista, cualquier número se lee fuera de contexto. -->
+           lleva las tres cosas que dicen qué estás viendo: qué ciclo, con
+           qué lente, y en qué sección vas. Si se pierde de vista,
+           cualquier número de abajo queda sin contexto. -->
       <div id="barraEstudio">
-        <div class="identidad-estudio">
-          <span class="etiqueta-ancha">Estudio del ciclo</span>
-          <div class="navegacion-estudio">
-            <button type="button" id="cicloEstudioAnterior" title="Ciclo anterior">‹</button>
-            <span id="nombreCicloEstudio"></span>
-            <button type="button" id="cicloEstudioSiguiente" title="Ciclo siguiente">›</button>
+        <div class="linea-control">
+          <div class="identidad-estudio">
+            <div class="navegacion-estudio">
+              <button type="button" id="cicloEstudioAnterior" title="Ciclo anterior">‹</button>
+              <span id="nombreCicloEstudio"></span>
+              <button type="button" id="cicloEstudioSiguiente" title="Ciclo siguiente">›</button>
+            </div>
+            <span id="estadoCicloEstudio"></span>
           </div>
-          <span id="estadoCicloEstudio"></span>
+
+          <!-- Caja o consumo. No es una preferencia de vista: son dos
+               preguntas contables distintas, y mezclarlas contaría dos
+               veces la misma compra a crédito. La explicación completa
+               vive en el title, no ocupando media pantalla. Ver la
+               sección "LA LENTE" en motor.js. -->
+          <div class="lente-estudio" role="group" aria-label="Con qué lente se miden las cifras">
+            <button type="button" class="opcion-lente" data-lente="caja">Caja</button>
+            <button type="button" class="opcion-lente" data-lente="consumo">Consumo</button>
+          </div>
         </div>
 
-        <!-- Caja o consumo. No es una preferencia de vista: son dos
-             preguntas contables distintas, y mezclarlas contaría dos veces
-             la misma compra a crédito. Ver la sección "LA LENTE" en
-             motor.js. -->
-        <div class="lente-estudio" role="group" aria-label="Con qué lente se miden las cifras">
-          <button type="button" class="opcion-lente" data-lente="caja">Caja</button>
-          <button type="button" class="opcion-lente" data-lente="consumo">Consumo</button>
-        </div>
+        <!-- El índice. Se ilumina solo según dónde vaya el scroll. -->
+        <nav class="indice-secciones" id="indiceSecciones" aria-label="Secciones del estudio"></nav>
       </div>
-
-      <!-- Qué mide la lente activa, en una frase. Sin esto, dos totales
-           distintos para el mismo ciclo se leen como un error de la app. -->
-      <p class="explicacion-lente" id="explicacionLente"></p>
 
       <!-- Aviso de que arriba hay una simulación abierta y esto no la mide. -->
       <div id="avisoSimulacionEstudio"></div>
 
-      <!-- Retícula de dos zonas de peso desigual, no de columnas iguales:
-           columnas iguales producen el efecto "rejilla de widgets", donde
-           todo pesa lo mismo y nada manda. A la izquierda la narrativa que
-           se lee en orden; a la derecha la referencia que se consulta. -->
-      <div class="reticula-estudio">
+      <!-- Seis paneles a todo lo ancho, uno por sección. Cada uno con su
+           borde y su cabecera: es lo que hace que al hacer scroll siempre
+           se sepa dónde empieza y dónde acaba lo que se está viendo. -->
+      <section class="seccion-estudio" id="seccionCierre"></section>
+      <section class="seccion-estudio" id="seccionEstructura"></section>
+      <section class="seccion-estudio" id="seccionRitmo"></section>
+      <section class="seccion-estudio" id="seccionFrentes"></section>
+      <section class="seccion-estudio" id="seccionHorizonte"></section>
+      <section class="seccion-estudio" id="seccionComparativo"></section>
 
-        <div class="espina-estudio">
-          <section class="seccion-estudio" id="seccionCierre"></section>
-          <section class="seccion-estudio" id="seccionEstructura"></section>
-          <section class="seccion-estudio" id="seccionRitmo">
-            <div id="contenedorTrayectoriaSemaforo"></div>
-          </section>
-        </div>
-
-        <aside class="margen-estudio">
-          <section class="seccion-estudio">
-            <h2 class="titulo-seccion">Próximos pagos</h2>
-            <ul class="lista-items" id="listaProximosPagosAnalisis"></ul>
-          </section>
-          <section class="seccion-estudio" id="seccionMovimientos">
-            <h2 class="titulo-seccion">Movimientos del ciclo</h2>
-            <ul class="lista-items" id="listaMovimientosCiclo"></ul>
-          </section>
-        </aside>
-
-      </div>
-
-      <!-- Estas tres son tablas por derecho propio y no caben en la espina:
-           van a todo lo ancho, debajo. -->
-      <section class="seccion-estudio ancha" id="seccionFrentes"></section>
-      <section class="seccion-estudio ancha" id="seccionHorizonte"></section>
-      <section class="seccion-estudio ancha" id="seccionComparativo"></section>
+      <!-- El libro de movimientos: referencia, no análisis. Va al final y
+           cerrado, para que no compita con las seis secciones. -->
+      <details class="movimientos-plegados" id="movimientosPlegados">
+        <summary>
+          Movimientos del ciclo
+          <span class="cuenta-movimientos" id="cuentaMovimientos"></span>
+        </summary>
+        <div id="listaMovimientosCiclo"></div>
+      </details>
 
     </div>
 
