@@ -3330,3 +3330,135 @@ function calcularGastoPorDestinatario(ciclo, datos, lente) {
     return b.total - a.total;
   });
 }
+
+// ============================================================
+// ESTUDIO DEL CICLO — EL HORIZONTE: DEUDA Y CRÉDITO
+// ============================================================
+//
+// Las otras secciones miran un ciclo. Esta mira hacia adelante, porque
+// la deuda es lo único del presupuesto que tiene fecha de caducidad
+// conocida, y saber cuándo se acaba cambia decisiones de hoy.
+//
+// La pregunta que de verdad se hace quien tiene deuda no es "¿cuánto
+// debo?" sino "¿cuándo me libero, y de cuánto al mes?". Eso es lo que
+// calcula el calendario de liberación.
+
+// Cuánto pesa al mes una obligación que se paga con otra frecuencia.
+// Todo se lleva a mensual para poder sumarlo: un pago quincenal de $500
+// no son $500 al mes, son $1,000.
+function convertirAMensual(monto, frecuencia) {
+  if (frecuencia === "quincenal") { return Number(monto) * 2; }
+  if (frecuencia === "bimestral") { return Number(monto) / 2; }
+  return Number(monto);
+}
+
+// El piso de gasto: lo que cuesta existir cada mes antes de comer.
+// Suma las deudas activas y los recurrentes activos, cada uno llevado a
+// su equivalente mensual.
+//
+// No incluye el pago de las tarjetas porque ese no es fijo — depende de
+// lo que se compre — y meterlo aquí haría que el piso subiera y bajara
+// solo, que es justo lo contrario de lo que un piso significa.
+function calcularCompromisoMensualFijo(datos) {
+  const deDeudas = datos.deudas
+    .filter(function (deuda) { return deuda.activa; })
+    .reduce(function (suma, deuda) {
+      return suma + convertirAMensual(deuda.montoPorPago, deuda.frecuencia);
+    }, 0);
+
+  const deRecurrentes = datos.recurrentes
+    .filter(function (recurrente) { return recurrente.activo; })
+    .reduce(function (suma, recurrente) {
+      return suma + convertirAMensual(recurrente.montoEstimado, recurrente.frecuencia);
+    }, 0);
+
+  return {
+    deDeudas: deDeudas,
+    deRecurrentes: deRecurrentes,
+    total: deDeudas + deRecurrentes
+  };
+}
+
+// El calendario de liberación de flujo: cuándo se acaba cada deuda y
+// cuánto pago mensual suelta al acabarse.
+//
+// Es la sección que contesta "en enero se liberan $2,300 al mes". Sale
+// entera de funciones que ya existen — calcularEstadoDeDeuda da la fecha
+// de liquidación — así que no hay pronóstico nuevo que verificar.
+function calcularCalendarioDeLiberacionDeFlujo(datos) {
+  const eventos = datos.deudas
+    .filter(function (deuda) { return deuda.activa; })
+    .map(function (deuda) {
+      const estado = calcularEstadoDeDeuda(deuda);
+      return {
+        nombre: deuda.nombre,
+        fechaLiquidacion: formatearFechaISO(estado.fechaLiquidacion),
+        mensualQueSeLibera: convertirAMensual(deuda.montoPorPago, deuda.frecuencia),
+        pagosRestantes: deuda.pagosTotales - deuda.pagosRealizados,
+        saldoRestante: estado.saldoRestante
+      };
+    })
+    .sort(function (a, b) {
+      return crearFechaLocal(a.fechaLiquidacion) - crearFechaLocal(b.fechaLiquidacion);
+    });
+
+  // El acumulado: al liquidarse la segunda deuda ya se liberó también lo
+  // de la primera. Sin el acumulado, cada renglón se leería como si las
+  // liberaciones no se sumaran entre sí.
+  let acumulado = 0;
+  eventos.forEach(function (evento) {
+    acumulado += evento.mensualQueSeLibera;
+    evento.acumuladoMensual = acumulado;
+  });
+
+  return eventos;
+}
+
+// Lo que se puede decir con certeza de una tarjeta en un ciclo. A
+// propósito NO incluye un "saldo utilizado": la app no guarda el saldo
+// que reporta el banco, y derivarlo de los gastos sería un cálculo
+// nuevo, imposible de cotejar contra nada. Un número que no se puede
+// verificar en un tablero de dinero no vale la pena.
+//
+// lineaTotal se devuelve porque el usuario la capturó, pero es
+// informativa: nunca suma al disponible.
+function calcularUtilizacionDeTarjetas(ciclo, datos) {
+  return datos.config.tarjetas.map(function (tarjeta) {
+    const compromisoDelCiclo = datos.compromisos.find(function (compromiso) {
+      return compromiso.cicloId === ciclo.id &&
+        compromiso.origen === "tarjeta" &&
+        compromiso.origenId === tarjeta.id;
+    });
+
+    const compradoEnElCiclo = datos.gastos
+      .filter(function (gasto) {
+        return gasto.cicloId === ciclo.id &&
+          gasto.fuente === "credito" &&
+          gasto.tarjetaId === tarjeta.id;
+      })
+      .reduce(function (suma, gasto) { return suma + Number(gasto.monto); }, 0);
+
+    const aMeses = datos.gastos
+      .filter(function (gasto) {
+        return gasto.cicloId === ciclo.id &&
+          gasto.fuente === "credito" &&
+          gasto.tarjetaId === tarjeta.id &&
+          gasto.mesesDiferidos;
+      });
+
+    return {
+      id: tarjeta.id,
+      nombre: tarjeta.nombre || "Tarjeta",
+      diaCorte: tarjeta.diaCorte,
+      diaPago: tarjeta.diaPago,
+      lineaTotal: Number(tarjeta.lineaTotal) || 0,
+      pagoDelCiclo: compromisoDelCiclo
+        ? Number(compromisoDelCiclo.pagado ? compromisoDelCiclo.montoReal : compromisoDelCiclo.montoEstimado)
+        : 0,
+      pagado: Boolean(compromisoDelCiclo && compromisoDelCiclo.pagado),
+      fechaDePago: compromisoDelCiclo ? compromisoDelCiclo.fechaProgramada : null,
+      compradoEnElCiclo: compradoEnElCiclo,
+      comprasAMeses: aMeses.length
+    };
+  });
+}

@@ -189,9 +189,9 @@ function renderizarEstudioDelCiclo() {
   // El ritmo dibuja la trayectoria por dentro: es su tercera pieza.
   renderizarRitmoDelCiclo();
   renderizarFrentesDelCiclo();
+  renderizarHorizonteDelCiclo();
   renderizarProximosPagosAnalisis();
   renderizarMovimientosDelCiclo();
-  renderizarEstadoDeDeudaAnalisis();
 }
 
 // ============================================================
@@ -1047,35 +1047,6 @@ function renderizarMovimientosDelCiclo() {
 }
 
 // ============================================================
-// ESTUDIO — DEUDA
-// ============================================================
-//
-// Aplica calcularEstadoDeDeuda a cada deuda activa. Solo texto por ahora
-// — la barra de avance visual queda para una pasada de diseño aparte.
-function renderizarEstadoDeDeudaAnalisis() {
-  const datos = leerDatos();
-  const contenedor = document.getElementById("contenedorDeuda");
-  const deudasActivas = datos.deudas.filter(function (deuda) { return deuda.activa; });
-
-  if (deudasActivas.length === 0) {
-    contenedor.innerHTML = "<p class=\"pista\">No hay deudas activas.</p>";
-    return;
-  }
-
-  contenedor.innerHTML = deudasActivas.map(function (deuda) {
-    const estado = calcularEstadoDeDeuda(deuda);
-    const pagosRestantes = deuda.pagosTotales - deuda.pagosRealizados;
-
-    return "<div class=\"estado-deuda-item\">" +
-      "<div><strong>" + escaparHTML(deuda.nombre) + "</strong> — " + pagosRestantes + " de " + deuda.pagosTotales + " pagos restantes</div>" +
-      "<p class=\"detalle\">Saldo restante: " + formatearMoneda(estado.saldoRestante) + " (" + (estado.porcentajePagado * 100).toFixed(1) + "% pagado)</p>" +
-      "<p class=\"detalle\">Costo del crédito: " + formatearMoneda(estado.costoDelCredito) + " (" + (estado.porcentajeSobrante * 100).toFixed(1) + "% sobre lo solicitado)</p>" +
-      "<p class=\"pista\">Se liquida aprox. el " + formatearFechaISO(estado.fechaLiquidacion) + "</p>" +
-    "</div>";
-  }).join("");
-}
-
-// ============================================================
 // ESTUDIO — §4 FRENTES
 // ============================================================
 //
@@ -1166,4 +1137,181 @@ function renderizarFrentesDelCiclo() {
     "<p class=\"nota-de-bolsa\">La parte sólida ya salió; la rayada son compromisos del ciclo " +
       "que todavía no se pagan. «Sin asignar» va siempre al final: no es un frente, es lo que " +
       "falta por etiquetar.</p>";
+}
+
+// ============================================================
+// ESTUDIO — §5 HORIZONTE
+// ============================================================
+//
+// Deuda y crédito, que es lo único del presupuesto con fecha de
+// caducidad conocida. Reemplaza a la vieja sección de Deuda, que era
+// solo texto: aquí la barra de avance por deuda (pendiente anotado en
+// SPEC.md) y el calendario de liberación de flujo.
+
+// La barra de avance de una deuda: cuánto se lleva pagado. Se dibuja
+// contra pagos y no contra pesos porque es lo que el usuario siente —
+// "voy en el 6 de 24" — y porque con saldoManual los pesos y los pagos
+// dejan de ser proporcionales.
+function htmlDeUnaDeuda(deuda, datos) {
+  const estado = calcularEstadoDeDeuda(deuda);
+  const pagosRestantes = deuda.pagosTotales - deuda.pagosRealizados;
+  const avance = deuda.pagosTotales > 0 ? deuda.pagosRealizados / deuda.pagosTotales : 0;
+
+  // De dónde sale el saldo importa: uno lo dice el banco y el otro lo
+  // deduce la app suponiendo que no hubo abonos a capital. Decir cuál es
+  // cuál es la diferencia entre un dato y una estimación disfrazada.
+  const origenDelSaldo = deuda.saldoManual !== null && deuda.saldoManual !== undefined
+    ? "según el banco, al " + escaparHTML(deuda.fechaSaldoManual || "sin fecha")
+    : "calculado: " + pagosRestantes + " pagos × " + formatearMoneda(deuda.montoPorPago);
+
+  return "<article class=\"tarjeta-deuda\">" +
+      "<header class=\"cabeza-deuda\">" +
+        "<span class=\"nombre-deuda\">" + escaparHTML(deuda.nombre) + "</span>" +
+        "<span class=\"pagos-deuda\">" + deuda.pagosRealizados + " de " + deuda.pagosTotales + " pagos</span>" +
+      "</header>" +
+      "<div class=\"barra-deuda\">" +
+        "<div class=\"relleno-deuda\" style=\"width: " + (avance * 100).toFixed(2) + "%;\"></div>" +
+      "</div>" +
+      "<div class=\"datos-deuda\">" +
+        "<div class=\"dato-deuda\">" +
+          "<span class=\"etiqueta-ancha\">Falta</span>" +
+          "<span class=\"cifra-deuda\">" + formatearMoneda(estado.saldoRestante) + "</span>" +
+          "<span class=\"pista-deuda\">" + origenDelSaldo + "</span>" +
+        "</div>" +
+        "<div class=\"dato-deuda\">" +
+          "<span class=\"etiqueta-ancha\">Costo del crédito</span>" +
+          "<span class=\"cifra-deuda\">" + formatearMoneda(estado.costoDelCredito) + "</span>" +
+          "<span class=\"pista-deuda\">" + formatearPorcentaje(estado.porcentajeSobrante, 1) +
+            " sobre lo solicitado</span>" +
+        "</div>" +
+        "<div class=\"dato-deuda\">" +
+          "<span class=\"etiqueta-ancha\">Se liquida</span>" +
+          "<span class=\"cifra-deuda\">" + formatearFechaISO(estado.fechaLiquidacion) + "</span>" +
+          "<span class=\"pista-deuda\">" + formatearPorcentaje(avance) + " pagado</span>" +
+        "</div>" +
+      "</div>" +
+    "</article>";
+}
+
+// El calendario de liberación. Es la pieza que contesta la pregunta que
+// de verdad se hace quien tiene deuda: no "cuánto debo" sino "cuándo me
+// libero, y de cuánto al mes".
+function htmlDelCalendarioDeLiberacion(eventos, compromisoMensual) {
+  if (eventos.length === 0) {
+    return "";
+  }
+
+  const filas = eventos.map(function (evento) {
+    return "<tr>" +
+      "<td class=\"celda-nombre\">" + escaparHTML(evento.nombre) + "</td>" +
+      "<td class=\"celda-cifra\">" + escaparHTML(evento.fechaLiquidacion) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + evento.pagosRestantes + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(evento.mensualQueSeLibera) + "</td>" +
+      "<td class=\"celda-cifra fuerte\">" + formatearMoneda(evento.acumuladoMensual) + "</td>" +
+    "</tr>";
+  }).join("");
+
+  const totalLiberado = eventos[eventos.length - 1].acumuladoMensual;
+  const proporcion = compromisoMensual.total > 0 ? totalLiberado / compromisoMensual.total : null;
+
+  return "<div class=\"bloque-liberacion\">" +
+      "<span class=\"etiqueta-ancha\">Cuándo se libera el flujo</span>" +
+      "<table class=\"tabla-estudio\">" +
+        "<thead><tr>" +
+          "<th>Deuda</th>" +
+          "<th class=\"celda-cifra\">Se liquida</th>" +
+          "<th class=\"celda-cifra\">Pagos que faltan</th>" +
+          "<th class=\"celda-cifra\">Suelta al mes</th>" +
+          "<th class=\"celda-cifra\">Acumulado</th>" +
+        "</tr></thead>" +
+        "<tbody>" + filas + "</tbody>" +
+      "</table>" +
+      "<p class=\"nota-de-bolsa\">Cuando termine la última, tu piso mensual baja " +
+        formatearMoneda(totalLiberado) +
+        (proporcion !== null ? " — el " + formatearPorcentaje(proporcion) + " de lo que hoy pagas fijo cada mes" : "") +
+        ". Las fechas salen de los pagos que faltan, no de un pronóstico.</p>" +
+    "</div>";
+}
+
+function htmlDeLasTarjetas(tarjetas) {
+  if (tarjetas.length === 0) {
+    return "";
+  }
+
+  const filas = tarjetas.map(function (tarjeta) {
+    const estadoDelPago = tarjeta.pagado ? "pagado" : (tarjeta.fechaDePago || "sin pago este ciclo");
+    const detalleMeses = tarjeta.comprasAMeses > 0
+      ? " · " + tarjeta.comprasAMeses + (tarjeta.comprasAMeses === 1 ? " compra a meses" : " compras a meses")
+      : "";
+
+    return "<tr>" +
+      "<td class=\"celda-nombre\">" + escaparHTML(tarjeta.nombre) +
+        "<span class=\"parte-del-ingreso\">corte " + tarjeta.diaCorte + " · pago " + tarjeta.diaPago + "</span></td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(tarjeta.pagoDelCiclo) + "</td>" +
+      "<td class=\"celda-cifra secundaria\">" + escaparHTML(estadoDelPago) + "</td>" +
+      "<td class=\"celda-cifra\">" + formatearMoneda(tarjeta.compradoEnElCiclo) + escaparHTML(detalleMeses) + "</td>" +
+      "<td class=\"celda-cifra apagada\">" +
+        (tarjeta.lineaTotal > 0 ? formatearMoneda(tarjeta.lineaTotal) : "—") + "</td>" +
+    "</tr>";
+  }).join("");
+
+  return "<div class=\"bloque-tarjetas\">" +
+      "<span class=\"etiqueta-ancha\">Tarjetas</span>" +
+      "<table class=\"tabla-estudio\">" +
+        "<thead><tr>" +
+          "<th>Tarjeta</th>" +
+          "<th class=\"celda-cifra\">Pago de este ciclo</th>" +
+          "<th class=\"celda-cifra\">Estado</th>" +
+          "<th class=\"celda-cifra\">Comprado en el ciclo</th>" +
+          "<th class=\"celda-cifra\">Línea</th>" +
+        "</tr></thead>" +
+        "<tbody>" + filas + "</tbody>" +
+      "</table>" +
+      "<p class=\"nota-de-bolsa\">La línea es informativa y nunca suma a lo disponible. " +
+        "La app no lleva el saldo que reporta el banco: solo sabe lo que tú capturaste, " +
+        "así que no se inventa un saldo utilizado.</p>" +
+    "</div>";
+}
+
+function renderizarHorizonteDelCiclo() {
+  const datos = leerDatos();
+  const ciclo = obtenerCicloDelEstudio();
+  const seccion = document.getElementById("seccionHorizonte");
+
+  const deudasActivas = datos.deudas.filter(function (deuda) { return deuda.activa; });
+  const compromisoMensual = calcularCompromisoMensualFijo(datos);
+  const liberacion = calcularCalendarioDeLiberacionDeFlujo(datos);
+  const tarjetas = calcularUtilizacionDeTarjetas(ciclo, datos);
+
+  const encabezado = htmlDeEncabezadoDeSeccion("05", "Horizonte", "¿Cuándo me libero?");
+
+  if (deudasActivas.length === 0 && tarjetas.length === 0) {
+    seccion.innerHTML = encabezado +
+      htmlDeEstadoVacio("No hay deudas activas ni tarjetas dadas de alta.");
+    return;
+  }
+
+  // El piso: lo que cuesta existir cada mes antes de comer. Va primero
+  // porque es contra lo que se mide todo lo demás de esta sección.
+  const piso = "<div class=\"piso-mensual\">" +
+      "<div class=\"razon\">" +
+        "<span class=\"etiqueta-ancha\">Compromiso mensual fijo</span>" +
+        "<span class=\"cifra-razon\">" + formatearMoneda(compromisoMensual.total) + "</span>" +
+        "<span class=\"pista-razon\">" +
+          formatearMoneda(compromisoMensual.deDeudas) + " de deuda · " +
+          formatearMoneda(compromisoMensual.deRecurrentes) + " de recurrentes. " +
+          "Lo que sale cada mes antes de comer. No incluye el pago de las tarjetas, " +
+          "que no es fijo.</span>" +
+      "</div>" +
+    "</div>";
+
+  const deudas = deudasActivas.length > 0
+    ? "<div class=\"lista-deudas\">" + deudasActivas.map(function (deuda) {
+        return htmlDeUnaDeuda(deuda, datos);
+      }).join("") + "</div>"
+    : "<p class=\"nota-de-bolsa\">No hay deudas activas.</p>";
+
+  seccion.innerHTML = encabezado + piso + deudas +
+    htmlDelCalendarioDeLiberacion(liberacion, compromisoMensual) +
+    htmlDeLasTarjetas(tarjetas);
 }
