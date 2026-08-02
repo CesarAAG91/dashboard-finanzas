@@ -39,22 +39,42 @@ const DIAS_SEMANA_COMPLETOS = ["Domingo", "Lunes", "Martes", "Miércoles",
 // Lo único del estado del ciclo que sobrevive en el teléfono. No es una
 // pantalla ni un resumen: es una línea que no estorba el flujo.
 //
-// Ningún cálculo nuevo — calcularDisponibleReal es el mismo número que
-// encabeza la vista ancha.
+// Son dos números y responden preguntas distintas, por eso van juntos y del
+// mismo tamaño (decisión del usuario, 2 ago 2026):
+//
+//   Libre para gastar — cuánto puedo gastar sin desfondar lo que ya está
+//                       comprometido. Descuenta compromisos y presupuesto.
+//   Saldo actual      — cuánto dinero hay en la cuenta ahora mismo. Solo
+//                       ingresos menos lo que ya salió a débito.
+//
+// El saldo siempre es el mayor de los dos. Gastar $200 de comida dentro del
+// presupuesto baja el saldo $200 y no mueve el disponible: el gasto y su
+// apartado se cancelan. Pasarse sí baja los dos.
+//
+// Ningún cálculo se inventa aquí — los dos salen del motor, que es el mismo
+// que alimenta la vista ancha.
 
 function renderizarCintaCaptura() {
   const datos = leerDatos();
   const ciclo = asegurarCicloActual();
   const disponible = calcularDisponibleReal(ciclo, datos);
+  const saldo = calcularSaldoActual(ciclo, datos);
 
   document.getElementById("cintaCaptura").innerHTML =
-    "<span class=\"cinta-etiqueta\">Libre para gastar</span>" +
-    "<span class=\"cinta-monto mono" + (disponible < 0 ? " en-numeros-rojos" : "") + "\">" +
-      formatearMoneda(disponible) +
-    "</span>" +
+    htmlDeUnNumeroDeLaCinta("Libre para gastar", disponible) +
+    htmlDeUnNumeroDeLaCinta("Saldo actual", saldo) +
     "<button type=\"button\" class=\"boton-datos-cinta" +
       (necesitaAvisoDeRespaldo(datos) ? " toca-respaldar" : "") + "\"" +
       " data-abrir-datos=\"1\" aria-label=\"Respaldo\">⤓</button>";
+}
+
+function htmlDeUnNumeroDeLaCinta(etiqueta, monto) {
+  return "<div class=\"cinta-cifra\">" +
+      "<span class=\"cinta-etiqueta\">" + escaparHTML(etiqueta) + "</span>" +
+      "<span class=\"cinta-monto mono" + (monto < 0 ? " en-numeros-rojos" : "") + "\">" +
+        formatearMoneda(monto) +
+      "</span>" +
+    "</div>";
 }
 
 // ============================================================
@@ -207,10 +227,17 @@ function registrarPagoDeCompromiso(compromisoId, montoReal, fuente) {
   const ahora = new Date();
   const cicloActual = asegurarCicloActual();
 
+  // El gasto se guarda en el ciclo del compromiso, que no siempre es el
+  // ciclo de hoy (se puede adelantar el pago de algo del ciclo que viene),
+  // así que su semana tiene que medirse contra ese mismo ciclo. Medirla
+  // contra el ciclo actual daba una semana que no existe dentro del ciclo
+  // al que el gasto pertenece.
+  const cicloDelCompromiso = datos.ciclos.find(function (c) { return c.id === compromiso.cicloId; }) || cicloActual;
+
   datos.gastos.push({
     id: generarId("gas"),
     cicloId: compromiso.cicloId,
-    semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloActual.fechaInicio),
+    semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloDelCompromiso),
     fecha: formatearFechaISO(ahora),
     hora: String(ahora.getHours()).padStart(2, "0") + ":" + String(ahora.getMinutes()).padStart(2, "0"),
     monto: montoReal,
@@ -530,18 +557,23 @@ function obtenerSubcategoriasCandidatasAAtajo(datos) {
 // Devuelve null cuando esa categoría no tiene presupuesto capturado: sin un
 // total contra el cual medir, no hay nada honesto que decir.
 function calcularRestanteSemanalDeCategoria(categoria, ciclo, datos, montoEnCurso) {
-  const presupuesto = Number(obtenerPresupuestoSemanalVigente(ciclo, datos)[categoria.id] || 0);
-  if (presupuesto <= 0) {
+  // Contra la bolsa de ESTA semana, no contra el presupuesto capturado.
+  // Desde que las semanas son cuatro y de distinta longitud, una semana de 9
+  // días tiene bolsa de $2,700 aunque el presupuesto capturado diga $2,100:
+  // medir contra el número plano le habría quitado tres días de comida.
+  const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo);
+  const bolsa = calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, semanaDeHoy);
+  if (bolsa <= 0) {
     return null;
   }
 
-  // Lo ya gastado sale de la misma función que dibuja el avance semanal en
-  // la laptop, con su mismo filtro exacto (categoría, ciclo y número de
-  // semana): así el teléfono y la laptop nunca dicen números distintos.
-  const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo.fechaInicio);
-  const yaGastado = calcularProyeccionDeCierreSemanal(categoria, ciclo, datos, semanaDeHoy).gastadoEnLaSemana;
+  // Lo ya gastado sale de la misma función que usa el apartado del
+  // disponible, con su mismo filtro exacto (categoría, ciclo, semana, débito
+  // y subcategoría que consume): así el teléfono y la laptop nunca pueden
+  // decir números distintos.
+  const yaGastado = calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, semanaDeHoy);
 
-  return presupuesto - yaGastado - montoEnCurso;
+  return bolsa - yaGastado - montoEnCurso;
 }
 
 // Cuántos pagos de esta categoría siguen pendientes en el ciclo y cuánto
@@ -585,12 +617,17 @@ function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEst
     if (restante === null) {
       return "<p class=\"renglon-informativo\"></p>";
     }
+    // El nombre que se dice es el de quien de verdad gasta esa bolsa. Si el
+    // presupuesto de Transporte solo lo consume la gasolina, decir "te quedan
+    // $342 en Transporte" invitaría a gastarlos en un Didi que no los toca.
+    const nombreDeLaBolsa = categoria.subcategoriaQueConsumeElPresupuesto || categoria.nombre;
+
     if (restante < 0) {
       return "<p class=\"renglon-informativo excedido\">Te pasaste por " +
-        formatearMoneda(Math.abs(restante)) + " en " + escaparHTML(categoria.nombre) + " esta semana</p>";
+        formatearMoneda(Math.abs(restante)) + " en " + escaparHTML(nombreDeLaBolsa) + " esta semana</p>";
     }
     return "<p class=\"renglon-informativo\">Te quedan " + formatearMoneda(restante) +
-      " en " + escaparHTML(categoria.nombre) + " esta semana</p>";
+      " en " + escaparHTML(nombreDeLaBolsa) + " esta semana</p>";
   }
 
   if (!idQueSeEstaPagando) {
@@ -804,7 +841,7 @@ function guardarGastoDelTicket() {
   datos.gastos.push({
     id: generarId("gas"),
     cicloId: cicloActual.id,
-    semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloActual.fechaInicio),
+    semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloActual),
     fecha: formatearFechaISO(ahora),
     hora: String(ahora.getHours()).padStart(2, "0") + ":" + String(ahora.getMinutes()).padStart(2, "0"),
     monto: monto,
@@ -945,8 +982,41 @@ function htmlPasoOpciones() {
   return htmlCabeceraDelTicket("Ciclo", null, false) +
     htmlVencimientosAlFrente(datos) +
     htmlUltimosMovimientos(datos) +
+    htmlDeLaBarraSemanal(datos) +
     htmlBurbujasDeAtajos(atajos, datos) +
     htmlDeLasDosPuertas(datos);
+}
+
+// La barra de la semana, entre lo ya capturado y los atajos. Ese lugar lo
+// eligió el usuario: es lo último que ve antes de tocar el botón con el que
+// va a gastar, que es justo cuando la información sirve.
+//
+// Un segmento por día de la semana. El de hoy va apagado hasta que el día
+// termine; los ya cerrados llevan el color que tenía el acumulado al cerrar.
+// El único número es lo que queda de la bolsa, y ese sí se mueve en vivo.
+// Nada más — el usuario fue explícito en no llenarla de cifras.
+//
+// Si no hay categoría marcada con barra, o no tiene presupuesto capturado,
+// no se dibuja nada. Una barra sin bolsa contra la cual medir mentiría.
+function htmlDeLaBarraSemanal(datos) {
+  const barra = calcularBarraSemanalDeComida(asegurarCicloActual(), datos);
+  if (!barra) {
+    return "";
+  }
+
+  const segmentos = barra.segmentos.map(function (segmento) {
+    return "<span class=\"segmento-barra segmento-" + segmento.color +
+      (segmento.esHoy ? " es-hoy" : "") + "\"></span>";
+  }).join("");
+
+  const textoDelRestante = barra.fueraDePresupuesto
+    ? "Fuera de presupuesto · " + formatearMoneda(barra.restante)
+    : "Quedan " + formatearMoneda(barra.restante);
+
+  return "<div class=\"barra-semanal" + (barra.fueraDePresupuesto ? " excedida" : "") + "\">" +
+      "<div class=\"pista-barra\">" + segmentos + "</div>" +
+      "<p class=\"restante-barra\">" + escaparHTML(textoDelRestante) + "</p>" +
+    "</div>";
 }
 
 // Los atajos como burbujas en lista: una por renglón, redondeadas, con el

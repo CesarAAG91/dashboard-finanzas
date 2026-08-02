@@ -38,7 +38,14 @@ function manejarEnvioCategoria(evento) {
     id: generarId("cat"),
     nombre: nombre,
     subcategorias: subcategorias,
-    esVariableSemanal: esVariableSemanal
+    esVariableSemanal: esVariableSemanal,
+    // Los dos ajustes finos arrancan apagados y se afinan al editar, no al
+    // dar de alta: el desplegable de "qué subcategoría consume el
+    // presupuesto" necesita que las subcategorías ya existan, y solo una
+    // categoría en toda la app lleva barra. Apagados significan lo de
+    // siempre: sin barra, y todas las subcategorías consumen.
+    subcategoriaQueConsumeElPresupuesto: null,
+    muestraBarraSemanal: false
   });
   guardarDatos(datos);
 
@@ -66,6 +73,7 @@ function renderizarCategorias() {
         "<label>Nombre<input type=\"text\" class=\"nombre-editado\" value=\"" + escaparHTML(categoria.nombre) + "\"></label>" +
         "<label>Subcategorías, separadas por coma<input type=\"text\" class=\"subcategorias-editadas\" value=\"" + escaparHTML(categoria.subcategorias.join(", ")) + "\"></label>" +
         "<label><input type=\"checkbox\" class=\"variable-semanal-editada\"" + (categoria.esVariableSemanal ? " checked" : "") + "> Recibe presupuesto semanal</label>" +
+        htmlDeLosAjustesDePresupuesto(categoria) +
         "<button type=\"button\" class=\"boton-guardar-categoria\">Guardar cambios</button>" +
       "</div>" +
     "</li>";
@@ -83,6 +91,39 @@ function renderizarCategorias() {
       guardarEdicionDeCategoria(categoriaId, filaLi);
     });
   });
+}
+
+// Los dos ajustes finos del presupuesto de una categoría variable. Solo se
+// dibujan si la categoría recibe presupuesto semanal: sin presupuesto no hay
+// bolsa que repartir ni barra que pintar, y mostrarlos sería ofrecer algo que
+// no hace nada.
+//
+// "Quién consume el presupuesto" existe porque el tope vive en la categoría
+// pero no siempre lo gasta toda ella: Transporte tiene $500 semanales que son
+// de gasolina, y el Didi es gasto extra que no debe comerse esa bolsa (ver
+// elGastoConsumeLaBolsa en motor.js).
+//
+// "Muestra la barra" no se adivina por el nombre de la categoría. Reconocerla
+// como "Comida" se rompería el día que se llame "Alimentos".
+function htmlDeLosAjustesDePresupuesto(categoria) {
+  if (!categoria.esVariableSemanal) {
+    return "";
+  }
+
+  const opciones = ["<option value=\"\">Todas sus subcategorías</option>"]
+    .concat(categoria.subcategorias.map(function (subcategoria) {
+      const estaElegida = categoria.subcategoriaQueConsumeElPresupuesto === subcategoria;
+      return "<option value=\"" + escaparHTML(subcategoria) + "\"" +
+        (estaElegida ? " selected" : "") + ">Solo " + escaparHTML(subcategoria) + "</option>";
+    }))
+    .join("");
+
+  return "<label>El presupuesto lo consume" +
+      "<select class=\"subcategoria-que-consume-editada\">" + opciones + "</select>" +
+    "</label>" +
+    "<label><input type=\"checkbox\" class=\"muestra-barra-editada\"" +
+      (categoria.muestraBarraSemanal ? " checked" : "") +
+    "> Muestra la barra semanal en Captura</label>";
 }
 
 // Guarda los cambios de nombre, subcategorías y presupuesto semanal de una
@@ -107,6 +148,38 @@ function guardarEdicionDeCategoria(categoriaId, filaLi) {
   categoria.nombre = nombre;
   categoria.subcategorias = subcategorias;
   categoria.esVariableSemanal = esVariableSemanal;
+
+  // Los dos ajustes finos solo están en pantalla si la categoría era variable
+  // al dibujarla, así que se leen nada más cuando existen. Al apagar
+  // "recibe presupuesto semanal" se limpian los dos: una categoría sin bolsa
+  // no puede tener barra ni subcategoría consumidora, y dejar el valor viejo
+  // guardado lo haría reaparecer al volver a prenderla.
+  const selectorDeConsumo = filaLi.querySelector(".subcategoria-que-consume-editada");
+  const casillaDeBarra = filaLi.querySelector(".muestra-barra-editada");
+
+  if (!esVariableSemanal || !selectorDeConsumo) {
+    categoria.subcategoriaQueConsumeElPresupuesto = null;
+    categoria.muestraBarraSemanal = false;
+  } else {
+    // Una subcategoría que ya no existe en la lista deja de ser válida: si se
+    // renombró o se borró, el presupuesto vuelve a consumirlo toda la
+    // categoría en vez de quedar apuntando a algo que nadie va a capturar.
+    const elegida = selectorDeConsumo.value;
+    categoria.subcategoriaQueConsumeElPresupuesto =
+      subcategorias.indexOf(elegida) !== -1 ? elegida : null;
+    categoria.muestraBarraSemanal = casillaDeBarra.checked;
+  }
+
+  // La barra es una sola en toda la app. Si esta categoría se marcó, las
+  // demás se desmarcan solas — es más claro que un error diciendo que ya
+  // había otra, y evita que dos barras compitan por el mismo lugar.
+  if (categoria.muestraBarraSemanal) {
+    datos.config.categorias.forEach(function (otra) {
+      if (otra.id !== categoria.id) {
+        otra.muestraBarraSemanal = false;
+      }
+    });
+  }
 
   guardarDatos(datos);
   renderizarTodo();

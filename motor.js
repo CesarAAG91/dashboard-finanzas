@@ -55,6 +55,26 @@ const DIAS_PARA_PENDIENTE_URGENTE = 3;
 // súper grande distorsiona la proyección de todo el mes.
 const DIAS_MINIMOS_PARA_RITMO_REAL = 7;
 
+// En cuántas semanas se parte un ciclo, siempre, dure lo que dure.
+//
+// Decisión del usuario (2 ago 2026). Antes las semanas eran de 7 días
+// exactos y la última quedaba corta: un ciclo de 33 días daba cinco
+// semanas, la última de 5 días. "Semana 5" no significa nada cuando el
+// mes tiene cuatro, y una barra dibujada sobre eso se ve rota justo al
+// final del ciclo.
+//
+// Ahora son cuatro semanas de longitud variable (ver
+// calcularDiasDeCadaSemanaDelCiclo). Lo que no cambia es la tasa diaria:
+// el presupuesto se sigue capturando por semana de 7 días, y la bolsa de
+// cada semana es esa tasa por los días que de verdad tenga. Así el total
+// del ciclo siempre es tasa diaria × días del ciclo, se agrupe como se
+// agrupe.
+const SEMANAS_POR_CICLO = 4;
+
+// En cuántos tramos de color se parte la bolsa semanal para la barra de
+// Captura. Cuatro: verde, amarillo, naranja y rojo, en cuartos exactos.
+const TRAMOS_DE_COLOR_DE_LA_BARRA = 4;
+
 // A partir de cuántos días sin exportar un respaldo (JSON) se muestra el
 // aviso en pantalla. localStorage en iOS puede borrarse tras periodos de
 // inactividad, así que el respaldo no es opcional.
@@ -117,10 +137,47 @@ function leerDatos() {
   const seCompletaronCampos = completarCamposDeRespaldoFaltantes(datos);
   const seLimpiaronCiclos = eliminarCiclosDuplicados(datos);
   const seLimpiaronIngresos = eliminarIngresosDelModeloViejo(datos);
-  if (seCompletaronCampos || seLimpiaronCiclos || seLimpiaronIngresos) {
+  const seRecalcularonSemanas = recalcularLaSemanaDeLosGastos(datos);
+  if (seCompletaronCampos || seLimpiaronCiclos || seLimpiaronIngresos || seRecalcularonSemanas) {
     guardarDatos(datos);
   }
   return datos;
+}
+
+// Pone al día el campo "semana" de los gastos ya guardados (2 ago 2026).
+//
+// Hasta ese día las semanas eran de 7 días exactos contados desde el inicio
+// del ciclo, así que un ciclo de 33 días tenía cinco semanas y la última
+// duraba 5 días. Ahora son siempre cuatro, de longitud variable (ver
+// SEMANAS_POR_CICLO). Los gastos capturados antes del cambio traen el número
+// viejo, y con él caerían en una semana que ya no existe: un gasto marcado
+// como "semana 5" no lo contaría ninguna bolsa, y el disponible mentiría.
+//
+// Se recalcula contra el ciclo al que el gasto pertenece, no contra el ciclo
+// de hoy — un gasto viejo se mide con su propio ciclo. Un gasto cuyo ciclo ya
+// no exista se deja como está: no hay contra qué recalcularlo, y borrarlo o
+// inventarle una semana sería peor.
+function recalcularLaSemanaDeLosGastos(datos) {
+  if (!Array.isArray(datos.gastos) || !Array.isArray(datos.ciclos)) {
+    return false;
+  }
+
+  let seCambioAlgo = false;
+
+  datos.gastos.forEach(function (gasto) {
+    const ciclo = datos.ciclos.find(function (c) { return c.id === gasto.cicloId; });
+    if (!ciclo) {
+      return;
+    }
+
+    const semanaCorrecta = calcularSemanaDeLaFecha(gasto.fecha, ciclo);
+    if (gasto.semana !== semanaCorrecta) {
+      gasto.semana = semanaCorrecta;
+      seCambioAlgo = true;
+    }
+  });
+
+  return seCambioAlgo;
 }
 
 // Limpieza de una sola vez, decidida por el usuario el 30 jul 2026.
@@ -273,8 +330,16 @@ function escaparHTML(texto) {
 
 // Da formato de moneda mexicana a un número, para que las listas se lean
 // como dinero ("$1,234.50") y no como números sueltos.
+//
+// El menos va antes del signo de pesos ("-$200.00"), no en medio
+// ("$-200.00"), que es como sale si se concatena el "$" a secas. Importa
+// porque hay varios números que pueden ser negativos y se leen a diario: el
+// disponible de un ciclo que no cierra, y lo que queda de una bolsa semanal
+// cuando ya se pasó.
 function formatearMoneda(monto) {
-  return "$" + Number(monto).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const numero = Number(monto);
+  const signo = numero < 0 ? "-" : "";
+  return signo + "$" + Math.abs(numero).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ============================================================
@@ -1175,28 +1240,80 @@ function calcularRangoDeDiasDelCiclo(ciclo) {
   return calcularRangoDeDias(ciclo.fechaInicio, ciclo.fechaFin);
 }
 
-// La semana N de un ciclo dura 7 días, salvo la última: un ciclo de
-// ~29-31 días no es múltiplo exacto de 7, así que esa semana se corta
-// donde se corta el ciclo, no en un séptimo día que no existe.
+// Cuántos días le toca a cada una de las cuatro semanas del ciclo.
+//
+// Un ciclo dura entre 28 y 33 días, casi nunca múltiplo de 4, así que el
+// sobrante se reparte de a un día a las primeras semanas. La del depósito
+// es la larga, por decisión del usuario: es cuando acaba de cobrar.
+//
+//   33 días -> 9, 8, 8, 8      30 días -> 8, 8, 7, 7
+//   32 días -> 8, 8, 8, 8      29 días -> 8, 7, 7, 7
+//   31 días -> 8, 8, 8, 7      28 días -> 7, 7, 7, 7
+//
+// Esta es la ÚNICA fuente del reparto. Todo lo que necesite saber dónde
+// empieza o acaba una semana sale de aquí, para que no puedan existir dos
+// respuestas distintas a la misma pregunta.
+function calcularDiasDeCadaSemanaDelCiclo(ciclo) {
+  const diasDelCiclo = calcularDiasTotalesDelCiclo(ciclo);
+  const diasBase = Math.floor(diasDelCiclo / SEMANAS_POR_CICLO);
+  const diasSobrantes = diasDelCiclo % SEMANAS_POR_CICLO;
+
+  const dias = [];
+  for (let semana = 1; semana <= SEMANAS_POR_CICLO; semana++) {
+    const leTocaUnDiaExtra = semana <= diasSobrantes;
+    dias.push(diasBase + (leTocaUnDiaExtra ? 1 : 0));
+  }
+  return dias;
+}
+
+// En qué día del ciclo empieza la semana N, contando el primer día como 0.
+// Es la suma de los días de todas las semanas anteriores.
+function calcularDiaDelCicloEnQueEmpiezaLaSemana(ciclo, numeroDeSemana) {
+  const diasPorSemana = calcularDiasDeCadaSemanaDelCiclo(ciclo);
+  let dias = 0;
+  for (let semana = 1; semana < numeroDeSemana; semana++) {
+    dias += diasPorSemana[semana - 1];
+  }
+  return dias;
+}
+
+// Las fechas de la semana N del ciclo, ya con sus días transcurridos y
+// restantes. La longitud sale del reparto, no de un 7 fijo.
 function calcularRangoDeLaSemanaActual(ciclo, numeroDeSemana) {
   const inicioCiclo = crearFechaLocal(ciclo.fechaInicio);
-  const finCiclo = crearFechaLocal(ciclo.fechaFin);
-  const inicioSemana = sumarDias(inicioCiclo, (numeroDeSemana - 1) * 7);
-  const finSemanaSinAcotar = sumarDias(inicioSemana, 6);
-  const finSemana = finSemanaSinAcotar > finCiclo ? finCiclo : finSemanaSinAcotar;
+  const diasDeLaSemana = calcularDiasDeCadaSemanaDelCiclo(ciclo)[numeroDeSemana - 1];
+  const diasAntesDeEstaSemana = calcularDiaDelCicloEnQueEmpiezaLaSemana(ciclo, numeroDeSemana);
+
+  const inicioSemana = sumarDias(inicioCiclo, diasAntesDeEstaSemana);
+  const finSemana = sumarDias(inicioSemana, diasDeLaSemana - 1);
 
   return calcularRangoDeDias(formatearFechaISO(inicioSemana), formatearFechaISO(finSemana));
 }
 
 // Lo inverso de la anterior: dada una fecha, en qué semana del ciclo cae.
-// Se cuenta de 7 en 7 días desde el inicio del ciclo, como pide SPEC.md, y
-// la primera semana es la 1, no la 0.
-function calcularSemanaDeLaFecha(fechaTexto, cicloInicioTexto) {
+// La primera semana es la 1, no la 0, y nunca devuelve más de 4.
+//
+// Recibe el ciclo completo y no solo su fecha de inicio porque las semanas
+// ya no miden lo mismo en todos los ciclos: sin saber cuánto dura el ciclo
+// no se puede saber dónde termina su primera semana.
+function calcularSemanaDeLaFecha(fechaTexto, ciclo) {
   const fecha = crearFechaLocal(fechaTexto);
-  const inicio = crearFechaLocal(cicloInicioTexto);
+  const inicio = crearFechaLocal(ciclo.fechaInicio);
   const milisegundosPorDia = 1000 * 60 * 60 * 24;
-  const diasTranscurridos = Math.round((fecha - inicio) / milisegundosPorDia);
-  return Math.floor(diasTranscurridos / 7) + 1;
+  const diaDelCiclo = Math.round((fecha - inicio) / milisegundosPorDia);
+
+  // Se avanza semana por semana hasta pasarse del día buscado. Una fecha
+  // anterior al ciclo cae en la 1 y una posterior en la última: fuera de
+  // rango no hay respuesta mejor, y devolver 0 o 5 rompería a quien la use.
+  const diasPorSemana = calcularDiasDeCadaSemanaDelCiclo(ciclo);
+  let diasAcumulados = 0;
+  for (let semana = 1; semana <= SEMANAS_POR_CICLO; semana++) {
+    diasAcumulados += diasPorSemana[semana - 1];
+    if (diaDelCiclo < diasAcumulados) {
+      return semana;
+    }
+  }
+  return SEMANAS_POR_CICLO;
 }
 
 // ============================================================
@@ -1409,34 +1526,75 @@ function calcularCompromisosPendientesDelCiclo(ciclo, datos) {
 // Una comida a crédito no sale de la cuenta en este ciclo (sale cuando se
 // paga la tarjeta, que ya cuenta como compromiso): si consumiera el apartado,
 // el disponible SUBIRÍA por haber gastado, que sería absurdo.
-function calcularPresupuestoVariablePendiente(ciclo, datos) {
-  const rango = calcularRangoDeDiasDelCiclo(ciclo);
+// Cuánto dinero le toca a una categoría en una semana concreta del ciclo.
+//
+// El presupuesto se captura por semana de 7 días ($2,100 de comida), pero
+// las semanas ya no miden todas lo mismo: en un ciclo de 33 días la primera
+// tiene 9 días. Lo que se mantiene fijo es la tasa diaria, así que la bolsa
+// de cada semana es esa tasa por los días que de verdad tenga.
+//
+// Es la ÚNICA definición de "la bolsa de esta semana". La usan el apartado
+// del disponible, el renglón informativo del teléfono y la barra de Captura,
+// y por eso los tres no pueden decir números distintos.
+function calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, numeroDeSemana) {
   const presupuesto = obtenerPresupuestoSemanalVigente(ciclo, datos);
-  const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo.fechaInicio);
-  const semanasDelCiclo = Math.ceil(rango.diasTotales / 7);
+  const tasaDiaria = (Number(presupuesto[categoria.id]) || 0) / 7;
+  const diasDeLaSemana = calcularDiasDeCadaSemanaDelCiclo(ciclo)[numeroDeSemana - 1];
+  return tasaDiaria * diasDeLaSemana;
+}
+
+// Si un gasto consume o no la bolsa semanal de su categoría.
+//
+// Dos condiciones. La primera: solo el gasto a débito, porque una compra a
+// crédito no saca dinero de la cuenta en este ciclo (sale cuando se paga la
+// tarjeta, que ya cuenta como compromiso). Si consumiera la bolsa, gastar
+// haría SUBIR el disponible.
+//
+// La segunda es del usuario (2 ago 2026): una categoría puede declarar que
+// su presupuesto lo gasta una sola de sus subcategorías. Transporte tiene
+// $500 semanales que son de gasolina; el Didi y el transporte urbano se
+// registran en la misma categoría y salen en el análisis, pero son gasto
+// extra y no tocan esos $500 — bajan el disponible directo, sin bolsa que
+// los cubra. Cuando la categoría no declara nada, todas sus subcategorías
+// consumen, que es el caso de Comida (diaria, súper y restaurante).
+function elGastoConsumeLaBolsa(gasto, categoria) {
+  if (gasto.fuente !== "debito") {
+    return false;
+  }
+  if (!categoria.subcategoriaQueConsumeElPresupuesto) {
+    return true;
+  }
+  return gasto.subcategoria === categoria.subcategoriaQueConsumeElPresupuesto;
+}
+
+// Lo que ya se gastó de la bolsa de una categoría en una semana del ciclo.
+// El filtro vive aquí y en ningún otro lado: es lo que evita que el teléfono
+// y la laptop cuenten cosas distintas.
+function calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, numeroDeSemana) {
+  return datos.gastos
+    .filter(function (gasto) {
+      return gasto.categoriaId === categoria.id &&
+        gasto.cicloId === ciclo.id &&
+        gasto.semana === numeroDeSemana &&
+        elGastoConsumeLaBolsa(gasto, categoria);
+    })
+    .reduce(function (suma, gasto) { return suma + Number(gasto.monto); }, 0);
+}
+
+function calcularPresupuestoVariablePendiente(ciclo, datos) {
+  const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo);
 
   return datos.config.categorias
     .filter(function (categoria) { return categoria.esVariableSemanal; })
     .reduce(function (total, categoria) {
-      const tasaDiaria = (Number(presupuesto[categoria.id]) || 0) / 7;
       let apartadoDeLaCategoria = 0;
 
       // Las semanas que ya cerraron no apartan nada: lo que se gastó en ellas
       // ya está restado como gasto, y lo que sobró se fue con la semana.
-      for (let semana = Math.max(semanaDeHoy, 1); semana <= semanasDelCiclo; semana++) {
-        // La última semana de un ciclo casi nunca dura 7 días (un ciclo de 32
-        // días son cuatro semanas y media), así que su presupuesto es
-        // proporcional a los días que de verdad caen dentro del ciclo.
-        const diasDeLaSemana = calcularRangoDeLaSemanaActual(ciclo, semana).diasTotales;
-
-        const gastadoEnLaSemana = datos.gastos
-          .filter(function (g) {
-            return g.categoriaId === categoria.id && g.cicloId === ciclo.id &&
-              g.semana === semana && g.fuente === "debito";
-          })
-          .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
-
-        apartadoDeLaCategoria += Math.max(0, (tasaDiaria * diasDeLaSemana) - gastadoEnLaSemana);
+      for (let semana = Math.max(semanaDeHoy, 1); semana <= SEMANAS_POR_CICLO; semana++) {
+        const bolsa = calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, semana);
+        const gastado = calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, semana);
+        apartadoDeLaCategoria += Math.max(0, bolsa - gastado);
       }
 
       return total + apartadoDeLaCategoria;
@@ -1464,10 +1622,30 @@ function calcularPresupuestoVariablePendiente(ciclo, datos) {
 // en un día de presupuesto variable, porque uno contaba los días que faltan y
 // el otro el ciclo completo. Lo que sobra al cerrar ES lo que se puede gastar
 // de más: no son dos preguntas, es una.
+// Todo el dinero que ya salió de la cuenta en este ciclo. Solo débito: lo
+// comprado a crédito todavía no sale del banco.
+function calcularGastosDebitoDelCiclo(ciclo, datos) {
+  return datos.gastos
+    .filter(function (gasto) { return gasto.cicloId === ciclo.id && gasto.fuente === "debito"; })
+    .reduce(function (suma, gasto) { return suma + Number(gasto.monto); }, 0);
+}
+
+// Cuánto dinero hay ahora mismo en la cuenta: lo que entró menos lo que ya
+// salió. Nada más — no descuenta compromisos ni presupuesto apartado.
+//
+// Es la pregunta "¿cuánto tengo?", distinta de "¿cuánto puedo gastar?", que
+// es calcularDisponibleReal. Van juntas en la cinta del teléfono a propósito:
+// el saldo siempre es el número grande, y el disponible siempre el chico.
+//
+// El gasto a crédito no resta aquí (decisión del usuario, 2 ago 2026: "me
+// interesa ver lo real que me queda de dinero"). Ese gasto sí queda
+// registrado, y sale cuando se paga la tarjeta.
+function calcularSaldoActual(ciclo, datos) {
+  return calcularIngresosDelCiclo(ciclo, datos) - calcularGastosDebitoDelCiclo(ciclo, datos);
+}
+
 function calcularDisponibleReal(ciclo, datos, mensualidadesDeTarjetaDelCiclo) {
-  const gastosDebitoDelCiclo = datos.gastos
-    .filter(function (g) { return g.cicloId === ciclo.id && g.fuente === "debito"; })
-    .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+  const gastosDebitoDelCiclo = calcularGastosDebitoDelCiclo(ciclo, datos);
 
   // Aquí manda el presupuesto apartado, no el ritmo real (1 ago 2026). El
   // ritmo dice "vas más rápido de lo que planeaste", y para eso sirve el
@@ -1599,16 +1777,141 @@ function calcularMargenAntesDeUmbrales(proyeccionCierre, ingresosDelCiclo) {
 // calcularMargenAntesDeUmbrales tal cual — ambas son genéricas en un
 // monto contra un total, no saben ni les importa si ese total es el
 // ingreso del ciclo o el presupuesto semanal de una categoría.
+//
+// Lo gastado sale de calcularGastadoDeLaBolsaEnLaSemana, el mismo filtro que
+// usa el apartado del disponible. Antes esta función contaba todo el gasto de
+// la categoría, incluido el de crédito, mientras el apartado solo contaba el
+// débito: el renglón "Te quedan $X" del teléfono y el disponible se movían
+// distinto ante la misma compra con tarjeta. Ahora es imposible que discrepen.
 function calcularProyeccionDeCierreSemanal(categoria, ciclo, datos, numeroDeSemana) {
   const rango = calcularRangoDeLaSemanaActual(ciclo, numeroDeSemana);
-  const gastadoEnLaSemana = datos.gastos
-    .filter(function (g) { return g.categoriaId === categoria.id && g.cicloId === ciclo.id && g.semana === numeroDeSemana; })
-    .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+  const gastadoEnLaSemana = calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, numeroDeSemana);
 
   const ritmoDiarioSemanal = gastadoEnLaSemana / rango.diasTranscurridos;
   const proyeccionCierreSemanal = gastadoEnLaSemana + (ritmoDiarioSemanal * rango.diasRestantes);
 
   return { gastadoEnLaSemana: gastadoEnLaSemana, proyeccionCierreSemanal: proyeccionCierreSemanal };
+}
+
+// ============================================================
+// BARRA SEMANAL DE COMIDA
+// ============================================================
+//
+// La barra que vive en la pantalla de entrada del teléfono, entre lo pagado
+// del día y los atajos. Existe para una sola pregunta, en el momento exacto
+// en que importa: "voy a gastar, ¿cómo llevo la semana?".
+//
+// Cómo se lee, y en qué se diferencia de todo lo demás de la app:
+//
+// La barra NO mide ritmo. No compara contra los días que han pasado. Mide
+// consumo: cuánto llevas de la bolsa de esta semana, sin importar en cuántos
+// días te lo gastaste. La bolsa se parte en cuartos exactos y el color sale
+// de en qué cuarto cae el acumulado.
+//
+// Eso tiene una consecuencia que el usuario conoce y aceptó (2 ago 2026):
+// gastando sus $300 diarios perfectos, al día 6 el acumulado son $1,800 de
+// $2,100 y la barra está roja. Rojo significa "queda poca bolsa", no "te
+// portaste mal". La alternativa era mover los cortes con los días, y la
+// descartó: quiere ver cuánto le queda, no si va a tiempo.
+//
+// Un segmento por día de la semana — nueve segmentos en una semana de nueve
+// días. El día en curso no se pinta hasta que termina, porque hasta la
+// medianoche todavía puede empeorar. Al cerrar, el segmento se queda con el
+// color que tenía el acumulado en ese momento y ya no cambia nunca. Un día
+// sin gasto repite el color del anterior, porque el acumulado no se movió.
+// Como el acumulado solo puede subir, el color nunca retrocede: la barra
+// acaba siendo un degradado que cuenta la historia de la semana.
+
+// Cuál categoría lleva barra. Se marca en Ajustes y no se adivina por el
+// nombre: reconocerla como "Comida" se rompería el día que el usuario la
+// llame "Alimentos". Solo puede haber una — la primera marcada gana.
+function obtenerCategoriaDeLaBarraSemanal(datos) {
+  return datos.config.categorias.find(function (categoria) {
+    return categoria.esVariableSemanal && categoria.muestraBarraSemanal;
+  }) || null;
+}
+
+// En qué tramo de color cae un acumulado dentro de su bolsa. Cuartos
+// exactos, por decisión del usuario: 25%, 50% y 75%.
+function calcularColorDelTramoDeLaBarra(acumulado, bolsa) {
+  if (bolsa <= 0) {
+    return "sin-color";
+  }
+  const tramo = Math.ceil((acumulado / bolsa) * TRAMOS_DE_COLOR_DE_LA_BARRA);
+  if (tramo <= 1) {
+    return "verde";
+  }
+  if (tramo === 2) {
+    return "amarillo";
+  }
+  if (tramo === 3) {
+    return "naranja";
+  }
+  return "rojo";
+}
+
+// Todo lo que la pantalla necesita para dibujar la barra de esta semana.
+//
+// Devuelve null cuando no hay categoría marcada o cuando esa categoría no
+// tiene presupuesto capturado: sin un total contra el cual medir no hay nada
+// honesto que dibujar, y una barra vacía miente más que no ponerla. Mismo
+// criterio que el renglón informativo del monto.
+function calcularBarraSemanalDeComida(ciclo, datos) {
+  const categoria = obtenerCategoriaDeLaBarraSemanal(datos);
+  if (!categoria) {
+    return null;
+  }
+
+  const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo);
+  const bolsa = calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, semanaDeHoy);
+  if (bolsa <= 0) {
+    return null;
+  }
+
+  const inicioDeLaSemana = sumarDias(
+    crearFechaLocal(ciclo.fechaInicio),
+    calcularDiaDelCicloEnQueEmpiezaLaSemana(ciclo, semanaDeHoy)
+  );
+  const diasDeLaSemana = calcularDiasDeCadaSemanaDelCiclo(ciclo)[semanaDeHoy - 1];
+  const hoy = crearFechaLocal(formatearFechaISO(new Date()));
+
+  // Se recorre día por día acumulando, porque el color de cada segmento es
+  // el del acumulado hasta ese día — no el del gasto de ese día suelto.
+  const segmentos = [];
+  let acumulado = 0;
+
+  for (let numeroDeDia = 0; numeroDeDia < diasDeLaSemana; numeroDeDia++) {
+    const fechaDelDia = sumarDias(inicioDeLaSemana, numeroDeDia);
+    const fechaDelDiaTexto = formatearFechaISO(fechaDelDia);
+
+    acumulado += datos.gastos
+      .filter(function (gasto) {
+        return gasto.categoriaId === categoria.id &&
+          gasto.cicloId === ciclo.id &&
+          gasto.fecha === fechaDelDiaTexto &&
+          elGastoConsumeLaBolsa(gasto, categoria);
+      })
+      .reduce(function (suma, gasto) { return suma + Number(gasto.monto); }, 0);
+
+    const elDiaYaCerro = fechaDelDia < hoy;
+    segmentos.push({
+      color: elDiaYaCerro ? calcularColorDelTramoDeLaBarra(acumulado, bolsa) : "sin-color",
+      esHoy: fechaDelDia.getTime() === hoy.getTime()
+    });
+  }
+
+  // El restante sí cuenta el gasto de hoy, aunque el segmento de hoy todavía
+  // no se pinte: el número tiene que bajar en el momento en que se registra
+  // la compra, que es cuando se está mirando.
+  const gastadoEnLaSemana = calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, semanaDeHoy);
+
+  return {
+    categoria: categoria,
+    segmentos: segmentos,
+    bolsa: bolsa,
+    restante: bolsa - gastadoEnLaSemana,
+    fueraDePresupuesto: gastadoEnLaSemana > bolsa
+  };
 }
 
 // ============================================================

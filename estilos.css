@@ -388,17 +388,29 @@ details summary {
   }
 }
 
-/* ---------- La cinta: el único número que sobrevive del resumen ---------- */
+/* ---------- La cinta: los dos números del ciclo ---------- */
 /* Libre para gastar (calcularDisponibleReal) es el mismo número que manda
-   en la vista ancha. Va sobre la máquina, no sobre el papel: no es parte
-   del recibo que se está imprimiendo, es el estado del ciclo. */
+   en la vista ancha; Saldo actual (calcularSaldoActual) es el dinero que
+   de verdad hay en la cuenta. Van sobre la máquina, no sobre el papel: no
+   son parte del recibo que se está imprimiendo, son el estado del ciclo.
+
+   Del mismo tamaño a propósito: responden preguntas distintas y ninguna
+   manda sobre la otra. */
 #cintaCaptura {
   flex: 0 0 auto;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: flex-end;
+  gap: 14px;
   padding: 0 6px 10px;
+}
+/* Cada cifra es etiqueta arriba y monto abajo. Crecen parejo y se reparten
+   el ancho que deja el botón de respaldo. */
+#cintaCaptura .cinta-cifra {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 #cintaCaptura .cinta-etiqueta {
   font-size: 10px;
@@ -406,6 +418,9 @@ details summary {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--cinta-etiqueta-c);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #cintaCaptura .cinta-monto {
   font-size: 17px;
@@ -766,6 +781,56 @@ details summary {
   font-size: 11px;
   font-weight: 400;
   color: var(--tinta-ter-c);
+}
+
+/* ---------- La barra semanal de comida ---------- */
+/* Va entre lo capturado del día y los atajos: es lo último que se ve antes
+   de tocar el botón con el que se va a gastar.
+
+   flex: 0 0 auto porque no debe crecer ni encogerse — el espacio que sobra
+   es de las burbujas (ver el bloque de abajo). Es la pieza más chica de la
+   pantalla a propósito: informa, no compite. */
+#vistaCaptura .barra-semanal {
+  flex: 0 0 auto;
+  padding: 2px 0 9px;
+}
+/* Los segmentos, uno por día de la semana. Sin gap: es una sola barra
+   partida, no una fila de fichas sueltas. Los separa una línea del color
+   del papel, que a este grosor se lee como muesca. */
+#vistaCaptura .pista-barra {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+}
+#vistaCaptura .segmento-barra {
+  flex: 1 1 0;
+  border-radius: 2px;
+  background-color: var(--papel-linea-c);
+}
+/* Los cuatro tramos. Tomados de la paleta de categorías, que ya está
+   validada para daltonismo y contraste; el naranja es el escalón que
+   faltaba entre el ámbar y el rojo del semáforo. */
+#vistaCaptura .segmento-verde { background-color: #199e70; }
+#vistaCaptura .segmento-amarillo { background-color: #c98500; }
+#vistaCaptura .segmento-naranja { background-color: #d95926; }
+#vistaCaptura .segmento-rojo { background-color: #c02626; }
+/* El día en curso y los que faltan van apagados: hasta la medianoche el día
+   todavía puede empeorar, así que pintarlo sería adelantar un veredicto. Un
+   punto marca cuál es hoy, para que el hueco no parezca un error. */
+#vistaCaptura .segmento-sin-color.es-hoy {
+  background-color: var(--papel-toque-c);
+  box-shadow: inset 0 0 0 1px var(--papel-linea-c);
+}
+/* El único número de la barra. El usuario fue explícito: nada más que esto. */
+#vistaCaptura .restante-barra {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: var(--tinta-sec-c);
+  text-align: right;
+}
+#vistaCaptura .barra-semanal.excedida .restante-barra {
+  color: #c02626;
+  font-weight: 600;
 }
 
 /* ---------- Los atajos, como burbujas en lista ---------- */
