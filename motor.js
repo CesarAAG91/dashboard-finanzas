@@ -2448,11 +2448,17 @@ function cambiarCicloEnfocadoSimulacion(delta) {
 // crédito diferido, sigue apareciendo aquí (no solo en el bucket
 // sintético) para poder revertirlo o cambiarle tarjeta/meses — su monto
 // ya no cuenta en el subtotal de su categoría mientras lo esté.
-function construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) {
+// Los tres campos de un pago dentro de la simulación: cuándo, cuánto y
+// con qué se paga. Son los únicos que se pueden mover sin salir de la
+// primera pantalla, y son justo los que se mueven al planear un ciclo.
+//
+// La fecha sustituyó al viejo selector de "ciclo destino" (2 ago 2026).
+// Un pago pertenece al ciclo en el que cae su fecha — así lo define
+// SPEC.md — así que pedir las dos cosas era pedir dos veces lo mismo y
+// dejar abierta la posibilidad de que se contradijeran. Ahora se captura
+// la fecha y el ciclo se deriva, que es la única dirección que no miente.
+function construirFilaCompromisoSimulado(item, tarjetasQuePermitenDiferir) {
   const deshabilitado = item.pagado ? " disabled" : "";
-  const marcaModificado = item.modificadoEnSimulacion ? "<span class=\"marca-modificado\">modificado</span>" : "";
-  const etiquetaPagado = item.pagado ? " <span class=\"detalle\">(pagado)</span>" : "";
-  const etiquetaCredito = item.estadoCredito ? " <span class=\"detalle\">(diferido a crédito, no cuenta en este subtotal)</span>" : "";
   const permiteFuente = item.origen !== "tarjeta"; // pagar una tarjeta con "crédito" no tiene sentido
 
   const opcionesTarjeta = tarjetasQuePermitenDiferir.length > 0
@@ -2460,23 +2466,39 @@ function construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQu
     : "<option value=\"\">Ninguna tarjeta permite MSI</option>";
 
   const controlesFuenteHTML = permiteFuente
-    ? "<select class=\"fuente-simulada-editada\"" + deshabilitado + ">" +
-        "<option value=\"debito\">Débito</option>" +
-        "<option value=\"credito\">Crédito</option>" +
-      "</select>" +
-      "<span class=\"controles-credito-simulado\" style=\"display: none;\">" +
-        "<select class=\"tarjeta-simulada-editada\">" + opcionesTarjeta + "</select>" +
-        "<select class=\"meses-simulados-editada\">" +
-          "<option value=\"1\">1 mes</option><option value=\"3\">3 meses</option><option value=\"6\">6 meses</option>" +
-          "<option value=\"9\">9 meses</option><option value=\"12\">12 meses</option>" +
+    ? "<label class=\"campo-simulado\">" +
+        "<span>Cómo se paga</span>" +
+        "<select class=\"fuente-simulada-editada\"" + deshabilitado + ">" +
+          "<option value=\"debito\">Débito</option>" +
+          "<option value=\"credito\">Crédito a meses</option>" +
         "</select>" +
-      "</span>"
+      "</label>" +
+      "<div class=\"controles-credito-simulado\" style=\"display: none;\">" +
+        "<label class=\"campo-simulado\">" +
+          "<span>Tarjeta</span>" +
+          "<select class=\"tarjeta-simulada-editada\">" + opcionesTarjeta + "</select>" +
+        "</label>" +
+        "<label class=\"campo-simulado\">" +
+          "<span>Meses</span>" +
+          "<select class=\"meses-simulados-editada\">" +
+            "<option value=\"1\">1 mes</option><option value=\"3\">3 meses</option><option value=\"6\">6 meses</option>" +
+            "<option value=\"9\">9 meses</option><option value=\"12\">12 meses</option>" +
+          "</select>" +
+        "</label>" +
+      "</div>"
     : "";
 
   return "<div class=\"fila-compromiso-simulado\" data-id-simulado=\"" + item.idSimulado + "\">" +
-    "<span class=\"nombre-compromiso-simulado\">" + escaparHTML(item.nombre) + etiquetaPagado + etiquetaCredito + marcaModificado + "</span>" +
-    "<input type=\"number\" class=\"monto-simulado-editado\" min=\"0\" step=\"0.01\" value=\"" + montoEfectivoDeSimulado(item) + "\"" + deshabilitado + ">" +
-    "<select class=\"ciclo-destino-simulado\"" + deshabilitado + ">" + horizonteOpcionesHTML + "</select>" +
+    "<label class=\"campo-simulado\">" +
+      "<span>Fecha</span>" +
+      "<input type=\"date\" class=\"fecha-simulada-editada\" value=\"" +
+        escaparHTML(item.fechaProgramada) + "\"" + deshabilitado + ">" +
+    "</label>" +
+    "<label class=\"campo-simulado\">" +
+      "<span>Monto</span>" +
+      "<input type=\"number\" class=\"monto-simulado-editado\" min=\"0\" step=\"0.01\" value=\"" +
+        montoEfectivoDeSimulado(item) + "\"" + deshabilitado + ">" +
+    "</label>" +
     controlesFuenteHTML +
   "</div>";
 }
@@ -2489,12 +2511,12 @@ function conectarEventosDeFilaCompromisoSimulado(contenedor) {
       return;
     }
 
-    const selectCiclo = fila.querySelector(".ciclo-destino-simulado");
-    selectCiclo.value = item.cicloId;
-    selectCiclo.addEventListener("change", function (evento) {
-      item.cicloId = evento.target.value;
-      item.modificadoEnSimulacion = true;
-      renderizarTodo();
+    // Mover la fecha mueve también el ciclo, y de eso se encarga
+    // cambiarFechaSimulada — la misma función que ya usa el calendario.
+    // Aquí no se repite el cálculo: si la regla de qué ciclo le toca a
+    // una fecha cambiara, cambiaría en un solo lugar.
+    fila.querySelector(".fecha-simulada-editada").addEventListener("change", function (evento) {
+      cambiarFechaSimulada(idSimulado, evento.target.value);
     });
 
     fila.querySelector(".monto-simulado-editado").addEventListener("change", function (evento) {

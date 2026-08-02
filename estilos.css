@@ -2129,6 +2129,302 @@ details summary {
   cursor: pointer;
 }
 #vistaAncha .boton-marcar-pagado:hover { border-color: var(--texto-3a); }
+
+/* ---------- Acción ---------- */
+/* En el flujo, en su propia fila: así no hay número mágico que mantener
+   sincronizado con la altura del cajón, que cambia según su contenido. */
+#accionesFlotantes {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 22px 12px;
+}
+/* Con el calendario desplegado no hay dónde ponerlo sin tapar el panel del
+   día. Para dar de alta algo en una fecha concreta el lugar natural es el
+   propio día (pendiente, va con los modales de registro). */
+#primeraPantalla.con-cajon-abierto #accionesFlotantes {
+  display: none;
+}
+/* Inversión neutra: el único elemento de la app con fondo claro sólido, que
+   es lo que lo hace resaltar sin necesidad de color ni de tamaño. Radio 10,
+   como todo el sistema — no un pill, para que no se lea como una insignia. */
+#botonAgregarYAjustar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 16px 11px 13px;
+  background-color: var(--texto-a);
+  color: var(--fondo-a);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+#botonAgregarYAjustar .signo-mas {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+  /* El signo carga el peso visual, así que se le da su propio espacio
+     separado del texto por una línea, no por aire. */
+  padding-right: 9px;
+  border-right: 1px solid rgba(24, 22, 28, 0.22);
+}
+#botonAgregarYAjustar:hover { background-color: #ffffff; }
+#botonAgregarYAjustar:active { transform: translateY(1px); }
+
+/* ---------- Marca de crédito y botón de opciones ---------- */
+#vistaAncha .marca-credito {
+  font-family: var(--mono-a);
+  font-size: 0.85em;
+  color: var(--texto-3a);
+  border: 1px solid var(--borde-a);
+  border-radius: 4px;
+  padding: 0 0.3em;
+}
+/* ---------- La fila tocable del muro ---------- */
+/* La fila ENTERA es el botón. Antes había un botón de tres puntos de 20px
+   al final de la línea: un blanco imposible en el teléfono y algo que hay
+   que buscar en la laptop. Decisión del usuario (2 ago 2026). */
+#vistaAncha button.fila-muro {
+  width: 100%;
+  border: 0;
+  background-color: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  /* Cada gasto queda encapsulado: su propio recuadro, con separación
+     visible entre uno y otro. Antes eran renglones pegados y no se veía
+     dónde acababa uno y empezaba el siguiente. */
+  border: 1px solid transparent;
+  border-radius: 0.5em;
+  padding: 0.42em 0.5em;
+  margin-bottom: 0.22em;
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+#vistaAncha button.fila-muro:hover {
+  background-color: var(--superficie-alta-a);
+  border-color: var(--borde-a);
+}
+#vistaAncha button.fila-muro:focus-visible {
+  outline: 2px solid var(--texto-2a);
+  outline-offset: 1px;
+}
+/* La fila abierta se queda marcada: sin esto, con la ventanita encima no
+   se sabe cuál de todos los pagos se está tocando. */
+#vistaAncha button.fila-muro.esta-abierta {
+  background-color: var(--superficie-alta-a);
+  border-color: var(--texto-3a);
+}
+/* Un pago ya pagado no es botón, pero lleva el mismo espaciado para que
+   la columna no se desalinee. */
+#vistaAncha .fila-muro.es-pagado {
+  padding: 0.42em 0.5em;
+  margin-bottom: 0.22em;
+  border: 1px solid transparent;
+}
+
+/* Un pago diferido ya no sale de este ciclo: se atenúa, como los pagados. */
+#vistaAncha .fila-muro.es-credito .nombre-fila-muro,
+#vistaAncha .fila-muro.es-credito .monto-fila-muro { color: var(--texto-3a); }
+
+/* ---------- Ventanita de opciones de un pago ---------- */
+/* No es un modal centrado: es una ventanita anclada a la fila que se
+   tocó, colocada con position: fixed y coordenadas medidas (ver
+   anclarPanelDeOpcionesALaFila). Va suelta y no dentro del muro porque
+   el muro recorta lo que se sale de sus recuadros.
+
+   La capa que la rodea es transparente: no oscurece la pantalla, solo
+   está ahí para atrapar el toque de "cerrar". Oscurecer convertiría un
+   ajuste rápido en una interrupción. */
+#capaOpcionesPago {
+  position: fixed;
+  inset: 0;
+  background-color: transparent;
+  z-index: 60;
+}
+#capaOpcionesPago[hidden] { display: none; }
+
+#panelOpcionesPago {
+  position: fixed;
+  width: 268px;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--superficie-a);
+  border: 1px solid var(--texto-3a);
+  border-radius: 12px;
+  /* La única sombra de la app, y con razón: es lo que separa una ventana
+     flotante del contenido que tapa. Sin ella se lee como parte del muro. */
+  box-shadow: 0 14px 34px rgba(8, 7, 10, 0.66);
+  overflow: hidden;
+}
+
+#encabezadoOpcionesPago {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 8px 10px 14px;
+  background-color: var(--fondo-a);
+  border-bottom: 1px solid var(--borde-sutil-a);
+}
+#encabezadoOpcionesPago .nombre-en-panel {
+  font-size: 13px;
+  color: var(--texto-a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#botonCerrarOpcionesPago {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--texto-3a);
+  font-family: inherit;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#botonCerrarOpcionesPago:hover { color: var(--texto-a); }
+
+#cuerpoOpcionesPago {
+  padding: 13px 14px 12px;
+  /* Si el panel se recorta por falta de espacio, el que hace scroll es
+     el cuerpo: el encabezado con el nombre se tiene que quedar visible. */
+  overflow-y: auto;
+}
+
+/* Los campos en columna, cada uno con su etiqueta encima: en 268px de
+   ancho una fila de controles sin nombre no se entiende. */
+#cuerpoOpcionesPago .fila-compromiso-simulado {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+#vistaAncha .campo-simulado,
+#cuerpoOpcionesPago .campo-simulado {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+#cuerpoOpcionesPago .campo-simulado > span {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--texto-3a);
+}
+#cuerpoOpcionesPago input,
+#cuerpoOpcionesPago select {
+  width: 100%;
+  background-color: var(--fondo-a);
+  border: 1px solid var(--borde-a);
+  border-radius: 7px;
+  color: var(--texto-a);
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 8px 9px;
+}
+#cuerpoOpcionesPago input {
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+}
+#cuerpoOpcionesPago input:focus,
+#cuerpoOpcionesPago select:focus {
+  outline: none;
+  border-color: var(--texto-3a);
+}
+/* Tarjeta y meses solo aparecen si se eligió crédito: los muestra
+   conectarEventosDeFilaCompromisoSimulado poniendo display. */
+#cuerpoOpcionesPago .controles-credito-simulado {
+  display: none;
+  flex-direction: column;
+  gap: 11px;
+}
+
+#cuerpoOpcionesPago .pie-simulacion {
+  margin: 13px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid var(--borde-sutil-a);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--texto-3a);
+}
+#cuerpoOpcionesPago .pie-simulacion strong {
+  color: var(--texto-2a);
+  font-weight: 500;
+}
+
+/* ---------- Modal de Ajustes ---------- */
+/* Ventana flotante de tamaño contenido, nunca a pantalla completa. */
+#capaModal {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(12, 10, 15, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  z-index: 50;
+}
+#capaModal[hidden] { display: none; }
+
+#panelAjustes {
+  background-color: var(--fondo-a);
+  border: 1px solid var(--borde-a);
+  border-radius: 10px;
+  width: min(760px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#encabezadoAjustes {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--borde-sutil-a);
+}
+#encabezadoAjustes h2 { margin: 0; font-size: 15px; }
+#botonCerrarAjustes {
+  border: 1px solid var(--borde-a);
+  background-color: var(--superficie-a);
+  color: var(--texto-2a);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+#contenidoAjustes {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 18px 18px;
+}
+
+/* Los cuatro menús de atajos, en dos columnas: así se ven como el cuadro
+   de botones que van a formar en el teléfono, y no como una lista larga. */
+#listaAtajosDeCaptura {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+#vistaAncha button:focus-visible,
+#vistaAncha input:focus-visible,
+#vistaAncha select:focus-visible {
+  outline: 2px solid var(--texto-2a);
+  outline-offset: 1px;
+}
+
+
 /* ============================================================ */
 /* VISTA ANCHA — ESTUDIO DEL CICLO (la segunda pantalla)         */
 /* ============================================================ */

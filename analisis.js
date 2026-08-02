@@ -421,24 +421,10 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
           ? " <span class=\"marca-credito\">" + pago.estadoCredito.mesesDiferidos + " MSI</span>"
           : "";
 
-        // Un pago pendiente lleva su monto como campo editable; uno ya
-        // pagado, como texto: su monto real ya ocurrió y no es negociable.
-        // El campo se ve igual que el texto hasta que se enfoca, así que
-        // editarlo no cambia la altura de la fila ni obliga a reacomodar el
-        // muro entero.
-        const montoHTML = pago.pagado
-          ? "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>"
-          : "<input type=\"number\" min=\"0\" step=\"1\" class=\"monto-editable-muro\"" +
-            " data-monto-de=\"" + pago.idSimulado + "\" value=\"" + monto + "\"" +
-            " aria-label=\"Monto de " + escaparHTML(pago.nombre) + "\">";
-
-        // Botón para abrir las opciones de pago (débito o crédito a meses, y
-        // a qué ciclo mandarlo). No van desplegadas en la fila: llenarían el
-        // muro de selects y dejaría de leerse de un golpe.
-        const botonOpciones = pago.pagado
-          ? ""
-          : "<button type=\"button\" class=\"boton-opciones-pago\" data-opciones-de=\"" + pago.idSimulado + "\"" +
-            " title=\"Cómo pagarlo\" aria-label=\"Opciones de pago de " + escaparHTML(pago.nombre) + "\">···</button>";
+        // El monto va siempre como texto. Antes era un campo suelto dentro
+        // de la fila, y convivía mal con el botón de tres puntos de al
+        // lado: dos blancos chiquitos que acertar en la misma línea.
+        const montoHTML = "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>";
 
         // El destinatario solo baja a una segunda línea cuando hace falta
         // para no confundir dos pagos que se llaman igual (ver
@@ -450,14 +436,30 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
           ? "<span class=\"destinatario-fila-muro\">" + escaparHTML(destinatarioVisible) + "</span>"
           : "";
 
-        const fila = "<div class=\"fila-muro" + (estado === "pagado" ? " es-pagado" : "") +
-            (pago.estadoCredito ? " es-credito" : "") + "\">" +
+        // La fila ENTERA es el botón: nombre, día y monto. Antes había que
+        // acertarle a un botón de tres puntos de 20px al final de la línea,
+        // que en el teléfono es un blanco imposible y en la laptop obliga a
+        // buscarlo. Decisión del usuario (2 ago 2026): "quiero que cada
+        // gasto pueda tocarlo toda su línea".
+        //
+        // Un pago ya pagado no es botón: no hay nada que decidir sobre él.
+        const interior =
           "<span class=\"punto-estado " + estado + "\"></span>" +
           "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + etiquetaCredito + segundaLinea + "</span>" +
           "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
-          montoHTML +
-          botonOpciones +
-        "</div>";
+          montoHTML;
+
+        const clases = "fila-muro" + (estado === "pagado" ? " es-pagado" : "") +
+          (pago.estadoCredito ? " es-credito" : "") +
+          (idDePagoConOpcionesAbiertas === pago.idSimulado ? " esta-abierta" : "");
+
+        const fila = pago.pagado
+          ? "<div class=\"" + clases + "\">" + interior + "</div>"
+          : "<button type=\"button\" class=\"" + clases + " es-tocable\"" +
+              " data-opciones-de=\"" + pago.idSimulado + "\"" +
+              " aria-label=\"Ajustar " + escaparHTML(pago.nombre) + "\">" +
+              interior +
+            "</button>";
 
         if (!conAccionDePago || pago.pagado) {
           return fila;
@@ -612,15 +614,16 @@ function pintarMuro(recuadros, columnas, mostrarTitulos) {
     });
   });
 
-  document.querySelectorAll("#muroPagos [data-monto-de]").forEach(function (campo) {
-    campo.addEventListener("change", function () {
-      cambiarMontoSimulado(campo.getAttribute("data-monto-de"), campo.value);
-    });
-  });
-
-  document.querySelectorAll("#muroPagos [data-opciones-de]").forEach(function (boton) {
-    boton.addEventListener("click", function () {
-      abrirOpcionesDePago(boton.getAttribute("data-opciones-de"));
+  // La fila entera abre su ventanita, y volver a tocarla la cierra: si no
+  // fuera así, la única forma de cerrarla sería acertarle a la ×.
+  document.querySelectorAll("#muroPagos [data-opciones-de]").forEach(function (fila) {
+    fila.addEventListener("click", function () {
+      const id = fila.getAttribute("data-opciones-de");
+      if (idDePagoConOpcionesAbiertas === id) {
+        cerrarOpcionesDePago();
+      } else {
+        abrirOpcionesDePago(id);
+      }
     });
   });
 }
@@ -644,10 +647,6 @@ function abrirOpcionesDePago(idSimulado) {
   const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
   if (!item) { return; }
 
-  const horizonte = obtenerHorizonteDeCiclosSimulacion();
-  const horizonteOpcionesHTML = horizonte.map(function (c) {
-    return "<option value=\"" + c.id + "\">" + c.id + "</option>";
-  }).join("");
   const tarjetasQuePermitenDiferir = datosSimulados.config.tarjetas.filter(function (t) {
     return t.permiteDiferirAMeses;
   });
@@ -655,14 +654,13 @@ function abrirOpcionesDePago(idSimulado) {
   const panel = document.getElementById("panelOpcionesPago");
   panel.innerHTML =
     "<header id=\"encabezadoOpcionesPago\">" +
-      "<h2>" + escaparHTML(item.nombre) + "</h2>" +
-      "<button type=\"button\" id=\"botonCerrarOpcionesPago\">Cerrar</button>" +
+      "<span class=\"nombre-en-panel\">" + escaparHTML(item.nombre) + "</span>" +
+      "<button type=\"button\" id=\"botonCerrarOpcionesPago\" aria-label=\"Cerrar\">×</button>" +
     "</header>" +
     "<div id=\"cuerpoOpcionesPago\">" +
-      "<p class=\"pista\">Cambia el monto, mándalo a otro ciclo, o difiérelo a " +
-        "meses con una tarjeta. Nada de esto se guarda hasta que lo confirmes " +
-        "en la barra de arriba.</p>" +
-      construirFilaCompromisoSimulado(item, horizonteOpcionesHTML, tarjetasQuePermitenDiferir) +
+      construirFilaCompromisoSimulado(item, tarjetasQuePermitenDiferir) +
+      "<p class=\"pie-simulacion\">Es una simulación. Nada se guarda hasta que uses " +
+        "<strong>Guardar</strong> en la barra de arriba.</p>" +
     "</div>";
 
   document.getElementById("capaOpcionesPago").hidden = false;
@@ -675,6 +673,57 @@ function abrirOpcionesDePago(idSimulado) {
   // Al redibujar, la ventana se queda abierta sobre el mismo pago para poder
   // probar varias combinaciones sin volver a buscarlo.
   idDePagoConOpcionesAbiertas = idSimulado;
+
+  anclarPanelDeOpcionesALaFila(idSimulado);
+}
+
+// Coloca la ventanita pegada a la fila que se tocó, no en el centro de la
+// pantalla. Se posiciona con position: fixed y coordenadas medidas, y no
+// como hijo de la fila, porque el muro recorta lo que se sale de sus
+// recuadros y la ventana quedaría cortada.
+//
+// Debajo de la fila si cabe; encima si no. Y siempre dentro de la
+// ventana del navegador, aunque la fila esté pegada a un borde.
+function anclarPanelDeOpcionesALaFila(idSimulado) {
+  const fila = document.querySelector("#muroPagos [data-opciones-de=\"" + idSimulado + "\"]");
+  const panel = document.getElementById("panelOpcionesPago");
+  if (!fila) { return; }
+
+  const MARGEN = 10;
+  const SEPARACION = 6;
+  const rectFila = fila.getBoundingClientRect();
+
+  // Se mide el panel ya dibujado, sin tope de altura, para saber cuánto
+  // quiere ocupar. El tope se le pone después, según el hueco que haya.
+  panel.style.maxHeight = "";
+  const alturaDeseada = panel.getBoundingClientRect().height;
+  const anchoPanel = panel.getBoundingClientRect().width;
+
+  let izquierda = rectFila.left;
+  if (izquierda + anchoPanel > window.innerWidth - MARGEN) {
+    izquierda = window.innerWidth - anchoPanel - MARGEN;
+  }
+  panel.style.left = Math.max(izquierda, MARGEN) + "px";
+
+  const huecoAbajo = window.innerHeight - rectFila.bottom - SEPARACION - MARGEN;
+  const huecoArriba = rectFila.top - SEPARACION - MARGEN;
+
+  // Debajo de la fila si cabe entero; si no, encima. Y si no cabe de
+  // ningún lado —pantallas bajas, o una fila a media altura— se queda del
+  // lado con más hueco y el panel se recorta con scroll propio. Antes se
+  // pegaba al borde de arriba y terminaba tapando justo el pago que se
+  // estaba editando, que es lo peor que puede hacer.
+  if (alturaDeseada <= huecoAbajo) {
+    panel.style.top = (rectFila.bottom + SEPARACION) + "px";
+  } else if (alturaDeseada <= huecoArriba) {
+    panel.style.top = (rectFila.top - alturaDeseada - SEPARACION) + "px";
+  } else if (huecoAbajo >= huecoArriba) {
+    panel.style.top = (rectFila.bottom + SEPARACION) + "px";
+    panel.style.maxHeight = huecoAbajo + "px";
+  } else {
+    panel.style.top = MARGEN + "px";
+    panel.style.maxHeight = huecoArriba + "px";
+  }
 }
 
 let idDePagoConOpcionesAbiertas = null;
@@ -1136,24 +1185,6 @@ function guardarSimulacion() {
   // queda en pantalla es exactamente lo que se grabó.
   reiniciarSimulacion();
   mostrarMensaje("Cambios guardados.");
-}
-
-// Editar el monto de un pago. Opera sobre el item materializado, que puede
-// ser un compromiso real o uno de un ciclo proyectado.
-function cambiarMontoSimulado(idSimulado, nuevoMonto) {
-  const monto = Number(nuevoMonto);
-  if (!monto || monto <= 0) {
-    renderizarTodo();
-    return;
-  }
-
-  asegurarSimulacionAbierta();
-  const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
-  if (!item) { return; }
-
-  item.montoEstimado = monto;
-  item.modificadoEnSimulacion = true;
-  renderizarTodo();
 }
 
 // Mover un pago a otra fecha (posponerlo o adelantarlo).

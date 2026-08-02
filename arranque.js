@@ -90,6 +90,20 @@ document.querySelectorAll("#zonaAnalisis .opcion-lente").forEach(function (boton
 // su innerHTML), así que basta con activarlo una vez al arrancar.
 activarIndiceDelEstudio();
 
+// La ventanita de opciones de un pago se cierra al tocar fuera de ella o con
+// Escape, como cualquier menú desplegable. La capa cubre la pantalla completa
+// pero es transparente: solo está ahí para atrapar ese toque.
+document.getElementById("capaOpcionesPago").addEventListener("click", function (evento) {
+  if (evento.target.id === "capaOpcionesPago") {
+    cerrarOpcionesDePago();
+  }
+});
+document.addEventListener("keydown", function (evento) {
+  if (evento.key === "Escape" && opcionesDePagoEstanAbiertas()) {
+    cerrarOpcionesDePago();
+  }
+});
+
 document.getElementById("asaCajon").addEventListener("click", alternarCajonDeCalendario);
 document.getElementById("mesAnteriorCajon").addEventListener("click", function () {
   cambiarMesDelCajon(-1);
