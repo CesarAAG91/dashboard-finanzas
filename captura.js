@@ -590,8 +590,8 @@ function calcularFaltantesDeCategoriaEnElCiclo(categoriaId, cicloId, datos, idQu
   };
 }
 
-// Arma el renglón que va arriba del monto. Cuál de los dos aparece lo
-// decide la categoría:
+// Qué dice el renglón que va arriba del monto, como texto y no como HTML.
+// Cuál de los dos aparece lo decide la categoría:
 //
 // - Variable y pagando con débito -> lo que queda de la semana. Con
 //   crédito no aparece: el presupuesto semanal mide lo que sale de la
@@ -600,22 +600,28 @@ function calcularFaltantesDeCategoriaEnElCiclo(categoriaId, cicloId, datos, idQu
 //   categoría este ciclo.
 // - Cualquier otro caso (tarjetas, deudas, categorías sin presupuesto):
 //   ningún renglón. Más vale nada que un número que no significa nada.
-function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEstaPagando) {
+//
+// Devuelve el texto en vez del HTML porque teclear cambia solo el texto del
+// renglón que ya está en pantalla, sin volver a crear el elemento (ver
+// actualizarMontoEnPantalla). htmlDelRenglonInformativo, abajo, es la que lo
+// envuelve para el dibujado inicial.
+function textoDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEstaPagando) {
+  const sinRenglon = { texto: "", excedido: false };
   const datos = leerDatos();
   const ciclo = asegurarCicloActual();
   const categoria = datos.config.categorias.find(function (c) { return c.id === categoriaId; });
 
   if (!categoria) {
-    return "<p class=\"renglon-informativo\"></p>";
+    return sinRenglon;
   }
 
   if (categoria.esVariableSemanal) {
     if (fuente !== "debito") {
-      return "<p class=\"renglon-informativo\"></p>";
+      return sinRenglon;
     }
     const restante = calcularRestanteSemanalDeCategoria(categoria, ciclo, datos, montoEnCurso);
     if (restante === null) {
-      return "<p class=\"renglon-informativo\"></p>";
+      return sinRenglon;
     }
     // El nombre que se dice es el de quien de verdad gasta esa bolsa. Si el
     // presupuesto de Transporte solo lo consume la gasolina, decir "te quedan
@@ -623,23 +629,38 @@ function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEst
     const nombreDeLaBolsa = categoria.subcategoriaQueConsumeElPresupuesto || categoria.nombre;
 
     if (restante < 0) {
-      return "<p class=\"renglon-informativo excedido\">Te pasaste por " +
-        formatearMoneda(Math.abs(restante)) + " en " + escaparHTML(nombreDeLaBolsa) + " esta semana</p>";
+      return {
+        texto: "Te pasaste por " + formatearMoneda(Math.abs(restante)) + " en " + nombreDeLaBolsa + " esta semana",
+        excedido: true
+      };
     }
-    return "<p class=\"renglon-informativo\">Te quedan " + formatearMoneda(restante) +
-      " en " + escaparHTML(nombreDeLaBolsa) + " esta semana</p>";
+    return {
+      texto: "Te quedan " + formatearMoneda(restante) + " en " + nombreDeLaBolsa + " esta semana",
+      excedido: false
+    };
   }
 
   if (!idQueSeEstaPagando) {
-    return "<p class=\"renglon-informativo\"></p>";
+    return sinRenglon;
   }
 
   const faltantes = calcularFaltantesDeCategoriaEnElCiclo(categoriaId, ciclo.id, datos, idQueSeEstaPagando);
   if (faltantes.cuantos === 0) {
-    return "<p class=\"renglon-informativo\">Con este se cierra " + escaparHTML(categoria.nombre) + " este ciclo</p>";
+    return { texto: "Con este se cierra " + categoria.nombre + " este ciclo", excedido: false };
   }
-  return "<p class=\"renglon-informativo\">Faltan " + faltantes.cuantos + " de " +
-    escaparHTML(categoria.nombre) + " este ciclo · " + formatearMoneda(faltantes.suma) + " por pagar</p>";
+  return {
+    texto: "Faltan " + faltantes.cuantos + " de " + categoria.nombre + " este ciclo · " +
+      formatearMoneda(faltantes.suma) + " por pagar",
+    excedido: false
+  };
+}
+
+// El renglón como HTML, para el dibujado completo del ticket. Al teclear no
+// se usa: ahí se cambia el texto del que ya existe.
+function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEstaPagando) {
+  const renglon = textoDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEstaPagando);
+  return "<p class=\"renglon-informativo" + (renglon.excedido ? " excedido" : "") + "\">" +
+    escaparHTML(renglon.texto) + "</p>";
 }
 
 // ============================================================
@@ -1777,8 +1798,18 @@ function desprenderElTicket() {
   elTicketDebeEntrarImprimiendose = true;
 }
 
-// Redibuja solo el monto, el renglón informativo y el botón: teclear no
-// tiene por qué rehacer la pantalla entera ni reiniciar sus animaciones.
+// Pone al día lo que cambia al teclear: el monto, el renglón informativo, el
+// reparto a meses y el botón de guardar. El resto del ticket no se toca.
+//
+// Nada de esto vuelve a crear un elemento. Antes el monto y el renglón se
+// reemplazaban con outerHTML, que destruye el nodo y construye uno nuevo en su
+// lugar: el número desaparecía y se volvía a pintar en cada tecla, y eso se
+// veía como un parpadeo de la cifra completa mientras se escribía. Cambiar el
+// texto del nodo que ya está en pantalla no tiene ese costo — el navegador
+// repinta el texto y nada más.
+//
+// Si algún día hay que meterle otro dato a esta pantalla, que se actualice
+// igual: buscar el nodo y cambiarle el contenido, nunca reemplazarlo.
 function actualizarMontoEnPantalla() {
   const ticket = document.getElementById("ticketCaptura");
   const datos = leerDatos();
@@ -1790,13 +1821,21 @@ function actualizarMontoEnPantalla() {
     categoriaDelRenglon = compromiso ? resolverCategoriaDeCompromiso(compromiso, datos) : null;
   }
 
-  ticket.querySelector(".monto-ticket").outerHTML = htmlDelMonto();
-  ticket.querySelector(".renglon-informativo").outerHTML = htmlDelRenglonInformativo(
+  // El monto: solo cambia la cifra. El signo de pesos no se toca nunca.
+  const cifra = ticket.querySelector(".monto-ticket .cifra");
+  const enEspera = montoEscritoEnElTicket === "";
+  cifra.textContent = enEspera ? "0" : montoEscritoEnElTicket;
+  cifra.classList.toggle("en-espera", enEspera);
+
+  const renglon = textoDelRenglonInformativo(
     categoriaDelRenglon,
     fuenteSeleccionadaGasto,
     montoDelTicketComoNumero(),
     esPago ? compromisoQueSeEstaPagando : null
   );
+  const renglonEnPantalla = ticket.querySelector(".renglon-informativo");
+  renglonEnPantalla.textContent = renglon.texto;
+  renglonEnPantalla.classList.toggle("excedido", renglon.excedido);
   // El reparto a meses también se mueve con cada tecla: "12 pagos de $1,000"
   // solo sirve si va cambiando mientras se escribe el monto.
   const renglonReparto = ticket.querySelector(".renglon-reparto");
