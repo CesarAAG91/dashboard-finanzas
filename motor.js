@@ -81,7 +81,11 @@ function crearEstructuraVacia() {
   return {
     config: {
       categorias: [],
-      tarjetas: []
+      tarjetas: [],
+      // Los atajos del muro de Captura: las subcategorías que se capturan
+      // a diario y merecen un botón en la primera pantalla del teléfono.
+      // Ver "ATAJOS DE CAPTURA" en captura.js.
+      atajosDeCaptura: []
     },
     ciclos: [],
     ingresos: [],
@@ -218,6 +222,13 @@ function completarCamposDeRespaldoFaltantes(datos) {
   }
   if (datos.ultimoRespaldo === undefined) {
     datos.ultimoRespaldo = null;
+    faltabaAlgo = true;
+  }
+  // Los atajos de Captura llegaron después de que la app ya estaba en uso,
+  // así que unos datos guardados antes de esa fecha no traen la lista. Sin
+  // esto, la primera pantalla del teléfono reventaría al recorrerla.
+  if (datos.config && !Array.isArray(datos.config.atajosDeCaptura)) {
+    datos.config.atajosDeCaptura = [];
     faltabaAlgo = true;
   }
 

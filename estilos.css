@@ -721,6 +721,55 @@ details summary {
   color: var(--tinta-ter-c);
 }
 
+/* El muro de atajos no se pega arriba como las demás rejillas: se centra en
+   el alto que le sobra. Son tres o cuatro botones, no doce, y el sobrante
+   pegado abajo dejaba media pantalla vacía. Centrados caen además donde el
+   pulgar alcanza sin recorrer el teléfono. */
+#vistaCaptura .rejilla-atajos {
+  margin-top: auto;
+  align-content: center;
+}
+#vistaCaptura .rejilla-atajos .boton-ticket {
+  font-size: 17px;
+}
+
+/* ---------- Las dos puertas al pie del muro (pantalla 1) ---------- */
+/* Renglones, no botones grandes, y a propósito: son la excepción del día y
+   no deben competir con los atajos por la mirada. Se quedan pegadas al pie
+   porque la rejilla de arriba lleva margin-bottom: auto. */
+#vistaCaptura .puertas-ticket {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--papel-linea-c);
+}
+#vistaCaptura .puerta-ticket {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+  padding: 7px 2px;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  color: var(--tinta-sec-c);
+  cursor: pointer;
+}
+#vistaCaptura .puerta-ticket:active { background-color: var(--papel-toque-c); }
+/* La flecha se dibuja aquí y no en el HTML: es decoración, y un lector de
+   pantalla no tiene por qué leer "flecha" después del nombre. */
+#vistaCaptura .puerta-ticket::after {
+  content: "→";
+  margin-left: auto;
+  color: var(--tinta-ter-c);
+}
+#vistaCaptura .puerta-ticket .cuantos {
+  font-size: 11px;
+  color: var(--tinta-ter-c);
+}
+
 /* ---------- Lo ya registrado hoy en esta categoría (pantalla 2) ---------- */
 /* Nunca crece más de tres líneas: si hoy hubo diez compras, se corta. Es un
    recordatorio de un vistazo, no una lista para leer. */
@@ -1992,6 +2041,14 @@ details summary {
   min-height: 0;
   overflow-y: auto;
   padding: 4px 18px 18px;
+}
+
+/* Los cuatro menús de atajos, en dos columnas: así se ven como el cuadro
+   de botones que van a formar en el teléfono, y no como una lista larga. */
+#listaAtajosDeCaptura {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 #vistaAncha button:focus-visible,

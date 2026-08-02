@@ -112,6 +112,121 @@ function guardarEdicionDeCategoria(categoriaId, filaLi) {
   renderizarTodo();
 }
 
+// ============================================================
+// CONFIGURACIÓN — ATAJOS DE CAPTURA
+// ============================================================
+//
+// Los cuatro botones grandes de la primera pantalla del teléfono. El
+// porqué de todo esto está explicado en captura.js, sección "CAPTURA —
+// ATAJOS DE CAPTURA"; aquí solo está el formulario que los elige.
+//
+// Son cuatro menús numerados en vez de una lista de casillas porque el
+// número es la posición en pantalla: el atajo 1 es siempre el de arriba a
+// la izquierda. Con casillas el orden lo decidiría el programa y los
+// botones se moverían de lugar solos, que es justo lo que hay que evitar
+// cuando se captura sin mirar.
+
+function renderizarAtajosDeCaptura() {
+  const datos = leerDatos();
+  const contenedor = document.getElementById("listaAtajosDeCaptura");
+  const candidatas = obtenerSubcategoriasCandidatasAAtajo(datos);
+
+  if (candidatas.length === 0) {
+    contenedor.innerHTML = "<p class=\"vacio\">Todavía no hay subcategorías que puedan ser atajo. " +
+      "Solo pueden serlo las de categorías que reciben presupuesto semanal, " +
+      "porque son las únicas donde se captura un gasto nuevo.</p>";
+    return;
+  }
+
+  const atajosGuardados = datos.config.atajosDeCaptura || [];
+  const menus = [];
+
+  for (let posicion = 0; posicion < MAXIMO_DE_ATAJOS; posicion++) {
+    const atajo = atajosGuardados[posicion];
+
+    const opciones = candidatas.map(function (candidata, indice) {
+      // Una candidata sin categoría es "Otros" antes de existir: todavía no
+      // tiene id, así que no puede coincidir con nada ya guardado.
+      const estaElegida = atajo && candidata.categoria !== null &&
+        atajo.categoriaId === candidata.categoria.id &&
+        atajo.subcategoria === candidata.subcategoria;
+
+      // El nombre de la categoría entre paréntesis desambigua dos
+      // subcategorías que se llamen igual. En "Otros" sobra: la etiqueta ya
+      // es el nombre de la categoría.
+      const deQueCategoria = candidata.categoria !== null &&
+        candidata.etiqueta !== candidata.categoria.nombre
+          ? " (" + escaparHTML(candidata.categoria.nombre) + ")"
+          : "";
+
+      return "<option value=\"" + indice + "\"" + (estaElegida ? " selected" : "") + ">" +
+        escaparHTML(candidata.etiqueta) + deQueCategoria +
+      "</option>";
+    }).join("");
+
+    menus.push(
+      "<label>Atajo " + (posicion + 1) +
+        "<select class=\"atajo-de-captura\">" +
+          "<option value=\"\">— vacío —</option>" +
+          opciones +
+        "</select>" +
+      "</label>"
+    );
+  }
+
+  contenedor.innerHTML = menus.join("");
+
+  contenedor.querySelectorAll(".atajo-de-captura").forEach(function (menu) {
+    menu.addEventListener("change", guardarAtajosDeCaptura);
+  });
+}
+
+// Guarda los cuatro menús de una sola vez, en el orden en que aparecen.
+//
+// Los menús se identifican por su posición en la lista de candidatas y no
+// por un texto compuesto, para no tener que inventar un separador que
+// podría chocar con el nombre de una subcategoría.
+//
+// Si la misma subcategoría se eligió en dos menús se conserva solo la
+// primera: dos botones idénticos en el muro no le sirven a nadie, y
+// callarlo sería peor que arreglarlo.
+function guardarAtajosDeCaptura() {
+  const candidatas = obtenerSubcategoriasCandidatasAAtajo(leerDatos());
+  const elegidos = [];
+
+  document.querySelectorAll("#listaAtajosDeCaptura .atajo-de-captura").forEach(function (menu) {
+    if (menu.value === "") {
+      return;
+    }
+
+    const candidata = candidatas[Number(menu.value)];
+    // "Otros" puede no existir todavía como categoría: elegirla en el muro
+    // es la primera vez que se usa, y ahí es donde nace. Esto escribe en
+    // los datos, así que tiene que pasar ANTES de leerlos abajo.
+    const categoria = candidata.categoria || asegurarCategoriaOtros();
+
+    const yaEstaba = elegidos.some(function (atajo) {
+      return atajo.categoriaId === categoria.id &&
+        atajo.subcategoria === candidata.subcategoria;
+    });
+
+    if (!yaEstaba) {
+      elegidos.push({
+        categoriaId: categoria.id,
+        subcategoria: candidata.subcategoria
+      });
+    }
+  });
+
+  // Se lee hasta aquí, y no al principio, porque asegurarCategoriaOtros
+  // pudo haber guardado una categoría nueva: leer antes y escribir después
+  // la borraría sin dejar rastro.
+  const datos = leerDatos();
+  datos.config.atajosDeCaptura = elegidos;
+  guardarDatos(datos);
+  renderizarTodo();
+}
+
 // Llena un <select> con las categorías existentes. Se usa en el formulario
 // de recurrentes, que necesita elegir a qué categoría pertenece cada uno.
 function poblarSelectDeCategorias(selectElement) {

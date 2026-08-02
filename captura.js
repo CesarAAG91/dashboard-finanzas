@@ -362,6 +362,121 @@ function etiquetaCompletaDeCompromiso(compromiso, datos) {
 }
 
 // ============================================================
+// CAPTURA — ATAJOS DE CAPTURA
+// ============================================================
+//
+// Lo que de verdad se captura todos los días no son categorías, son
+// subcategorías: el súper, la comida diaria, la gasolina. La categoría a la
+// que pertenecen (Comida, Transporte) sirve para el análisis de después, no
+// para capturar — obligar a pasar por ella es un toque y una pantalla que
+// no deciden nada.
+//
+// Por eso la primera pantalla del teléfono es un muro con esas
+// subcategorías directas, y las categorías completas quedan detrás de una
+// puerta. Cuáles van en el muro no lo adivina la app: las elige el usuario
+// desde la laptop, en Ajustes. Es una decisión que él ya conoce y que la
+// app tardaría semanas en aprender sola — y que al aprenderla movería los
+// botones de lugar justo cuando ya se memorizaron.
+//
+// Se guardan en config.atajosDeCaptura como una lista de
+// { categoriaId, subcategoria }. Van juntos y no solo la subcategoría
+// porque dos categorías distintas pueden tener una subcategoría con el
+// mismo nombre. Y es una lista aparte, no una bandera dentro de la
+// subcategoría, porque las subcategorías son texto suelto: convertirlas en
+// objetos rompería los tres lugares que las comparan por ese texto.
+
+// Cuántos atajos caben en el muro. Cuatro llenan la pantalla del iPhone con
+// botones cómodos para el pulgar; con más habría que encogerlos, y un muro
+// de atajos que hay que leer con cuidado ya no es un atajo.
+const MAXIMO_DE_ATAJOS = 4;
+
+// El tope de alto de un botón del muro. Es tan grande a propósito: casi
+// nunca manda, porque dos renglones de este tamaño ya llenan la pantalla de
+// un teléfono y entonces los botones se encogen solos hasta caber. Solo
+// actúa en el caso raro de un único atajo configurado, para que no salga un
+// botón del alto del teléfono entero.
+const ALTO_MAXIMO_DE_ATAJO = 340;
+
+// Hasta tres atajos van en una sola columna: botones anchos de lado a
+// lado, que es lo que hace imposible fallarles con el pulgar. Con tres en
+// dos columnas el tercero quedaba solo, con un hueco al lado. El cuarto es
+// el que obliga a partir en dos.
+const ATAJOS_PARA_DOS_COLUMNAS = 4;
+
+// Los atajos configurados que todavía apuntan a algo que existe.
+//
+// Un atajo se puede romper solo: basta con renombrar o borrar la
+// subcategoría desde Ajustes. Cuando pasa, el atajo simplemente no se
+// dibuja, y el dato sigue guardado — si fue un typo y se corrige al rato,
+// el botón vuelve a aparecer sin tener que reconfigurarlo. (Solo
+// desaparece de verdad la próxima vez que se toque el formulario de
+// Ajustes, que reescribe la lista con lo que muestran los menús.)
+function obtenerAtajosDeCaptura(datos) {
+  const atajos = datos.config.atajosDeCaptura || [];
+
+  return atajos.map(function (atajo) {
+    const categoria = datos.config.categorias.find(function (c) {
+      return c.id === atajo.categoriaId;
+    });
+
+    if (!categoria || !(categoria.subcategorias || []).includes(atajo.subcategoria)) {
+      return null;
+    }
+
+    return { categoria: categoria, subcategoria: atajo.subcategoria };
+  }).filter(function (atajo) {
+    return atajo !== null;
+  });
+}
+
+// Cómo se llama un atajo en pantalla.
+//
+// Casi siempre es el nombre de la subcategoría, que es lo que se está
+// capturando. La excepción es "Otros": su subcategoría real se llama "Sin
+// clasificar", y un botón que dice eso no se entiende de un vistazo. Ahí
+// manda el nombre de la categoría, que es como el usuario la piensa.
+function etiquetaDeAtajo(categoria, subcategoria) {
+  return esLaCategoriaOtros(categoria) ? categoria.nombre : subcategoria;
+}
+
+// Las subcategorías que se pueden poner en el muro: las de categorías de
+// gasto libre. Una subcategoría de Servicios no cabe aquí — tocarla no
+// captura un gasto nuevo, va a buscar un recibo que ya existe, y para eso
+// está la otra puerta.
+//
+// "Otros" se ofrece siempre, exista o no la categoría todavía. Se crea sola
+// la primera vez que se usa, así que sin esto no habría forma de ponerla en
+// el muro antes de haberla usado una vez — justo al revés de lo que se
+// necesita, que es tenerla a la mano desde el principio. Cuando todavía no
+// existe viaja con categoria en null, y quien la elija la crea.
+function obtenerSubcategoriasCandidatasAAtajo(datos) {
+  const candidatas = [];
+
+  datos.config.categorias.forEach(function (categoria) {
+    if (!esCategoriaDeGastoLibre(categoria)) {
+      return;
+    }
+    (categoria.subcategorias || []).forEach(function (subcategoria) {
+      candidatas.push({
+        categoria: categoria,
+        subcategoria: subcategoria,
+        etiqueta: etiquetaDeAtajo(categoria, subcategoria)
+      });
+    });
+  });
+
+  if (!datos.config.categorias.some(esLaCategoriaOtros)) {
+    candidatas.push({
+      categoria: null,
+      subcategoria: SUBCATEGORIA_OTROS,
+      etiqueta: NOMBRE_CATEGORIA_OTROS
+    });
+  }
+
+  return candidatas;
+}
+
+// ============================================================
 // CAPTURA — LOS DOS RENGLONES INFORMATIVOS
 // ============================================================
 //
@@ -465,8 +580,14 @@ function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEst
 //
 // Los pasos son:
 //
-//   "opciones"     Las categorías, más Tarjetas y Deudas, más lo que vence
-//                  hoy o ya venció. Es lo primero que se ve al abrir.
+//   "opciones"     El muro de atajos: lo que vence hoy o ya venció, los
+//                  botones grandes de lo que se captura a diario, y las dos
+//                  puertas al resto. Es lo primero que se ve al abrir.
+//   "categorias"   Las categorías completas, más Tarjetas y Deudas. Es lo
+//                  que antes era la primera pantalla; ahora vive detrás de
+//                  la puerta "Otra categoría".
+//   "pendientes"   Todo lo que falta pagar en el ciclo, por fecha. Detrás de
+//                  la puerta "Adelantar un pago".
 //   "subcategoria" Las subcategorías de la categoría elegida (o la lista de
 //                  tarjetas, o la de deudas).
 //   "monto"        Teclado propio, débito/crédito y Guardar. Es el paso de
@@ -482,6 +603,8 @@ function htmlDelRenglonInformativo(categoriaId, fuente, montoEnCurso, idQueSeEst
 // no es inventar un gasto, es pagar el que ya existe.
 
 const PASO_OPCIONES = "opciones";
+const PASO_CATEGORIAS = "categorias";
+const PASO_PENDIENTES = "pendientes";
 const PASO_SUBCATEGORIA = "subcategoria";
 const PASO_MONTO = "monto";
 const PASO_PAGO = "pago";
@@ -514,6 +637,11 @@ let destinatarioElegidoEnElTicket = "";
 let bloqueEspecialElegido = null;
 let compromisoQueSeEstaPagando = null;
 let pasoAlQueRegresaElPago = PASO_OPCIONES;
+// A dónde manda la flecha de regreso desde el paso del monto. Normalmente
+// a las subcategorías, que es de donde se vino; pero un atajo del muro se
+// salta ese paso, así que tiene que regresar hasta el muro o la flecha
+// llevaría a una pantalla por la que nunca se pasó.
+let pasoAlQueRegresaElGasto = PASO_SUBCATEGORIA;
 // Qué campo de texto está abierto ocupando el lugar del teclado numérico.
 let campoDeTextoAbierto = null;
 let elTicketDebeEntrarImprimiendose = false;
@@ -543,6 +671,7 @@ function reiniciarElTicket() {
   bloqueEspecialElegido = null;
   compromisoQueSeEstaPagando = null;
   pasoAlQueRegresaElPago = PASO_OPCIONES;
+  pasoAlQueRegresaElGasto = PASO_SUBCATEGORIA;
   campoDeTextoAbierto = null;
 }
 
@@ -720,14 +849,19 @@ function htmlCabeceraDelTicket(titulo, color, conFlecha) {
 const ALTO_MAXIMO_DE_RENGLON = 88;
 const SEPARACION_ENTRE_RENGLONES = 7;
 
-function htmlRejillaDeOpciones(opciones) {
-  const columnas = opciones.length > OPCIONES_PARA_TRES_COLUMNAS ? 3 : 2;
+// El segundo parámetro es opcional y solo lo usa el muro de atajos, que
+// necesita botones más altos y su propio número de columnas. Los demás
+// pasos la llaman con un solo argumento y se acomodan como siempre.
+function htmlRejillaDeOpciones(opciones, acomodo) {
+  const columnas = (acomodo && acomodo.columnas) ||
+    (opciones.length > OPCIONES_PARA_TRES_COLUMNAS ? 3 : 2);
   const filas = Math.ceil(opciones.length / columnas);
+  const alto = (acomodo && acomodo.altoMaximoDeRenglon) || ALTO_MAXIMO_DE_RENGLON;
 
   // El tope de alto se calcula aquí porque el CSS no sabe cuántas filas
   // hay. Si el tope no cabe en la pantalla, la rejilla se encoge sola: el
   // tope es un máximo, nunca un mínimo.
-  const topeDeAlto = (filas * ALTO_MAXIMO_DE_RENGLON) + ((filas - 1) * SEPARACION_ENTRE_RENGLONES);
+  const topeDeAlto = (filas * alto) + ((filas - 1) * SEPARACION_ENTRE_RENGLONES);
 
   const botones = opciones.map(function (opcion) {
     const atributos = Object.keys(opcion.datos || {}).map(function (nombre) {
@@ -743,13 +877,84 @@ function htmlRejillaDeOpciones(opciones) {
     "</button>";
   }).join("");
 
-  return "<div class=\"rejilla-ticket\" style=\"--columnas-ticket: " + columnas +
+  return "<div class=\"rejilla-ticket" + (acomodo ? " rejilla-atajos" : "") +
+    "\" style=\"--columnas-ticket: " + columnas +
     "; max-height: " + topeDeAlto + "px;\">" + botones + "</div>";
 }
 
-// ---------- Paso 1: qué se va a registrar ----------
+// ---------- Paso 1: el muro de atajos ----------
 
+// La primera pantalla. Tres bloques y nada más: lo que ya venció o vence
+// hoy, los botones de lo que se captura a diario, y las dos puertas al
+// resto. Cada atajo trae categoría y subcategoría, así que cae directo al
+// teclado: dos toques y guardar.
+//
+// Si todavía no hay atajos configurados, esta pantalla se comporta como
+// antes y muestra las categorías completas. Así la app nunca se ve vacía
+// mientras no se haya entrado a Ajustes a elegirlos.
 function htmlPasoOpciones() {
+  const datos = leerDatos();
+  const atajos = obtenerAtajosDeCaptura(datos);
+
+  if (atajos.length === 0) {
+    return htmlPasoCategorias();
+  }
+
+  const opciones = atajos.map(function (atajo) {
+    return {
+      nombre: etiquetaDeAtajo(atajo.categoria, atajo.subcategoria),
+      // El color es el de la categoría a la que pertenece: en el muro se
+      // pierde de vista a cuál es, y el color es lo que lo recuerda.
+      color: obtenerColorDeCategoria(atajo.categoria.id, datos),
+      datos: {
+        accion: "atajo",
+        categoria: atajo.categoria.id,
+        subcategoria: atajo.subcategoria
+      }
+    };
+  });
+
+  return htmlCabeceraDelTicket("Ciclo", null, false) +
+    htmlVencimientosAlFrente(datos) +
+    htmlRejillaDeOpciones(opciones, {
+      altoMaximoDeRenglon: ALTO_MAXIMO_DE_ATAJO,
+      columnas: opciones.length >= ATAJOS_PARA_DOS_COLUMNAS ? 2 : 1
+    }) +
+    htmlDeLasDosPuertas(datos);
+}
+
+// Las dos salidas al pie del muro, para todo lo que no es del día a día.
+// Se ven como renglones y no como botones grandes a propósito: son la
+// excepción, y no deben competir con los atajos por la mirada.
+//
+// "Adelantar un pago" solo aparece si hay algo que pagar. Una puerta que
+// lleva a una lista vacía es una promesa incumplida.
+function htmlDeLasDosPuertas(datos) {
+  const ciclo = asegurarCicloActual();
+  const cuantosPendientes = obtenerPendientesParaAdelantar(datos, ciclo.id).length;
+
+  const puertaDePagos = cuantosPendientes > 0
+    ? "<button type=\"button\" class=\"puerta-ticket\" data-accion=\"ir-a-paso\" data-paso=\"" + PASO_PENDIENTES + "\">" +
+        "<span>Adelantar un pago</span>" +
+        "<span class=\"cuantos\">" + cuantosPendientes + "</span>" +
+      "</button>"
+    : "";
+
+  return "<div class=\"puertas-ticket\">" +
+    "<button type=\"button\" class=\"puerta-ticket\" data-accion=\"ir-a-paso\" data-paso=\"" + PASO_CATEGORIAS + "\">" +
+      "<span>Otra categoría</span>" +
+    "</button>" +
+    puertaDePagos +
+  "</div>";
+}
+
+// ---------- Detrás de la puerta: las categorías completas ----------
+
+// Lo que hasta el 1 ago 2026 era la primera pantalla. No cambió nada de lo
+// que hace; solo dejó de ser lo primero que se ve. Sigue aquí entera porque
+// es la que cubre lo que no es del día a día: el restaurante de una vez por
+// semana, el Didi suelto, o adelantar un pago entrando por su categoría.
+function htmlPasoCategorias() {
   const datos = leerDatos();
   const ciclo = asegurarCicloActual();
 
@@ -814,11 +1019,19 @@ function htmlPasoOpciones() {
     });
   }
 
-  // El nombre de la app hace de encabezado del recibo, como el del
-  // establecimiento en un ticket de verdad. No dice "gasto nuevo" porque
-  // desde aquí también se paga lo que ya se debía.
-  return htmlCabeceraDelTicket("Ciclo", null, false) +
-    htmlVencimientosAlFrente(datos) +
+  // Esta pantalla se dibuja en dos situaciones y no se ve igual en las dos.
+  // Si todavía no hay atajos configurados, ella ES la primera pantalla: no
+  // lleva flecha (no hay a dónde regresar) y carga los vencimientos. Si se
+  // llegó por la puerta del muro, lleva flecha y no repite los vencimientos,
+  // que ya se vieron en la pantalla anterior.
+  const esLaPrimeraPantalla = pasoDelTicket === PASO_OPCIONES;
+
+  return htmlCabeceraDelTicket(
+      esLaPrimeraPantalla ? "Ciclo" : "Otra categoría",
+      null,
+      !esLaPrimeraPantalla
+    ) +
+    (esLaPrimeraPantalla ? htmlVencimientosAlFrente(datos) : "") +
     htmlRejillaDeOpciones(opciones);
 }
 
@@ -852,6 +1065,58 @@ function htmlVencimientosAlFrente(datos) {
     : "";
 
   return "<div class=\"vencimientos-ticket\">" + filas + linea + "</div>";
+}
+
+// ---------- Detrás de la puerta: adelantar un pago ----------
+
+// Todo lo que falta pagar, en un solo lugar y ordenado por fecha.
+//
+// Entran los pendientes del ciclo en curso y, además, los que ya vencieron
+// en cualquier ciclo anterior. Los vencidos viejos se incluyen a propósito:
+// la franja del muro solo muestra los primeros cuatro, y sin esta lista los
+// demás quedarían sin ninguna forma de alcanzarlos desde el teléfono.
+//
+// Los de monto cero quedan fuera por la misma razón de siempre: una tarjeta
+// sin compras del periodo no es un pago, y además sería impagable
+// (registrarPagoDeCompromiso rechaza montos de cero), así que se quedaría
+// atorada empujando fuera a los pagos de verdad.
+function obtenerPendientesParaAdelantar(datos, cicloId) {
+  const hoyTexto = formatearFechaISO(new Date());
+
+  return datos.compromisos
+    .filter(function (compromiso) {
+      if (compromiso.pagado || !hayAlgoQuePagar(compromiso)) {
+        return false;
+      }
+      return compromiso.cicloId === cicloId || compromiso.fechaProgramada <= hoyTexto;
+    })
+    .sort(function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : 1; });
+}
+
+// La pantalla de esa lista. Usa la misma rejilla que los demás pasos, y no
+// filas largas, porque la rejilla ya sabe encogerse cuando hay muchas
+// opciones — y aquí no puede haber scroll, como en ningún paso del ticket.
+function htmlPasoPendientes() {
+  const datos = leerDatos();
+  const ciclo = asegurarCicloActual();
+  const pendientes = obtenerPendientesParaAdelantar(datos, ciclo.id);
+
+  const opciones = pendientes.map(function (compromiso) {
+    const diasHasta = calcularDiasHastaFecha(compromiso.fechaProgramada);
+    const destinatario = resolverDestinatarioDeCompromiso(compromiso, datos);
+
+    return {
+      nombre: compromiso.nombre + (destinatario ? " · " + destinatario : ""),
+      color: obtenerColorDeCategoria(resolverCategoriaDeCompromiso(compromiso, datos), datos),
+      // Cuándo vence y cuánto es, juntos: son las dos cosas que deciden si
+      // este es el pago que se quiere adelantar hoy.
+      apoyo: formatearCuandoVence(diasHasta) + " · " + formatearMoneda(compromiso.montoEstimado),
+      datos: { accion: "pagar", compromiso: compromiso.id, regreso: PASO_PENDIENTES }
+    };
+  });
+
+  return htmlCabeceraDelTicket("Adelantar un pago", null, true) +
+    htmlRejillaDeOpciones(opciones);
 }
 
 // ---------- Paso 2: subcategoría, tarjeta o deuda ----------
@@ -1170,6 +1435,10 @@ function renderizarTicket() {
 
   if (pasoDelTicket === PASO_OPCIONES) {
     ticket.innerHTML = htmlPasoOpciones();
+  } else if (pasoDelTicket === PASO_CATEGORIAS) {
+    ticket.innerHTML = htmlPasoCategorias();
+  } else if (pasoDelTicket === PASO_PENDIENTES) {
+    ticket.innerHTML = htmlPasoPendientes();
   } else if (pasoDelTicket === PASO_SUBCATEGORIA) {
     ticket.innerHTML = htmlPasoSubcategoria();
   } else if (pasoDelTicket === PASO_MONTO && !laCategoriaElegidaEsDeGastoLibre()) {
@@ -1311,6 +1580,28 @@ function manejarToqueEnElTicket(evento) {
     return;
   }
 
+  // Las dos puertas del muro. No eligen nada todavía: solo abren la
+  // pantalla que corresponde, así que no tocan el estado del ticket.
+  if (accion === "ir-a-paso") {
+    avanzarDelTicket(boton.getAttribute("data-paso"));
+    return;
+  }
+
+  // Un atajo del muro trae categoría y subcategoría de una vez, así que se
+  // salta el paso de subcategorías y cae directo al teclado. Es el camino
+  // corto del día a día: dos toques y guardar.
+  if (accion === "atajo") {
+    categoriaSeleccionadaGasto = boton.getAttribute("data-categoria");
+    subcategoriaSeleccionadaGasto = boton.getAttribute("data-subcategoria");
+    bloqueEspecialElegido = null;
+    fuenteSeleccionadaGasto = "debito";
+    tarjetaSeleccionadaGasto = null;
+    // Como se saltó un paso, la flecha tiene que regresar hasta el muro.
+    pasoAlQueRegresaElGasto = PASO_OPCIONES;
+    avanzarDelTicket(PASO_MONTO);
+    return;
+  }
+
   if (accion === "elegir-categoria" || accion === "crear-otros") {
     const categoria = accion === "crear-otros"
       ? asegurarCategoriaOtros()
@@ -1337,6 +1628,8 @@ function manejarToqueEnElTicket(evento) {
     // decide renderizarTicket, que ya sabe distinguirlas.
     fuenteSeleccionadaGasto = "debito";
     tarjetaSeleccionadaGasto = null;
+    // Se vino del paso de subcategorías, así que ahí regresa la flecha.
+    pasoAlQueRegresaElGasto = PASO_SUBCATEGORIA;
     avanzarDelTicket(PASO_MONTO);
     return;
   }
@@ -1424,6 +1717,15 @@ function regresarUnPasoDelTicket() {
   }
 
   if (pasoDelTicket === PASO_MONTO) {
+    // Si se llegó por un atajo no hay paso intermedio al que volver: la
+    // flecha regresa al muro, y entonces se limpia el ticket entero porque
+    // ni la categoría sigue teniendo sentido.
+    if (pasoAlQueRegresaElGasto === PASO_OPCIONES) {
+      reiniciarElTicket();
+      avanzarDelTicket(PASO_OPCIONES);
+      return;
+    }
+
     subcategoriaSeleccionadaGasto = null;
     montoEscritoEnElTicket = "";
     descripcionEscritaEnElTicket = "";

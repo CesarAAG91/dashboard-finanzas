@@ -20,6 +20,9 @@ function renderizarTodo() {
   renderizarCintaCaptura();
   actualizarMontosDeCompromisosDeTarjeta(leerDatos());
   renderizarCategorias();
+  // Va justo después de las categorías porque depende de ellas: los atajos
+  // solo pueden ser subcategorías de una categoría que ya exista.
+  renderizarAtajosDeCaptura();
   actualizarSelectsDelFormularioRecurrente();
   renderizarTarjetas();
   renderizarDeudas();
