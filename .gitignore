@@ -5,6 +5,9 @@ DECISIONES.md
 PROGRESO.md
 PROMPT-INICIAL.md
 .claude/
+AGENTS.md
+PROJECT.md
+knowledge/
 
 # Imágenes de referencia y capturas de trabajo: se quedan locales. El repo solo
 # lleva los archivos que la app necesita para correr: index.html, estilos.css,
