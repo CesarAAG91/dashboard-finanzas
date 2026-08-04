@@ -118,20 +118,21 @@
     <!-- PRIMERA PANTALLA: veredicto, muro de pagos y cajón ---------- -->
     <div id="primeraPantalla">
 
+      <!-- La barra informativa: la cifra que manda con su rango de fechas,
+           las pastillas para moverse por el horizonte de ciclos, y las
+           fichas con los números del ciclo (antes eran un recuadro
+           "Resumen del ciclo" dentro del muro). -->
       <header id="encabezadoCiclo">
         <div class="veredicto-ciclo">
           <span class="etiqueta-ancha" id="etiquetaCifraPrincipal">Disponible del ciclo</span>
           <span class="cifra-protagonista" id="cifraDisponibleAncha">$0</span>
+          <span class="identidad-ciclo" id="identidadCiclo"></span>
         </div>
-        <div class="identidad-ciclo" id="identidadCiclo"></div>
-        <!-- Navegación por el horizonte: el mismo muro sirve para ver un ciclo
-             futuro, que es donde caen las mensualidades de lo que se difiere. -->
-        <div class="navegacion-ciclos">
-          <button type="button" id="cicloAnterior" title="Ciclo anterior">‹</button>
-          <span id="posicionEnHorizonte"></span>
-          <button type="button" id="cicloSiguiente" title="Ciclo siguiente">›</button>
-        </div>
-        <div class="resumen-ciclo" id="resumenCiclo"></div>
+        <!-- Una pastilla por ciclo del horizonte, la enfocada rellena. Ver
+             un ciclo futuro importa: ahí caen las mensualidades de lo que
+             se difiere a crédito. -->
+        <nav class="pastillas-ciclos" id="pastillasCiclos" aria-label="Elegir ciclo del horizonte"></nav>
+        <div class="fichas-encabezado" id="fichasCiclo"></div>
       </header>
 
       <!-- Aviso de que se está simulando, con guardar y reiniciar. -->

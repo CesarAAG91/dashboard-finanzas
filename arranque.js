@@ -65,11 +65,14 @@ function renderizarTodo() {
 document.getElementById("botonAgregarYAjustar").addEventListener("click", abrirAjustes);
 document.getElementById("botonCerrarAjustes").addEventListener("click", cerrarAjustes);
 
-document.getElementById("cicloAnterior").addEventListener("click", function () {
-  cambiarCicloEnfocadoSimulacion(-1);
-});
-document.getElementById("cicloSiguiente").addEventListener("click", function () {
-  cambiarCicloEnfocadoSimulacion(1);
+// Las pastillas de la barra se redibujan con cada render, así que el
+// listener va en su contenedor (que nunca cambia) y averigua cuál
+// pastilla se tocó por su atributo data-indice-ciclo.
+document.getElementById("pastillasCiclos").addEventListener("click", function (evento) {
+  const pastilla = evento.target.closest("[data-indice-ciclo]");
+  if (pastilla) {
+    irACicloDelHorizonte(Number(pastilla.getAttribute("data-indice-ciclo")));
+  }
 });
 
 // La segunda pantalla tiene su propia navegación de ciclos, aparte de la de

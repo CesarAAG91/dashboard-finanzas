@@ -263,92 +263,7 @@ function construirRecuadrosDelMuro(ciclo, datos) {
     });
   }
 
-  recuadros.push(construirResumenDelCiclo(ciclo, datos));
-
   return recuadros;
-}
-
-// El recuadro que cierra el muro: a dónde llega el ciclo si todo sigue así.
-//
-// Usa las fórmulas que ya están en SPEC.md, no versiones simplificadas:
-// "lo que falta del gasto variable" se proyecta al ritmo diario que se lleva
-// de verdad (calcularProyeccionDeCierre), no con el presupuesto teórico. Si
-// el ciclo aún no tiene gasto variable, ese ritmo es cero, así que en ese
-// caso se cae al presupuesto configurado para no prometer un cierre
-// demasiado optimista el día uno.
-function construirResumenDelCiclo(ciclo, datos) {
-  // Del motor de simulación, no de las fórmulas reales: es el único que
-  // descuenta lo diferido a crédito de este ciclo y suma en su lugar las
-  // mensualidades que caen aquí. Con las fórmulas reales, diferir un pago no
-  // movía este recuadro ni un peso, que era justo lo que había que arreglar.
-  const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
-  const items = obtenerItemsSimuladosDelCicloEnfocado();
-  const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
-
-  // Lo ya pagado son hechos: solo cuentan los pagos de verdad marcados, y
-  // nunca uno diferido (si se difirió, no se pagó de esta cuenta).
-  const comprometidoPagado = items
-    .filter(function (item) { return item.pagado && !item.estadoCredito; })
-    .reduce(function (suma, item) { return suma + Number(item.montoReal); }, 0);
-
-  const faltaPagar = Math.max(resultado.totalComprometido - comprometidoPagado, 0);
-
-  // En el ciclo en curso, el balance y "Libre para gastar" son el mismo
-  // número y se calculan igual: lo que sobra al cerrar ES lo que se puede
-  // gastar de más. Antes diferían en un día de presupuesto variable, porque
-  // uno contaba los días que faltan y el otro el ciclo completo.
-  //
-  // En un ciclo futuro no hay días transcurridos ni gasto real que medir, así
-  // que ahí manda el presupuesto del ciclo entero, que es lo que calcula el
-  // motor de simulación.
-  // Solo débito, igual que el balance de abajo: un gasto libre a crédito no
-  // sale de la cuenta en este ciclo, vuelve como pago de la tarjeta y ya está
-  // contado ahí. Si esta fila lo incluyera, el recuadro no sumaría.
-  const variableGastado = datos.gastos
-    .filter(function (g) {
-      return g.cicloId === ciclo.id && g.compromisoId === null && g.fuente === "debito";
-    })
-    .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
-
-  // El mismo apartado que resta la cifra grande, no el ritmo proyectado: si
-  // esta fila mostrara otra cosa, las filas del resumen no sumarían el
-  // balance de abajo y el recuadro se leería como si tuviera un error.
-  const variablePorVenir = esCicloActual
-    ? calcularPresupuestoVariablePendiente(ciclo, datos)
-    : resultado.gastoVariableProyectado;
-
-  // El mismo número y la misma función que la cifra grande de arriba, para
-  // que no puedan separarse nunca.
-  const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
-    .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
-
-  const balance = esCicloActual
-    ? calcularDisponibleReal(ciclo, datos, mensualidadesDeTarjeta)
-    : resultado.balanceDelCiclo;
-
-  const filas = [
-    { etiqueta: "Ingreso del ciclo", monto: resultado.ingresoDelCiclo },
-    { etiqueta: "Ya pagado", monto: comprometidoPagado },
-    { etiqueta: "Falta pagar", monto: faltaPagar }
-  ];
-
-  // El gasto variable ya hecho solo se muestra si existe, y aparte de lo que
-  // falta por gastar: son dos cosas distintas y sumarlas en una sola fila
-  // impedía ver de dónde sale el balance.
-  if (esCicloActual && variableGastado > 0) {
-    filas.push({ etiqueta: "Variable ya gastado", monto: variableGastado });
-  }
-  filas.push({
-    etiqueta: esCicloActual ? "Variable por gastar" : "Variable previsto",
-    monto: variablePorVenir
-  });
-
-  return {
-    tipo: "resumen",
-    nombre: "Resumen del ciclo",
-    balance: balance,
-    filas: filas
-  };
 }
 
 // conAccionDePago solo lo usa el panel del día del calendario: agrega bajo
@@ -375,25 +290,6 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
     "</div>";
   }
 
-  if (recuadro.tipo === "resumen") {
-    const claseBalance = recuadro.balance >= 0 ? " balance-alcanza" : " balance-no-alcanza";
-    return "<div class=\"recuadro\">" +
-      "<div class=\"encabezado-recuadro\">" +
-        "<span class=\"nombre-categoria-muro\">" + escaparHTML(recuadro.nombre) + "</span>" +
-      "</div>" +
-      recuadro.filas.map(function (fila) {
-        return "<div class=\"fila-resumen-muro\">" +
-          "<span class=\"etiqueta-resumen\">" + fila.etiqueta + "</span>" +
-          "<span class=\"monto-fila-muro\">" + formatearMoneda(fila.monto) + "</span>" +
-        "</div>";
-      }).join("") +
-      "<div class=\"fila-resumen-muro fila-balance" + claseBalance + "\">" +
-        "<span class=\"etiqueta-resumen\">Balance al cerrar</span>" +
-        "<span class=\"monto-fila-muro\">" + formatearMoneda(recuadro.balance) + "</span>" +
-      "</div>" +
-    "</div>";
-  }
-
   const total = recuadro.grupos.reduce(function (suma, grupo) {
     return suma + grupo.pagos.reduce(function (s, pago) {
       return s + Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
@@ -412,7 +308,6 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
       return titulo + grupo.pagos.map(function (pago) {
         const estado = calcularEstadoDePago(pago);
         const monto = Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
-        const etiquetaPago = pago.pagoNde ? " <span class=\"dia-fila-muro\">(pago " + pago.pagoNde + ")</span>" : "";
 
         // Un pago diferido a crédito deja de salir de este ciclo: se convierte
         // en mensualidades que alimentan el pago de la tarjeta. Se marca en la
@@ -445,7 +340,7 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
         // Un pago ya pagado no es botón: no hay nada que decidir sobre él.
         const interior =
           "<span class=\"punto-estado " + estado + "\"></span>" +
-          "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaPago + etiquetaCredito + segundaLinea + "</span>" +
+          "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaCredito + segundaLinea + "</span>" +
           "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
           montoHTML;
 
@@ -866,57 +761,157 @@ window.addEventListener("resize", function () {
 // ============================================================
 //
 // Un solo número manda: el disponible real, el mismo que ya muestra
-// Captura y el titular de Balance del ciclo. Al lado, la identidad del
-// ciclo — el usuario pidió explícitamente que quede claro cuáles son los
-// ciclos, porque no son meses de calendario.
+// Captura y el titular de Balance del ciclo. El resto de la barra son los
+// números que el usuario quiere ver al entrar — ingresos, comprometido,
+// pagado, variable — en fichas con el mismo lenguaje visual del estudio.
+// Antes vivían en un recuadro "Resumen del ciclo" dentro del muro; el
+// usuario pidió subirlos aquí (2 ago 2026) para que el muro quede solo
+// con pagos.
+
+// Los números que resumen el ciclo enfocado. Devuelve datos, no HTML: la
+// barra los acomoda como quiera, pero las cuentas viven en un solo lugar.
+//
+// Usa las fórmulas que ya están en SPEC.md, no versiones simplificadas:
+// "lo que falta del gasto variable" se proyecta al ritmo diario que se lleva
+// de verdad, no con el presupuesto teórico.
+function calcularResumenDelCiclo(ciclo, datos) {
+  // Del motor de simulación, no de las fórmulas reales: es el único que
+  // descuenta lo diferido a crédito de este ciclo y suma en su lugar las
+  // mensualidades que caen aquí. Con las fórmulas reales, diferir un pago no
+  // movía estos números ni un peso, que era justo lo que había que arreglar.
+  const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
+  const items = obtenerItemsSimuladosDelCicloEnfocado();
+  const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
+
+  // Lo ya pagado son hechos: solo cuentan los pagos de verdad marcados, y
+  // nunca uno diferido (si se difirió, no se pagó de esta cuenta).
+  const comprometidoPagado = items
+    .filter(function (item) { return item.pagado && !item.estadoCredito; })
+    .reduce(function (suma, item) { return suma + Number(item.montoReal); }, 0);
+
+  // Solo débito, igual que el balance: un gasto libre a crédito no sale de
+  // la cuenta en este ciclo, vuelve como pago de la tarjeta y ya está
+  // contado ahí. Si esta cifra lo incluyera, la barra no sumaría.
+  const variableGastado = datos.gastos
+    .filter(function (g) {
+      return g.cicloId === ciclo.id && g.compromisoId === null && g.fuente === "debito";
+    })
+    .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+  // El mismo apartado que resta la cifra grande, no el ritmo proyectado:
+  // si mostrara otra cosa, las fichas no sumarían el balance y la barra se
+  // leería como si tuviera un error.
+  const variablePorVenir = esCicloActual
+    ? calcularPresupuestoVariablePendiente(ciclo, datos)
+    : resultado.gastoVariableProyectado;
+
+  // En el ciclo en curso, el balance y "Libre para gastar" son el mismo
+  // número y se calculan igual: lo que sobra al cerrar ES lo que se puede
+  // gastar de más. Por eso la barra no muestra "Balance al cerrar": sería
+  // repetir la cifra grande con otro nombre.
+  //
+  // En un ciclo futuro no hay días transcurridos ni gasto real que medir,
+  // así que ahí manda el presupuesto del ciclo entero, que es lo que
+  // calcula el motor de simulación.
+  const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
+    .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+
+  const balance = esCicloActual
+    ? calcularDisponibleReal(ciclo, datos, mensualidadesDeTarjeta)
+    : resultado.balanceDelCiclo;
+
+  return {
+    esCicloActual: esCicloActual,
+    ingreso: resultado.ingresoDelCiclo,
+    comprometido: resultado.totalComprometido,
+    comprometidoPagado: comprometidoPagado,
+    faltaPagar: Math.max(resultado.totalComprometido - comprometidoPagado, 0),
+    pagosHechos: items.filter(function (item) { return item.pagado; }).length,
+    pagosTotales: items.length,
+    variableGastado: variableGastado,
+    variablePorVenir: variablePorVenir,
+    balance: balance
+  };
+}
 
 function renderizarEncabezadoDelCiclo() {
   const ciclo = obtenerCicloEnfocado();
-  const esCicloActual = indiceCicloEnfocadoSimulacion === 0;
-  const resultado = obtenerResultadoSimuladoDelCicloEnfocado();
-  const items = obtenerItemsSimuladosDelCicloEnfocado();
-  const pagados = items.filter(function (item) { return item.pagado; }).length;
+  const resumen = calcularResumenDelCiclo(ciclo, obtenerDatosVisibles());
 
   // En el ciclo actual la cifra que manda es el disponible de hoy. En un
   // ciclo futuro no existe "disponible": lo que se puede saber es con cuánto
   // cerraría, así que esa pasa a ser la cifra principal.
   document.getElementById("etiquetaCifraPrincipal").textContent =
-    esCicloActual ? "Libre para gastar" : "Balance proyectado";
-  const mensualidadesDeTarjeta = Object.keys(resultado.contribucionesTarjeta || {})
-    .reduce(function (suma, tarjetaId) { return suma + resultado.contribucionesTarjeta[tarjetaId]; }, 0);
+    resumen.esCicloActual ? "Libre para gastar" : "Balance proyectado";
+  document.getElementById("cifraDisponibleAncha").textContent = formatearMoneda(resumen.balance);
 
-  document.getElementById("cifraDisponibleAncha").textContent = formatearMoneda(
-    esCicloActual
-      ? calcularDisponibleReal(ciclo, obtenerDatosVisibles(), mensualidadesDeTarjeta)
-      : resultado.balanceDelCiclo
-  );
-
+  // El rango de fechas va corto ("del 30 jul al 28 ago"): el año sobra y
+  // el mes con nombre se lee más rápido que 2026-08-28.
   document.getElementById("identidadCiclo").innerHTML =
-    "<span class=\"etiqueta-ancha\">Ciclo " + ciclo.id +
-      (esCicloActual ? "" : " · proyectado") + "</span>" +
-    "<span>del <span class=\"cifra-a\">" + ciclo.fechaInicio + "</span>" +
-    " al <span class=\"cifra-a\">" + ciclo.fechaFin + "</span>" +
-    " · <span class=\"cifra-a\">" + calcularDiasTotalesDelCiclo(ciclo) + "</span> días</span>";
+    "del <span class=\"cifra-a\">" + formatearDiaYMes(ciclo.fechaInicio) + "</span>" +
+    " al <span class=\"cifra-a\">" + formatearDiaYMes(ciclo.fechaFin) + "</span>" +
+    " · <span class=\"cifra-a\">" + calcularDiasTotalesDelCiclo(ciclo) + "</span> días" +
+    (resumen.esCicloActual ? "" : " · proyectado");
 
-  document.getElementById("posicionEnHorizonte").textContent =
-    esCicloActual ? "actual" : "+" + indiceCicloEnfocadoSimulacion;
-  document.getElementById("cicloAnterior").disabled = indiceCicloEnfocadoSimulacion === 0;
-  document.getElementById("cicloSiguiente").disabled =
-    indiceCicloEnfocadoSimulacion === CANTIDAD_DE_CICLOS_A_PROYECTAR;
+  renderizarPastillasDeCiclos();
 
-  document.getElementById("resumenCiclo").innerHTML =
-    "<div class=\"dato-secundario\">" +
-      "<span class=\"etiqueta-ancha\">Ingresos</span>" +
-      "<span class=\"valor-a\">" + formatearMoneda(resultado.ingresoDelCiclo) + "</span>" +
-    "</div>" +
-    "<div class=\"dato-secundario\">" +
-      "<span class=\"etiqueta-ancha\">Comprometido</span>" +
-      "<span class=\"valor-a\">" + formatearMoneda(resultado.totalComprometido) + "</span>" +
-    "</div>" +
-    "<div class=\"dato-secundario\">" +
-      "<span class=\"etiqueta-ancha\">Pagado</span>" +
-      "<span class=\"valor-a\">" + pagados + " / " + items.length + "</span>" +
-    "</div>";
+  // Las fichas usan el mismo constructor y las mismas clases que las del
+  // estudio (htmlDeFicha, en estudio.js): el usuario pidió que la barra
+  // hablara el mismo idioma que "lo de abajo". Los colores de las barras
+  // son los del semáforo de esta pantalla — verde agua "pagado" para el
+  // avance de lo comprometido, ámbar "pendiente" para el variable que ya
+  // se consumió — porque aquí el color solo significa estado.
+  const proporcionPagada = resumen.comprometido > 0
+    ? resumen.comprometidoPagado / resumen.comprometido
+    : 0;
+  const bolsaVariable = resumen.variableGastado + resumen.variablePorVenir;
+  const proporcionGastada = bolsaVariable > 0
+    ? resumen.variableGastado / bolsaVariable
+    : 0;
+
+  const fichaIngresos = htmlDeFicha("Ingresos", formatearMoneda(resumen.ingreso));
+
+  const fichaComprometido = htmlDeFicha("Comprometido", formatearMoneda(resumen.comprometido), {
+    pie: resumen.pagosHechos + " de " + resumen.pagosTotales + " pagados",
+    barra: { valor: proporcionPagada, color: "#5eead4" },
+    titulo: "Ya pagado: " + formatearMoneda(resumen.comprometidoPagado) +
+      " · por pagar: " + formatearMoneda(resumen.faltaPagar)
+  });
+
+  // En un ciclo futuro no hay nada consumido que medir: la ficha se queda
+  // en el presupuesto previsto, sin barra ni pie.
+  const fichaVariable = resumen.esCicloActual
+    ? htmlDeFicha("Variable por gastar", formatearMoneda(resumen.variablePorVenir), {
+        pie: formatearMoneda(resumen.variableGastado) + " ya gastado",
+        barra: { valor: proporcionGastada, color: "#fde047" },
+        titulo: "La bolsa variable del ciclo: lo gastado más lo que queda por gastar"
+      })
+    : htmlDeFicha("Variable previsto", formatearMoneda(resumen.variablePorVenir));
+
+  document.getElementById("fichasCiclo").innerHTML =
+    fichaIngresos + fichaComprometido + fichaVariable;
+}
+
+// La tira de pastillas para moverse por el horizonte: una por ciclo, la
+// enfocada rellena. Sustituye a las flechas ‹ › (4 ago 2026): con los
+// siete ciclos a la vista, tocar el mes que se quiere ver es un solo paso
+// en vez de repetir la flecha, y de paso se ve cuánto horizonte hay.
+function renderizarPastillasDeCiclos() {
+  const horizonte = obtenerHorizonteDeCiclosSimulacion();
+
+  document.getElementById("pastillasCiclos").innerHTML = horizonte.map(function (ciclo, indice) {
+    // El id de un ciclo es "AAAA-MM"; la pastilla muestra solo el mes con
+    // nombre, y el id completo queda en el tooltip para distinguir el año.
+    const numeroDeMes = Number(ciclo.id.split("-")[1]);
+    const enfocada = indice === indiceCicloEnfocadoSimulacion;
+
+    return "<button type=\"button\" class=\"pastilla-ciclo" + (enfocada ? " esta-enfocada" : "") + "\"" +
+      " data-indice-ciclo=\"" + indice + "\"" +
+      " title=\"Ciclo " + ciclo.id + "\"" +
+      (enfocada ? " aria-current=\"true\"" : "") + ">" +
+      MESES_ABREVIADOS[numeroDeMes - 1] +
+    "</button>";
+  }).join("");
 }
 
 // ============================================================

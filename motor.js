@@ -2439,8 +2439,11 @@ function reiniciarSimulacion() {
   renderizarTodo();
 }
 
-function cambiarCicloEnfocadoSimulacion(delta) {
-  indiceCicloEnfocadoSimulacion = Math.min(Math.max(indiceCicloEnfocadoSimulacion + delta, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
+// Enfoca directamente un ciclo del horizonte (0 es el actual). Sustituyó
+// al avance de uno en uno con flechas cuando la barra pasó a pastillas
+// (4 ago 2026): cada pastilla trae el índice del ciclo que representa.
+function irACicloDelHorizonte(indice) {
+  indiceCicloEnfocadoSimulacion = Math.min(Math.max(indice, 0), CANTIDAD_DE_CICLOS_A_PROYECTAR);
   renderizarTodo();
 }
 

@@ -1426,12 +1426,16 @@ details summary {
   overflow: hidden;
 }
 
+/* La barra informativa: veredicto a la izquierda, pastillas de ciclo al
+   centro y fichas a la derecha. align-items center y no baseline porque
+   las fichas son cajas, no líneas de texto. */
 #encabezadoCiclo {
   flex: 0 0 auto;
   display: flex;
-  align-items: baseline;
-  gap: 28px;
-  padding: 18px 22px 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  padding: 12px 22px;
   border-bottom: 1px solid var(--borde-sutil-a);
 }
 
@@ -1459,57 +1463,68 @@ details summary {
   letter-spacing: -0.02em;
 }
 
+/* El rango de fechas vive pegado a la cifra grande: es su contexto ("libre
+   para gastar... de aquí a allá"), no un dato aparte. */
 #vistaAncha .identidad-ciclo {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--texto-2a);
+  margin-top: 3px;
 }
 #vistaAncha .identidad-ciclo .cifra-a { color: var(--texto-a); }
 
-#vistaAncha .navegacion-ciclos {
+/* ---------- Pastillas de ciclo ---------- */
+/* Una por ciclo del horizonte, la enfocada rellena en sólido. Son el único
+   control de la barra, y por eso son lo único con forma de pastilla: lo
+   tocable se distingue de lo legible. */
+#vistaAncha .pastillas-ciclos {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
+}
+#vistaAncha .pastilla-ciclo {
+  border: 1px solid var(--borde-a);
+  background-color: transparent;
+  color: var(--texto-2a);
+  border-radius: 999px;
+  padding: 4px 11px;
   font-size: 11px;
+  line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--texto-3a);
-}
-#vistaAncha .navegacion-ciclos button {
-  border: 1px solid var(--borde-a);
-  background-color: var(--superficie-a);
-  color: var(--texto-2a);
-  border-radius: 6px;
-  width: 24px;
-  height: 22px;
-  font-size: 13px;
-  line-height: 1;
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-#vistaAncha .navegacion-ciclos button:hover:not(:disabled) { color: var(--texto-a); }
-#vistaAncha .navegacion-ciclos button:disabled { opacity: 0.35; cursor: default; }
+#vistaAncha .pastilla-ciclo:hover {
+  background-color: var(--superficie-alta-a);
+  color: var(--texto-a);
+}
+#vistaAncha .pastilla-ciclo:focus-visible {
+  outline: 2px solid var(--texto-2a);
+  outline-offset: 1px;
+}
+#vistaAncha .pastilla-ciclo.esta-enfocada {
+  background-color: var(--texto-a);
+  border-color: var(--texto-a);
+  color: var(--fondo-a);
+  cursor: default;
+}
 
 #bandaTrayectoria[hidden] { display: none; }
 
-#vistaAncha .resumen-ciclo {
+/* ---------- Fichas de la barra ---------- */
+/* Reusan las clases de ficha del estudio (.ficha, .etiqueta-ficha...):
+   mismo lenguaje visual arriba y abajo. Aquí solo se compactan un poco
+   para que la barra no crezca de alto. */
+#vistaAncha .fichas-encabezado {
   margin-left: auto;
   display: flex;
-  gap: 24px;
-  align-items: baseline;
+  align-items: stretch;
+  gap: 10px;
 }
-#vistaAncha .dato-secundario {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  text-align: right;
-}
-#vistaAncha .dato-secundario .valor-a {
-  font-family: var(--mono-a);
-  font-variant-numeric: tabular-nums;
-  font-size: 16px;
-  color: var(--texto-a);
+#vistaAncha .fichas-encabezado .ficha {
+  min-width: 150px;
+  padding: 9px 13px;
+  gap: 4px;
 }
 
 /* ---------- Barra de simulación ---------- */
@@ -1793,28 +1808,6 @@ details summary {
   font-size: 0.85em;
   color: var(--texto-3a);
 }
-
-/* Resumen del ciclo: cierra el muro con a dónde llega todo esto. */
-#vistaAncha .fila-resumen-muro {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6em;
-  padding: 0.16em 0;
-  font-size: 0.78em;
-}
-#vistaAncha .etiqueta-resumen { color: var(--texto-2a); }
-#vistaAncha .fila-balance {
-  margin-top: 0.35em;
-  padding-top: 0.4em;
-  border-top: 1px solid var(--borde-sutil-a);
-  font-weight: 600;
-}
-#vistaAncha .fila-balance .etiqueta-resumen { color: var(--texto-a); }
-/* Único caso en que el color no marca el estado de un pago sino el del
-   ciclo entero: alcanza o no alcanza. Reusa los mismos dos colores. */
-#vistaAncha .fila-balance.balance-alcanza .monto-fila-muro { color: #5eead4; }
-#vistaAncha .fila-balance.balance-no-alcanza .monto-fila-muro { color: #f87171; }
 
 /* ---------- Cajón de calendario ---------- */
 /* Cerrado es una tira; abierto crece hacia arriba tapando el muro. No se
@@ -2193,16 +2186,23 @@ details summary {
   border: 0;
   background-color: transparent;
   color: inherit;
-  font: inherit;
+  /* Solo la familia, no el atajo "font": el atajo pisa el font-size de
+     0.78em que la fila hereda de .fila-muro (este selector es más
+     específico) y los pagos pendientes se veían 28% más grandes que los
+     pagados. */
+  font-family: inherit;
   text-align: left;
   cursor: pointer;
   /* Cada gasto queda encapsulado: su propio recuadro, con separación
      visible entre uno y otro. Antes eran renglones pegados y no se veía
-     dónde acababa uno y empezaba el siguiente. */
+     dónde acababa uno y empezaba el siguiente.
+     El espaciado es deliberadamente apretado (2 ago 2026): la primera
+     versión llevaba 0.42em/0.22em y las filas crecieron tanto que el
+     muro dejó de caber sin scroll. */
   border: 1px solid transparent;
   border-radius: 0.5em;
-  padding: 0.42em 0.5em;
-  margin-bottom: 0.22em;
+  padding: 0.2em 0.4em;
+  margin-bottom: 0.08em;
   transition: background-color 0.1s ease, border-color 0.1s ease;
 }
 #vistaAncha button.fila-muro:hover {
@@ -2222,8 +2222,8 @@ details summary {
 /* Un pago ya pagado no es botón, pero lleva el mismo espaciado para que
    la columna no se desalinee. */
 #vistaAncha .fila-muro.es-pagado {
-  padding: 0.42em 0.5em;
-  margin-bottom: 0.22em;
+  padding: 0.2em 0.4em;
+  margin-bottom: 0.08em;
   border: 1px solid transparent;
 }
 
