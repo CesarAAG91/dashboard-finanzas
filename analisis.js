@@ -1034,7 +1034,7 @@ function renderizarEncabezadoDelCiclo() {
     ? htmlDeFicha("Por pagar", formatearMoneda(resumen.faltaPagar), {
         pie: resumen.pagosHechos + " de " + resumen.pagosTotales + " pagados · de " +
           formatearMoneda(resumen.comprometido),
-        barra: { valor: proporcionPagada, color: "#5eead4" },
+        barra: { valor: proporcionPagada, color: "var(--bien-a)" },
         titulo: "Lo que todavía tiene que salir de la cuenta este ciclo. Ya pagado: " +
           formatearMoneda(resumen.comprometidoPagado) + " de " + formatearMoneda(resumen.comprometido)
       })
@@ -1047,7 +1047,7 @@ function renderizarEncabezadoDelCiclo() {
   const fichaVariable = resumen.esCicloActual
     ? htmlDeFicha("Variable por gastar", formatearMoneda(resumen.variablePorVenir), {
         pie: formatearMoneda(resumen.variableGastado) + " ya gastado",
-        barra: { valor: proporcionGastada, color: "#fde047" },
+        barra: { valor: proporcionGastada, color: "var(--cuidado-a)" },
         titulo: "La bolsa variable del ciclo: lo gastado más lo que queda por gastar"
       })
     : htmlDeFicha("Variable previsto", formatearMoneda(resumen.variablePorVenir));

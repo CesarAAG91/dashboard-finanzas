@@ -490,7 +490,7 @@ function htmlDeLasFichasDelCierre(resumen, ciclo, datos) {
   if (resumen.hayIngreso) {
     fichas.push(htmlDeFicha("Tasa de compromiso", formatearPorcentaje(resumen.tasaDeCompromiso), {
       pie: formatearMoneda(resumen.montoComprometidoDelCiclo) + " comprometido",
-      barra: { valor: resumen.tasaDeCompromiso, color: "#6d28d9" },
+      barra: { valor: resumen.tasaDeCompromiso, color: "var(--tramo-fijo-a)" },
       titulo: "Cuánto del ingreso ya estaba comprometido antes de empezar el ciclo. No cambia con la lente."
     }));
 
@@ -499,7 +499,7 @@ function htmlDeLasFichasDelCierre(resumen, ciclo, datos) {
       formatearPorcentaje(resumen.tasaDeAhorro),
       {
         pie: formatearMoneda(resumen.ingreso) + " de ingreso",
-        barra: { valor: Math.max(resumen.tasaDeAhorro, 0), color: "#34d399" },
+        barra: { valor: Math.max(resumen.tasaDeAhorro, 0), color: "var(--bien-a)" },
         tono: resumen.tasaDeAhorro < 0 ? "mal" : "bien"
       }
     ));
@@ -657,17 +657,17 @@ function renderizarEstructuraDelCiclo() {
   const fichas = "<div class=\"fila-fichas\">" +
     htmlDeFicha("Fijo", formatearMoneda(fijoTotal), {
       pie: formatearPorcentaje(total > 0 ? fijoTotal / total : 0) + " del gasto",
-      barra: { valor: total > 0 ? fijoTotal / total : 0, color: "#6d28d9" },
+      barra: { valor: total > 0 ? fijoTotal / total : 0, color: "var(--tramo-fijo-a)" },
       titulo: "Compromisos del ciclo, pagados y por pagar"
     }) +
     htmlDeFicha("Variable presupuestado", formatearMoneda(resumen.variablePresupuestado), {
       pie: formatearPorcentaje(total > 0 ? resumen.variablePresupuestado / total : 0) + " del gasto",
-      barra: { valor: total > 0 ? resumen.variablePresupuestado / total : 0, color: "#a78bfa" },
+      barra: { valor: total > 0 ? resumen.variablePresupuestado / total : 0, color: "var(--tramo-presupuestado-a)" },
       titulo: "Gasto libre que consume una bolsa semanal"
     }) +
     htmlDeFicha("Discrecional", formatearMoneda(resumen.discrecional), {
       pie: formatearPorcentaje(total > 0 ? resumen.discrecional / total : 0) + " del gasto",
-      barra: { valor: total > 0 ? resumen.discrecional / total : 0, color: "#ddd6fe" },
+      barra: { valor: total > 0 ? resumen.discrecional / total : 0, color: "var(--tramo-discrecional-a)" },
       titulo: "Gasto libre que ninguna bolsa cubre"
     }) +
   "</div>";
@@ -1143,7 +1143,7 @@ function renderizarHorizonteDelCiclo() {
       pie: formatearPorcentaje(compromisoMensual.total > 0 ? compromisoMensual.deDeudas / compromisoMensual.total : 0) + " del piso",
       barra: {
         valor: compromisoMensual.total > 0 ? compromisoMensual.deDeudas / compromisoMensual.total : 0,
-        color: "#f87171"
+        color: "var(--mal-a)"
       },
       chica: true
     }) +
@@ -1151,7 +1151,7 @@ function renderizarHorizonteDelCiclo() {
       pie: formatearPorcentaje(compromisoMensual.total > 0 ? compromisoMensual.deRecurrentes / compromisoMensual.total : 0) + " del piso",
       barra: {
         valor: compromisoMensual.total > 0 ? compromisoMensual.deRecurrentes / compromisoMensual.total : 0,
-        color: "#6d28d9"
+        color: "var(--tramo-fijo-a)"
       },
       chica: true
     }) +
@@ -1439,11 +1439,15 @@ function renderizarMovimientosDelCiclo() {
 // futuro punteado —, más las líneas de referencia de los umbrales del
 // semáforo y un cursor que sigue al mouse o al dedo.
 
+// Los cuatro colores del semáforo para el SVG. Se piden como tokens y no
+// como hex: así el día que la pantalla cambie de paleta —como pasó al migrar
+// a papel-calma el 4 ago 2026— esta gráfica se entera sola. Funciona porque
+// el SVG vive dentro de #vistaAncha y hereda sus variables.
 const COLOR_HEX_SEMAFORO = {
-  verde: "#5eead4",
-  amarillo: "#fde047",
-  rojo: "#fca5a5",
-  gris: "#94a3b8"
+  verde: "var(--bien-a)",
+  amarillo: "var(--cuidado-a)",
+  rojo: "var(--mal-a)",
+  gris: "var(--texto-3a)"
 };
 
 // Cómo se llama cada color del semáforo en pantalla. El color solo, sin
@@ -1545,8 +1549,8 @@ function renderizarTrayectoriaSemaforo() {
   const puntoHoy = trayectoria[indiceHoy];
   const puntoFinal = trayectoria[trayectoria.length - 1];
   const marcadoresHTML =
-    "<circle cx=\"" + coordenadaX(indiceHoy) + "\" cy=\"" + coordenadaY(puntoHoy.porcentaje) + "\" r=\"4\" fill=\"" + COLOR_HEX_SEMAFORO[puntoHoy.color] + "\" stroke=\"#1e293b\" stroke-width=\"2\"></circle>" +
-    "<circle cx=\"" + coordenadaX(trayectoria.length - 1) + "\" cy=\"" + coordenadaY(puntoFinal.porcentaje) + "\" r=\"4\" fill=\"" + COLOR_HEX_SEMAFORO[puntoFinal.color] + "\" stroke=\"#1e293b\" stroke-width=\"2\"></circle>";
+    "<circle cx=\"" + coordenadaX(indiceHoy) + "\" cy=\"" + coordenadaY(puntoHoy.porcentaje) + "\" r=\"4\" fill=\"" + COLOR_HEX_SEMAFORO[puntoHoy.color] + "\" stroke=\"var(--superficie-alta-a)\" stroke-width=\"2\"></circle>" +
+    "<circle cx=\"" + coordenadaX(trayectoria.length - 1) + "\" cy=\"" + coordenadaY(puntoFinal.porcentaje) + "\" r=\"4\" fill=\"" + COLOR_HEX_SEMAFORO[puntoFinal.color] + "\" stroke=\"var(--superficie-alta-a)\" stroke-width=\"2\"></circle>";
 
   const etiquetaFinalHTML = "<text class=\"grafica-eje-texto\" x=\"" + (coordenadaX(trayectoria.length - 1) - 4) + "\" y=\"" + (coordenadaY(puntoFinal.porcentaje) - 8) + "\" text-anchor=\"end\">" +
     Math.round(puntoFinal.porcentaje * 100) + "%" + (puntoFinal.esFuturo ? " proyectado" : "") + "</text>";

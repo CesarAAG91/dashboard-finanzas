@@ -1393,16 +1393,61 @@ details summary {
 
    Todo va anclado a #vistaAncha para no tocar la vista de Captura, que
    tiene su propia paleta ya aprobada.
+
+   PAPEL-CALMA (migrado el 4 ago 2026, decisión 0002). Esta pantalla nació
+   oscura y se repintó completa. La estructura no cambió ni un renglón: solo
+   el color. Dos cosas que conviene saber antes de tocarla:
+
+   - La escalera de superficies conserva su orden: --fondo-a es la página y
+     cada escalón siguiente está más levantado. Lo que cambió es hacia dónde
+     levanta — antes hacia la luz, ahora hacia el blanco del papel.
+   - El semáforo usa los MISMOS tres tonos que ya usa Captura sobre su papel
+     crema. La señal no cambia de idioma entre las dos pantallas; solo está
+     calculada contra un fondo claro. Los valores brillantes de antes
+     (#5eead4, #fde047, #f87171) no se leen sobre papel.
 */
 #vistaAncha {
-  --fondo-a: #18161c;
-  --superficie-a: #221f27;
-  --superficie-alta-a: #2c2833;
-  --borde-a: #35313c;
-  --borde-sutil-a: #29262f;
-  --texto-a: #f6f3ef;
-  --texto-2a: #948e9c;
-  --texto-3a: #6f6a78;
+  --fondo-a: #efebe2;
+  --superficie-a: #f7f4ee;
+  --superficie-alta-a: #fbf8f2;
+  --borde-a: #d5cfc1;
+  --borde-sutil-a: #e4dfd2;
+  --texto-a: #221f1a;
+  --texto-2a: #57524a;
+  /* El tercer nivel de tinta se oscureció al migrar (4 ago 2026). Sobre el
+     fondo oscuro, un gris tenue bastaba; sobre papel el mismo grado de
+     "apagado" cae a 3.1:1, por debajo del mínimo legible para texto chico
+     (4.5:1) — y este nivel lleva datos que sí se leen: el día de cada pago y
+     el pie de las fichas. La jerarquía la cargan el tamaño y el peso, no
+     desvanecer el texto hasta que estorbe leerlo. */
+  --texto-3a: #6d6659;
+
+  /* El acento quirúrgico de la dirección v1. Solo donde hay algo que decir:
+     la acción principal y el ciclo que se está mirando. Si empieza a
+     aparecer en más lugares, deja de ser acento. */
+  --acento-a: #33705c;
+  --acento-tenue-a: rgba(51, 112, 92, 0.12);
+
+  /* Semáforo sobre papel: los mismos tonos que --verde-papel-c y hermanos
+     en Captura. Aquí viven como tokens para que el JavaScript los pida con
+     var() en vez de llevar hex incrustados. */
+  --bien-a: #0f6b4f;
+  --cuidado-a: #8a5300;
+  --mal-a: #b3261e;
+  /* Versiones lavadas, para rellenos y bordes de aviso donde el tono pleno
+     gritaría. */
+  --bien-tenue-a: rgba(15, 107, 79, 0.12);
+  --cuidado-tenue-a: rgba(138, 83, 0, 0.10);
+  --mal-tenue-a: rgba(179, 38, 30, 0.10);
+
+  /* La rampa de compromiso del §2 Estructura: un solo tono en tres escalones,
+     de lo más forzoso a lo más libre. Re-entonada para papel — el escalón
+     claro de antes (#ddd6fe) desaparecía sobre crema. No es semáforo ni
+     identidad de categoría: es una escala ordinal, y por eso un solo matiz.
+     Vive como token para que el JavaScript la pida con var(). */
+  --tramo-fijo-a: #5b21b6;
+  --tramo-presupuestado-a: #8b5cf6;
+  --tramo-discrecional-a: #bfaef0;
 
   --mono-a: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
@@ -1502,10 +1547,14 @@ details summary {
   outline: 2px solid var(--texto-2a);
   outline-offset: 1px;
 }
+/* El ciclo que se está mirando. Sobre papel, invertir con la tinta —que es
+   lo que hacía en oscuro— dejaba un bloque negro que pesaba más que la cifra
+   protagonista de al lado. El acento dice "estás aquí" sin robarse la
+   pantalla, y es el segundo y último lugar donde aparece. */
 #vistaAncha .pastilla-ciclo.esta-enfocada {
-  background-color: var(--texto-a);
-  border-color: var(--texto-a);
-  color: var(--fondo-a);
+  background-color: var(--acento-a);
+  border-color: var(--acento-a);
+  color: #fbf8f2;
   cursor: default;
 }
 
@@ -1537,15 +1586,15 @@ details summary {
   gap: 12px;
   margin: 10px 22px 0;
   padding: 8px 12px;
-  border: 1px solid rgba(253, 224, 71, 0.35);
+  border: 1px solid var(--cuidado-a);
   border-radius: 8px;
-  background-color: rgba(253, 224, 71, 0.07);
+  background-color: var(--cuidado-tenue-a);
 }
 #barraSimulacion[hidden] { display: none; }
 #vistaAncha .aviso-simulacion {
   flex: 1 1 auto;
   font-size: 13px;
-  color: #fde047;
+  color: var(--cuidado-a);
 }
 #vistaAncha .nota-simulacion {
   flex: 0 1 auto;
@@ -1563,12 +1612,13 @@ details summary {
   cursor: pointer;
 }
 #barraSimulacion button:hover { color: var(--texto-a); }
-/* Guardar es la acción que toca datos reales: se distingue con la misma
-   inversión neutra del botón de agregar, no con un color nuevo. */
+/* Guardar es la acción que toca datos reales: se distingue igual que el botón
+   de agregar, que es la otra acción de peso de la pantalla. Antes los dos se
+   resolvían invirtiendo con la tinta; sobre papel los dos usan el acento. */
 #botonGuardarSimulacion {
-  background-color: var(--texto-a) !important;
-  border-color: var(--texto-a) !important;
-  color: var(--fondo-a) !important;
+  background-color: var(--acento-a) !important;
+  border-color: var(--acento-a) !important;
+  color: #fbf8f2 !important;
   font-weight: 500;
 }
 
@@ -1611,13 +1661,13 @@ details summary {
   stroke-width: 1;
 }
 #vistaAncha .linea-cero {
-  stroke: #f87171;
+  stroke: var(--mal-a);
   stroke-opacity: 0.35;
   stroke-width: 1;
   stroke-dasharray: 2 3;
 }
 #vistaAncha .punto-quiebre {
-  fill: #f87171;
+  fill: var(--mal-a);
 }
 #vistaAncha .punto-hoy {
   fill: var(--texto-a);
@@ -1671,7 +1721,7 @@ details summary {
 /* Lo vencido es lo único que cambia de tono: el punto ya lo dice, pero un
    recibo vencido merece leerse antes que los demás sin tener que buscarlo. */
 #vistaAncha .chip-siguiente.vencido {
-  border-color: rgba(248, 113, 113, 0.45);
+  border-color: var(--mal-a);
 }
 
 /* Mono con cifras tabulares en fecha y monto: es la regla de la dirección
@@ -1788,9 +1838,9 @@ details summary {
 }
 /* Los tres estados se derivan de pagado + fechaProgramada; no hace falta
    ningún campo nuevo en el modelo. Son el único color de la pantalla. */
-#vistaAncha .punto-estado.pagado { background-color: #5eead4; }
-#vistaAncha .punto-estado.pendiente { background-color: #fde047; }
-#vistaAncha .punto-estado.vencido { background-color: #f87171; }
+#vistaAncha .punto-estado.pagado { background-color: var(--bien-a); }
+#vistaAncha .punto-estado.pendiente { background-color: var(--cuidado-a); }
+#vistaAncha .punto-estado.vencido { background-color: var(--mal-a); }
 
 /* Ningún nombre se corta con "...": si no cabe en una línea, pasa a la
    siguiente. Truncar en una app de dinero es peor que ocupar un renglón
@@ -2229,8 +2279,12 @@ details summary {
   border: 0;
   border-radius: 10px;
   padding: 11px 16px 11px 13px;
-  background-color: var(--texto-a);
-  color: var(--fondo-a);
+  /* La única acción principal de la pantalla, y por eso el único lugar donde
+     aparece el acento verde bosque de la dirección v1. Sobre papel, invertir
+     con la tinta (que es lo que hacía en oscuro) daba un botón negro pesado;
+     el acento dice "esto se toca" sin gritar. */
+  background-color: var(--acento-a);
+  color: #fbf8f2;
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -2244,9 +2298,9 @@ details summary {
   /* El signo carga el peso visual, así que se le da su propio espacio
      separado del texto por una línea, no por aire. */
   padding-right: 9px;
-  border-right: 1px solid rgba(24, 22, 28, 0.22);
+  border-right: 1px solid rgba(251, 248, 242, 0.32);
 }
-#botonAgregarYAjustar:hover { background-color: #ffffff; }
+#botonAgregarYAjustar:hover { background-color: #2a5c4c; }
 #botonAgregarYAjustar:active { transform: translateY(1px); }
 
 /* ---------- Marca de crédito y botón de opciones ---------- */
@@ -2339,7 +2393,7 @@ details summary {
   border-radius: 12px;
   /* La única sombra de la app, y con razón: es lo que separa una ventana
      flotante del contenido que tapa. Sin ella se lee como parte del muro. */
-  box-shadow: 0 14px 34px rgba(8, 7, 10, 0.66);
+  box-shadow: 0 14px 34px rgba(34, 31, 26, 0.20);
   overflow: hidden;
 }
 
@@ -2445,7 +2499,7 @@ details summary {
 #capaModal {
   position: fixed;
   inset: 0;
-  background-color: rgba(12, 10, 15, 0.72);
+  background-color: rgba(34, 31, 26, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2453,6 +2507,63 @@ details summary {
   z-index: 50;
 }
 #capaModal[hidden] { display: none; }
+
+/* ---------- Formularios de Ajustes sobre papel ---------- */
+/*
+   Los formularios del modal no tienen estilos propios: heredan los globales
+   del principio de este archivo, que se escribieron para el body oscuro del
+   primer día. Al migrar la vista ancha a papel (4 ago 2026) quedaron campos
+   negros y etiquetas casi invisibles sobre el fondo claro.
+   Se corrige aquí, acotado a #capaModal, en vez de tocar los globales: esos
+   siguen sirviendo a lo que quedó fuera de las dos vistas con paleta propia,
+   y moverlos sería arreglar una pantalla rompiendo otra.
+*/
+#capaModal label { color: var(--texto-a); }
+#capaModal label input,
+#capaModal label select,
+#capaModal textarea {
+  background-color: var(--superficie-alta-a);
+  color: var(--texto-a);
+  border: 1px solid var(--borde-a);
+}
+#capaModal label input:focus,
+#capaModal label select:focus,
+#capaModal textarea:focus {
+  outline: 2px solid var(--acento-a);
+  outline-offset: 1px;
+  border-color: var(--acento-a);
+}
+
+/* Los botones que dan de alta algo llevan el acento; los que solo abren o
+   cierran van delineados. Antes los dos se veían igual, y en una pantalla
+   llena de formularios eso obliga a leer cada botón para saber cuál actúa. */
+#capaModal button {
+  background-color: var(--superficie-alta-a);
+  color: var(--texto-a);
+  border: 1px solid var(--borde-a);
+}
+#capaModal button:hover { background-color: var(--fondo-a); }
+#capaModal button[type="submit"] {
+  background-color: var(--acento-a);
+  color: #fbf8f2;
+  border-color: var(--acento-a);
+}
+#capaModal button[type="submit"]:hover { background-color: #2a5c4c; }
+#capaModal button:active { background-color: var(--acento-tenue-a); }
+#capaModal button[type="submit"]:active { background-color: #24503f; }
+
+#capaModal section,
+#capaModal ul.lista-items li { border-color: var(--borde-a); }
+#capaModal p.descripcion,
+#capaModal .detalle,
+#capaModal details summary { color: var(--texto-2a); }
+#capaModal .pista,
+#capaModal ul.lista-items li.vacio { color: var(--texto-3a); }
+#capaModal .aviso {
+  color: var(--cuidado-a);
+  border-left-color: var(--cuidado-a);
+}
+#capaModal .costo-credito { color: var(--mal-a); }
 
 #panelAjustes {
   background-color: var(--fondo-a);
@@ -2546,9 +2657,9 @@ details summary {
 
   /* Color semántico, separado de los tonos de categoría. Solo dice
      estado: bien, cuidado, se pasó. */
-  --bien-e: #34d399;
-  --cuidado-e: #fbbf24;
-  --mal-e: #f87171;
+  --bien-e: var(--bien-a);
+  --cuidado-e: var(--cuidado-a);
+  --mal-e: var(--mal-a);
 }
 
 /* ---------- Barra de control pegajosa ---------- */
@@ -2621,11 +2732,11 @@ details summary {
   white-space: nowrap;
 }
 #estadoCicloEstudio.es-cerrado {
-  border-color: rgba(52, 211, 153, 0.32);
+  border-color: var(--bien-a);
   color: var(--bien-e);
 }
 #estadoCicloEstudio.es-encurso {
-  border-color: rgba(251, 191, 36, 0.3);
+  border-color: var(--cuidado-a);
   color: var(--cuidado-e);
 }
 
@@ -2693,9 +2804,9 @@ details summary {
 #vistaAncha .aviso-estudio {
   margin: 0 0 18px;
   padding: 10px 14px;
-  border: 1px solid rgba(251, 191, 36, 0.28);
+  border: 1px solid var(--cuidado-a);
   border-radius: 9px;
-  background-color: rgba(251, 191, 36, 0.05);
+  background-color: var(--cuidado-tenue-a);
   font-size: 12.5px;
   color: var(--cuidado-e);
 }
@@ -2884,9 +2995,9 @@ details summary {
   font-variant-numeric: tabular-nums;
   font-size: 18px;
   font-weight: 300;
-  color: rgba(246, 243, 239, 0.55);
+  color: var(--texto-2a);
 }
-#vistaAncha .cifra-proyectada.mal { color: rgba(248, 113, 113, 0.65); }
+#vistaAncha .cifra-proyectada.mal { color: var(--mal-a); }
 
 /* ---------- La regla del ingreso ---------- */
 /* Una barra apilada: el 100% es lo que entró. La cola vacía ES el
@@ -2901,12 +3012,12 @@ details summary {
   overflow: hidden;
 }
 #vistaAncha .tramo-regla { height: 100%; min-width: 2px; }
-#vistaAncha .tramo-fijo { background-color: #6d28d9; }
+#vistaAncha .tramo-fijo { background-color: var(--tramo-fijo-a); }
 #vistaAncha .tramo-fijoPendiente {
-  background-image: repeating-linear-gradient(-45deg, #6d28d9 0 5px, rgba(109, 40, 217, 0.3) 5px 10px);
+  background-image: repeating-linear-gradient(-45deg, var(--tramo-fijo-a) 0 5px, rgba(91, 33, 182, 0.32) 5px 10px);
 }
-#vistaAncha .tramo-variablePresupuestado { background-color: #a78bfa; }
-#vistaAncha .tramo-discrecional { background-color: #ddd6fe; }
+#vistaAncha .tramo-variablePresupuestado { background-color: var(--tramo-presupuestado-a); }
+#vistaAncha .tramo-discrecional { background-color: var(--tramo-discrecional-a); }
 #vistaAncha .marca-ingreso {
   position: absolute;
   top: 0;
@@ -2943,12 +3054,12 @@ details summary {
   border-radius: 3px;
   flex: 0 0 auto;
 }
-#vistaAncha .marca-fijo { background-color: #6d28d9; }
+#vistaAncha .marca-fijo { background-color: var(--tramo-fijo-a); }
 #vistaAncha .marca-fijoPendiente {
-  background-image: repeating-linear-gradient(-45deg, #6d28d9 0 3px, rgba(109, 40, 217, 0.3) 3px 6px);
+  background-image: repeating-linear-gradient(-45deg, var(--tramo-fijo-a) 0 3px, rgba(91, 33, 182, 0.32) 3px 6px);
 }
-#vistaAncha .marca-variablePresupuestado { background-color: #a78bfa; }
-#vistaAncha .marca-discrecional { background-color: #ddd6fe; }
+#vistaAncha .marca-variablePresupuestado { background-color: var(--tramo-presupuestado-a); }
+#vistaAncha .marca-discrecional { background-color: var(--tramo-discrecional-a); }
 #vistaAncha .nombre-leyenda { color: var(--texto-2a); }
 #vistaAncha .monto-leyenda {
   margin-left: auto;
@@ -3129,8 +3240,8 @@ details summary {
 /* La semana en curso se marca con su recuadro, no con un color dentro
    de la dona: el color de adentro ya significa categoría. */
 #vistaAncha .semana.es-actual {
-  border-color: rgba(251, 191, 36, 0.4);
-  background-color: rgba(251, 191, 36, 0.04);
+  border-color: var(--cuidado-a);
+  background-color: var(--cuidado-tenue-a);
 }
 
 #vistaAncha .dona {
@@ -3272,7 +3383,7 @@ details summary {
 }
 #vistaAncha .relleno-dia {
   width: 100%;
-  background-color: #3987e5;
+  background-color: var(--acento-a);
   border-radius: 5px 5px 0 0;
   min-height: 2px;
 }
@@ -3405,8 +3516,8 @@ details summary {
 /* ============================================================ */
 /* §6 COMPARATIVO                                                */
 /* ============================================================ */
-#vistaAncha .fila-incompleta td { color: rgba(246, 243, 239, 0.45); }
-#vistaAncha .fila-incompleta .celda-cifra.fuerte { color: rgba(246, 243, 239, 0.5); }
+#vistaAncha .fila-incompleta td { color: var(--texto-3a); }
+#vistaAncha .fila-incompleta .celda-cifra.fuerte { color: var(--texto-3a); }
 #vistaAncha .fila-promedio td {
   border-top: 1px solid var(--borde-a);
   color: var(--texto-3a);
