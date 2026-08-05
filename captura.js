@@ -1274,21 +1274,43 @@ function htmlVencimientosAlFrente(datos) {
 // la franja del muro solo muestra los primeros cuatro, y sin esta lista los
 // demás quedarían sin ninguna forma de alcanzarlos desde el teléfono.
 //
-// Los de monto cero quedan fuera por la misma razón de siempre: una tarjeta
-// sin compras del periodo no es un pago, y además sería impagable
-// (registrarPagoDeCompromiso rechaza montos de cero), así que se quedaría
-// atorada empujando fuera a los pagos de verdad.
+// Los de monto cero SÍ entran, pero siempre al final (4 ago 2026).
+//
+// Antes quedaban fuera, con el argumento de que una tarjeta sin compras
+// registradas no es un pago y se quedaría atorada empujando fuera a los pagos
+// de verdad. La primera mitad resultó falsa en la práctica: al Director el
+// banco le cobró $487 de su tarjeta Nu por compras que nunca capturó en la
+// app, y al ir a registrar el pago la tarjeta aparecía apagada, sin forma de
+// tocarla. Terminó anotándolo como gasto suelto en "Otros", donde le comió la
+// bolsa de comida.
+//
+// La app solo sabe de una tarjeta lo que se le capturó; el banco sabe más.
+// Así que un pendiente en cero no significa "no debes nada", significa "no me
+// consta que debas algo" — y eso no es razón para impedir pagarlo.
+//
+// La segunda mitad del argumento sí era buena, y por eso van al final en vez
+// de mezclados: nunca empujan fuera de la vista a un recibo que sí vence.
 function obtenerPendientesParaAdelantar(datos, cicloId) {
   const hoyTexto = formatearFechaISO(new Date());
 
   return datos.compromisos
     .filter(function (compromiso) {
-      if (compromiso.pagado || !hayAlgoQuePagar(compromiso)) {
+      if (compromiso.pagado) {
         return false;
       }
       return compromiso.cicloId === cicloId || compromiso.fechaProgramada <= hoyTexto;
     })
-    .sort(function (a, b) { return a.fechaProgramada < b.fechaProgramada ? -1 : 1; });
+    .sort(function (a, b) {
+      // Primero todo lo que tiene monto conocido, por fecha. Después los de
+      // monto cero, también por fecha entre ellos.
+      const aTieneMonto = hayAlgoQuePagar(a);
+      const bTieneMonto = hayAlgoQuePagar(b);
+
+      if (aTieneMonto !== bTieneMonto) {
+        return aTieneMonto ? -1 : 1;
+      }
+      return a.fechaProgramada < b.fechaProgramada ? -1 : 1;
+    });
 }
 
 // La pantalla de esa lista. Usa la misma rejilla que los demás pasos, y no
@@ -1303,12 +1325,19 @@ function htmlPasoPendientes() {
     const diasHasta = calcularDiasHastaFecha(compromiso.fechaProgramada);
     const destinatario = resolverDestinatarioDeCompromiso(compromiso, datos);
 
+    // Un pendiente sin monto no dice "$0.00": diría que no debes nada, y lo
+    // que pasa es que la app no sabe cuánto. Se dice eso mismo, para que
+    // quede claro que hay que escribir el monto en la pantalla siguiente.
+    const cuanto = hayAlgoQuePagar(compromiso)
+      ? formatearMoneda(compromiso.montoEstimado)
+      : "sin compras registradas";
+
     return {
       nombre: compromiso.nombre + (destinatario ? " · " + destinatario : ""),
       color: obtenerColorDeCategoria(resolverCategoriaDeCompromiso(compromiso, datos), datos),
       // Cuándo vence y cuánto es, juntos: son las dos cosas que deciden si
       // este es el pago que se quiere adelantar hoy.
-      apoyo: formatearCuandoVence(diasHasta) + " · " + formatearMoneda(compromiso.montoEstimado),
+      apoyo: formatearCuandoVence(diasHasta) + " · " + cuanto,
       datos: { accion: "pagar", compromiso: compromiso.id, regreso: PASO_PENDIENTES }
     };
   });
@@ -1994,7 +2023,14 @@ function manejarToqueEnElTicket(evento) {
     const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoQueSeEstaPagando; });
     // El monto llega precargado con el estimado y es editable: casi
     // siempre es el correcto, y cuando no lo es se corrige tecleando.
-    montoEscritoEnElTicket = String(compromiso.montoEstimado);
+    //
+    // Un estimado de cero no se precarga: se deja el teclado en espera. Un
+    // "0" heredado se ve idéntico a un monto de verdad, y aquí justamente el
+    // punto es que la app NO sabe cuánto es y hay que escribirlo (pasa con
+    // una tarjeta cuyas compras nunca se capturaron).
+    montoEscritoEnElTicket = Number(compromiso.montoEstimado) > 0
+      ? String(compromiso.montoEstimado)
+      : "";
     fuenteSeleccionadaGasto = "debito";
     avanzarDelTicket(PASO_PAGO);
     return;
