@@ -233,12 +233,31 @@ function registrarPagoDeCompromiso(compromisoId, montoReal, fuente) {
   // contra el ciclo actual daba una semana que no existe dentro del ciclo
   // al que el gasto pertenece.
   const cicloDelCompromiso = datos.ciclos.find(function (c) { return c.id === compromiso.cicloId; }) || cicloActual;
+  const hoyTexto = formatearFechaISO(ahora);
+
+  // Excepción: un compromiso de un ciclo YA CERRADO.
+  //
+  // Pagar algo vencido de un ciclo pasado es dinero que sale HOY, así que el
+  // gasto tiene que vivir en el ciclo de hoy. Con la regla de arriba se iba al
+  // ciclo viejo y ni el saldo actual ni el disponible lo sentían: los dos
+  // seguían prometiendo dinero que ya no estaba. Le pasó al Director el 4 ago
+  // 2026 al pagar el Sky de julio y su tarjeta Nu — su saldo decía $1,187 de
+  // más. Hasta ese día el caso era inalcanzable, porque no había forma de
+  // llegar a un pendiente de un ciclo pasado.
+  //
+  // Adelantar un pago del ciclo que VIENE se queda como estaba, a propósito
+  // (decisión del Director, 4 ago 2026): ahí el gasto pertenece al
+  // presupuesto del ciclo que se está adelantando, y moverlo obligaría además
+  // a que ese ciclo dejara de contarlo en su proyección.
+  const vieneDeUnCicloCerrado = compromiso.cicloId !== cicloActual.id &&
+    cicloDelCompromiso.fechaFin < hoyTexto;
+  const cicloDelGasto = vieneDeUnCicloCerrado ? cicloActual : cicloDelCompromiso;
 
   datos.gastos.push({
     id: generarId("gas"),
-    cicloId: compromiso.cicloId,
-    semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloDelCompromiso),
-    fecha: formatearFechaISO(ahora),
+    cicloId: cicloDelGasto.id,
+    semana: calcularSemanaDeLaFecha(hoyTexto, cicloDelGasto),
+    fecha: hoyTexto,
     hora: String(ahora.getHours()).padStart(2, "0") + ":" + String(ahora.getMinutes()).padStart(2, "0"),
     monto: montoReal,
     categoriaId: categoriaId,
