@@ -1623,6 +1623,87 @@ details summary {
   fill: var(--texto-a);
 }
 
+/* ---------- Lo que sigue ---------- */
+/* Los próximos pagos cruzando categorías. Comparte retícula con la banda de
+   trayectoria de arriba (misma primera columna, mismo padding lateral) para
+   que las dos franjas se lean como un par y no como dos parches.
+
+   Es la franja más barata de la pantalla a propósito: cada píxel de alto que
+   ocupa se lo quita al muro, que se auto-escala para caber sin scroll. Por
+   eso una sola línea, sin recuadro propio y sin título grande. */
+#bandaLoQueSigue {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  align-items: center;
+  gap: 22px;
+  padding: 10px 22px 0;
+}
+#bandaLoQueSigue[hidden] { display: none; }
+
+/* Los chips se acomodan en una línea y, si no caben, se recortan por la
+   derecha en vez de brincar a un segundo renglón: la franja tiene que
+   ocupar un alto predecible para que el muro pueda contar con el resto. */
+#vistaAncha .chips-siguientes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Superficie apenas levantada del fondo: se distingue como grupo sin pedir
+   un borde por chip, que a cuatro chips ya sería ruido. */
+#vistaAncha .chip-siguiente {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background-color: var(--superficie-alta-a);
+  border: 1px solid var(--borde-sutil-a);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Lo vencido es lo único que cambia de tono: el punto ya lo dice, pero un
+   recibo vencido merece leerse antes que los demás sin tener que buscarlo. */
+#vistaAncha .chip-siguiente.vencido {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+/* Mono con cifras tabulares en fecha y monto: es la regla de la dirección
+   visual para todo lo que sea dato, y aquí además alinea los chips entre sí.
+   Se pide con el token, no con la clase .mono — esa vive dentro de
+   #vistaCaptura y aquí no aplicaría. */
+#vistaAncha .fecha-chip {
+  color: var(--texto-3a);
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+}
+/* El nombre es lo único que puede ceder ancho: la fecha y el monto son
+   datos cortos que no se deben cortar nunca. */
+#vistaAncha .nombre-chip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--texto-2a);
+}
+#vistaAncha .monto-chip {
+  color: var(--texto-a);
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* No es un chip más: dice cuántos quedaron fuera y a dónde ir por ellos. */
+#vistaAncha .resto-siguiente {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+
 /* ---------- Muro de pagos ---------- */
 /* Columnas explícitas repartidas por JavaScript, no CSS multi-column:
    dejando el reparto al navegador, la altura no se puede medir de forma

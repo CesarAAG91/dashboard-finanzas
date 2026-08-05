@@ -62,6 +62,76 @@ function calcularEstadoDePago(compromiso) {
   return crearFechaLocal(compromiso.fechaProgramada) < hoy ? "vencido" : "pendiente";
 }
 
+// Ordena los pagos de un grupo del muro para que se lean como una agenda.
+//
+// Antes salían en el orden en que el motor materializa los compromisos —o
+// sea, orden de registro— así que para saber qué venía había que leer fecha
+// y estado fila por fila. Ruido reportado por el usuario (4 ago 2026): "los
+// próximos pagos no los tengo bien detectados".
+//
+// Dos criterios, en este orden:
+//
+// 1. Primero lo que todavía pide algo, al fondo lo que ya está resuelto.
+//    "Resuelto" incluye lo diferido a meses: no está pagado, pero ya no sale
+//    de este ciclo, así que no debe competir por la atención con lo que sí
+//    hay que pagar.
+// 2. Entre los del mismo bando, por fecha. Lo vencido queda arriba solo, sin
+//    necesidad de un criterio aparte: su fecha ya es la más vieja.
+//
+// El desempate por nombre existe para que dos pagos del mismo día no bailen
+// de posición entre un dibujado y el siguiente.
+function ordenarPagosDelMuro(pagos) {
+  return pagos.slice().sort(function (a, b) {
+    const resueltoA = a.pagado || Boolean(a.estadoCredito);
+    const resueltoB = b.pagado || Boolean(b.estadoCredito);
+
+    if (resueltoA !== resueltoB) {
+      return resueltoA ? 1 : -1;
+    }
+    if (a.fechaProgramada !== b.fechaProgramada) {
+      // Las fechas son "AAAA-MM-DD": comparadas como texto ya quedan en
+      // orden cronológico, sin construir un Date por comparación.
+      return a.fechaProgramada < b.fechaProgramada ? -1 : 1;
+    }
+    return a.nombre < b.nombre ? -1 : 1;
+  });
+}
+
+// Ordena los grupos de un recuadro entre sí, por su pago pendiente más
+// próximo.
+//
+// Ordenar solo dentro de cada grupo no basta: las subcategorías salen en el
+// orden en que la categoría las declara, así que el recuadro se lee en
+// zigzag —un pago del día 22 encima de uno del día 8— y cuando el muro se
+// aprieta y esconde los títulos, los grupos se funden en una sola lista
+// donde ese zigzag es lo único que queda a la vista.
+//
+// Un grupo sin nada pendiente (todo pagado o diferido) se va al final: ya
+// no pide nada, así que no compite por la atención.
+function ordenarGruposDelRecuadro(grupos) {
+  function fechaDelPrimerPendiente(grupo) {
+    const pendiente = grupo.pagos.find(function (pago) {
+      return !pago.pagado && !pago.estadoCredito;
+    });
+    // Los pagos del grupo ya vienen ordenados, así que el primer pendiente
+    // que aparece es el más próximo. Sin pendientes, una fecha imposible que
+    // lo manda al final sin necesitar un caso aparte en la comparación.
+    return pendiente ? pendiente.fechaProgramada : "9999-12-31";
+  }
+
+  return grupos.slice().sort(function (a, b) {
+    const fechaA = fechaDelPrimerPendiente(a);
+    const fechaB = fechaDelPrimerPendiente(b);
+
+    if (fechaA !== fechaB) {
+      return fechaA < fechaB ? -1 : 1;
+    }
+    // Empate: se conserva el orden en que la categoría declara sus
+    // subcategorías, que es el que el usuario capturó.
+    return 0;
+  });
+}
+
 // Etiqueta corta de fecha para las filas del muro ("14 ago"), donde el año
 // sobra porque todo lo que se ve pertenece al mismo ciclo.
 function formatearDiaYMes(fechaISO) {
@@ -204,12 +274,12 @@ function construirRecuadrosDelMuro(ciclo, datos) {
     (categoria.subcategorias || []).forEach(function (subcategoria) {
       const pagos = pagosPorSubcategoria[subcategoria];
       if (pagos && pagos.length > 0) {
-        grupos.push({ titulo: subcategoria, pagos: pagos });
+        grupos.push({ titulo: subcategoria, pagos: ordenarPagosDelMuro(pagos) });
       }
     });
 
     if (sinSubcategoria.length > 0) {
-      grupos.push({ titulo: null, pagos: sinSubcategoria });
+      grupos.push({ titulo: null, pagos: ordenarPagosDelMuro(sinSubcategoria) });
     }
 
     // Se decide una sola vez para todo el recuadro (ver
@@ -218,11 +288,13 @@ function construirRecuadrosDelMuro(ciclo, datos) {
       grupos.forEach(function (grupo) { grupo.titulo = null; });
     }
 
+    const gruposEnOrden = ordenarGruposDelRecuadro(grupos);
+
     recuadros.push({
       tipo: "pagos",
       nombre: categoria.nombre,
-      grupos: grupos,
-      destinatariosVisibles: calcularDestinatariosVisiblesDelRecuadro(grupos, datos)
+      grupos: gruposEnOrden,
+      destinatariosVisibles: calcularDestinatariosVisiblesDelRecuadro(gruposEnOrden, datos)
     });
   });
 
@@ -236,7 +308,7 @@ function construirRecuadrosDelMuro(ciclo, datos) {
       recuadros.push({
         tipo: "pagos",
         nombre: bloque.nombre,
-        grupos: [{ titulo: null, pagos: pagos }]
+        grupos: [{ titulo: null, pagos: ordenarPagosDelMuro(pagos) }]
       });
     }
   });
@@ -718,6 +790,73 @@ function acomodarMuroDePagos(recuadros) {
   return { columnas: menosDesborde.columnas, escala: ESCALA_MINIMA_MURO, modo: modoFinal.id, conScroll: true };
 }
 
+// ============================================================
+// VISTA ANCHA — LO QUE SIGUE
+// ============================================================
+//
+// El muro contesta "¿qué debo este ciclo y cuánto?": por eso agrupa por
+// categoría, que es como se decide el presupuesto. Pero no contesta "¿qué
+// sigue?", porque para eso hay que barrer todas las columnas comparando
+// fechas a ojo. Son dos preguntas distintas y necesitan dos lugares.
+//
+// Esta franja es la versión de laptop de lo que el teléfono ya tenía arriba
+// de todo: los próximos pagos, cruzando categorías, ordenados por fecha.
+//
+// Los chips son informativos, no botones: el muro sigue siendo el único
+// lugar donde se paga. Dos vías para la misma acción es una de más.
+
+// Cuántos pagos alcanzan a leerse de un vistazo sin que la franja se vuelva
+// una lista. Más de esto deja de ser "lo que sigue" y empieza a ser el muro
+// otra vez, pero en horizontal.
+const CUANTOS_PAGOS_MUESTRA_LO_QUE_SIGUE = 4;
+
+function renderizarBandaLoQueSigue() {
+  const banda = document.getElementById("bandaLoQueSigue");
+  const datos = obtenerDatosVisibles();
+
+  // Solo lo que todavía pide algo. Los de monto cero no entran, misma regla
+  // que en el teléfono: una tarjeta sin compras del periodo no es un
+  // pendiente, y un pago de cero no se puede registrar.
+  const pendientes = obtenerItemsSimuladosDelCicloEnfocado().filter(function (pago) {
+    return !pago.pagado && !pago.estadoCredito && Number(pago.montoEstimado) > 0;
+  });
+
+  // Sin pendientes la franja se va del todo, en vez de quedarse diciendo
+  // "nada": el alto que ocupa lo necesita el muro, que se auto-escala para
+  // caber sin scroll.
+  if (pendientes.length === 0) {
+    banda.innerHTML = "";
+    banda.hidden = true;
+    return;
+  }
+
+  const ordenados = ordenarPagosDelMuro(pendientes);
+  const proximos = ordenados.slice(0, CUANTOS_PAGOS_MUESTRA_LO_QUE_SIGUE);
+  const cuantosNoCaben = ordenados.length - proximos.length;
+
+  const chips = proximos.map(function (pago) {
+    const estado = calcularEstadoDePago(pago);
+
+    // etiquetaCompletaDeCompromiso ya devuelve HTML escapado, y resuelve el
+    // destinatario para que dos recibos que se llaman "Agua" no se confundan.
+    return "<span class=\"chip-siguiente " + estado + "\">" +
+        "<span class=\"punto-estado " + estado + "\"></span>" +
+        "<span class=\"fecha-chip\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
+        "<span class=\"nombre-chip\">" + etiquetaCompletaDeCompromiso(pago, datos) + "</span>" +
+        "<span class=\"monto-chip\">" + formatearMoneda(Number(pago.montoEstimado)) + "</span>" +
+      "</span>";
+  }).join("");
+
+  const resto = cuantosNoCaben > 0
+    ? "<span class=\"resto-siguiente\">+" + cuantosNoCaben + " en el muro</span>"
+    : "";
+
+  banda.hidden = false;
+  banda.innerHTML =
+    "<span class=\"etiqueta-ancha\">Lo que sigue</span>" +
+    "<div class=\"chips-siguientes\">" + chips + resto + "</div>";
+}
+
 function renderizarMuroDePagos() {
   const zona = document.getElementById("zonaMuro");
 
@@ -731,6 +870,12 @@ function renderizarMuroDePagos() {
 
   const datos = obtenerDatosVisibles();
   const ciclo = asegurarCicloActual();
+
+  // Va ANTES de acomodar el muro, no después: la franja le quita alto a la
+  // zona del muro, y el acomodo mide ese alto en vivo. Al revés, el muro se
+  // escalaría contra un espacio que ya no tiene.
+  renderizarBandaLoQueSigue();
+
   const recuadros = construirRecuadrosDelMuro(ciclo, datos);
 
   if (recuadros.length === 0) {

@@ -148,6 +148,13 @@
         <div class="grafica-trayectoria-banda" id="graficaTrayectoria"></div>
       </div>
 
+      <!-- Los próximos pagos, cruzando categorías y ordenados por fecha. El
+           muro de abajo contesta "¿qué debo y cuánto?"; esta franja contesta
+           "¿qué sigue?", que ahí abajo obliga a barrer las columnas.
+           Va fuera de #zonaMuro a propósito: así el muro, que mide su alto
+           en vivo, se reajusta solo cuando la franja aparece o se va. -->
+      <div id="bandaLoQueSigue" hidden></div>
+
       <div class="zona-muro" id="zonaMuro">
         <div class="muro" id="muroPagos"></div>
       </div>
