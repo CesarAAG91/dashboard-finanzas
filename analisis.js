@@ -934,21 +934,47 @@ function calcularResumenDelCiclo(ciclo, datos) {
     .filter(function (item) { return item.pagado && !item.estadoCredito; })
     .reduce(function (suma, item) { return suma + Number(item.montoReal); }, 0);
 
-  // Solo débito, igual que el balance: un gasto libre a crédito no sale de
-  // la cuenta en este ciclo, vuelve como pago de la tarjeta y ya está
-  // contado ahí. Si esta cifra lo incluyera, la barra no sumaría.
-  const variableGastado = datos.gastos
-    .filter(function (g) {
-      return g.cicloId === ciclo.id && g.compromisoId === null && g.fuente === "debito";
-    })
-    .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+  // La ficha de la derecha mide UNA sola bolsa: la de la categoría que el
+  // usuario marcó en Ajustes como la que lleva barra en Captura — su gasto
+  // diario, que en su caso es Comida.
+  //
+  // Antes sumaba TODO gasto libre a débito, sin mirar la categoría. Con sus
+  // datos reales eso metía en la cifra un pago de tarjeta, un empeño y una
+  // recarga registrados en "Otros": le decía que llevaba el 72% de su bolsa
+  // cuando llevaba el 50% (medido el 4 ago 2026). Decisión suya ese día:
+  // "comida es comida, ningún otro dato debe inflar ese monto".
+  //
+  // Se pregunta por la marca y nunca por el nombre: reconocerla como "Comida"
+  // se rompería el día que la llame "Alimentos" — misma razón por la que
+  // existe obtenerCategoriaDeLaBarraSemanal.
+  //
+  // Si no hay ninguna marcada (instalación nueva), la ficha vuelve a hablar
+  // de todo el presupuesto variable, que es mejor que no decir nada.
+  const categoriaDeLaBolsa = obtenerCategoriaDeLaBarraSemanal(datos);
 
-  // El mismo apartado que resta la cifra grande, no el ritmo proyectado:
-  // si mostrara otra cosa, las fichas no sumarían el balance y la barra se
-  // leería como si tuviera un error.
-  const variablePorVenir = esCicloActual
-    ? calcularPresupuestoVariablePendiente(ciclo, datos)
-    : resultado.gastoVariableProyectado;
+  // Se reusan las funciones del motor en vez de filtrar aquí: son las mismas
+  // que ya usan la barra de Captura y el §3 del estudio, así que las tres
+  // pantallas no pueden discrepar sobre cuánto llevas gastado de comida.
+  const variableGastado = categoriaDeLaBolsa
+    ? calcularGastadoDeLaBolsaEnElCiclo(categoriaDeLaBolsa, ciclo, datos)
+    : datos.gastos
+        .filter(function (g) {
+          return g.cicloId === ciclo.id && g.compromisoId === null && g.fuente === "debito";
+        })
+        .reduce(function (suma, g) { return suma + Number(g.monto); }, 0);
+
+  // Lo que sigue apartado de esa bolsa en lo que queda del ciclo. En un ciclo
+  // futuro no hay nada consumido, así que manda el presupuesto completo.
+  let variablePorVenir;
+  if (categoriaDeLaBolsa) {
+    variablePorVenir = esCicloActual
+      ? calcularPresupuestoPendienteDeCategoria(categoriaDeLaBolsa, ciclo, datos)
+      : calcularBolsaCompletaDeCategoria(categoriaDeLaBolsa, ciclo, datos);
+  } else {
+    variablePorVenir = esCicloActual
+      ? calcularPresupuestoVariablePendiente(ciclo, datos)
+      : resultado.gastoVariableProyectado;
+  }
 
   // En el ciclo en curso, el balance y "Libre para gastar" son el mismo
   // número y se calculan igual: lo que sobra al cerrar ES lo que se puede
@@ -975,6 +1001,9 @@ function calcularResumenDelCiclo(ciclo, datos) {
     pagosTotales: items.length,
     variableGastado: variableGastado,
     variablePorVenir: variablePorVenir,
+    // El nombre lo pone la categoría, no una constante: si la renombra, la
+    // ficha se entera sola.
+    nombreDeLaBolsa: categoriaDeLaBolsa ? categoriaDeLaBolsa.nombre : null,
     balance: balance
   };
 }
@@ -1044,13 +1073,19 @@ function renderizarEncabezadoDelCiclo() {
 
   // En un ciclo futuro no hay nada consumido que medir: la ficha se queda
   // en el presupuesto previsto, sin barra ni pie.
+  //
+  // La etiqueta la pone la categoría de la bolsa ("Comida por gastar"), para
+  // que diga qué mide de verdad. Solo cae en "Variable" cuando no hay ninguna
+  // categoría marcada y la ficha vuelve a hablar de todas.
+  const etiquetaBolsa = resumen.nombreDeLaBolsa || "Variable";
   const fichaVariable = resumen.esCicloActual
-    ? htmlDeFicha("Variable por gastar", formatearMoneda(resumen.variablePorVenir), {
+    ? htmlDeFicha(etiquetaBolsa + " por gastar", formatearMoneda(resumen.variablePorVenir), {
         pie: formatearMoneda(resumen.variableGastado) + " ya gastado",
         barra: { valor: proporcionGastada, color: "var(--cuidado-a)" },
-        titulo: "La bolsa variable del ciclo: lo gastado más lo que queda por gastar"
+        titulo: "El presupuesto de " + etiquetaBolsa + " en este ciclo: lo que ya consumió " +
+          "más lo que sigue apartado. No cuenta gastos de otras categorías."
       })
-    : htmlDeFicha("Variable previsto", formatearMoneda(resumen.variablePorVenir));
+    : htmlDeFicha("Presupuesto de " + etiquetaBolsa, formatearMoneda(resumen.variablePorVenir));
 
   document.getElementById("fichasCiclo").innerHTML =
     fichaIngresos + fichaComprometido + fichaVariable;

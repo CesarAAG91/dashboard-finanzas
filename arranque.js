@@ -33,6 +33,7 @@ function renderizarTodo() {
   renderizarOcurrenciasDelCiclo();
   renderizarPresupuestoSemanal();
   renderizarCompromisos();
+  renderizarPagosSinRegistro();
   renderizarTicket();
   // La segunda pantalla entera, con una sola llamada: qué secciones tiene
   // por dentro es asunto de estudio.js, no de aquí.

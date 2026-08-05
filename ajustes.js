@@ -1294,6 +1294,104 @@ function renderizarCompromisos() {
 }
 
 // ============================================================
+// REPARACIÓN — PAGOS MARCADOS SIN REGISTRO
+// ============================================================
+//
+// Problema que resuelve, con un caso real (4 ago 2026): el recibo de Sky de
+// julio quedó marcado como pagado sin estarlo, arrastrado por el marcado
+// masivo del arranque. Cuando llegó el momento de pagarlo de verdad no había
+// forma de hacerlo — el horizonte de la primera pantalla solo va hacia
+// adelante, así que julio no se puede enfocar, y borrar un movimiento no
+// servía porque ese compromiso nunca tuvo movimiento que borrar.
+//
+// Cómo se detectan: pagar desde la app SIEMPRE crea un gasto que apunta al
+// compromiso (ver registrarPagoDeCompromiso en captura.js). Así que un
+// compromiso pagado sin ningún gasto que lo señale no pasó por ahí — vino de
+// un respaldo o de una versión vieja. Ese es exactamente el conjunto
+// sospechoso, y la lista se vacía sola conforme se reparan.
+//
+// Es una lista, no un botón de "arreglar todo": la app no sabe cuáles se
+// pagaron de verdad. Eso solo lo sabe el usuario.
+
+function obtenerPagosMarcadosSinRegistro(datos) {
+  const tieneMovimiento = {};
+  datos.gastos.forEach(function (gasto) {
+    if (gasto.compromisoId) {
+      tieneMovimiento[gasto.compromisoId] = true;
+    }
+  });
+
+  return datos.compromisos
+    .filter(function (compromiso) {
+      return compromiso.pagado && !tieneMovimiento[compromiso.id];
+    })
+    .sort(function (a, b) {
+      return a.fechaProgramada < b.fechaProgramada ? -1 : 1;
+    });
+}
+
+// Devuelve un compromiso a pendientes.
+//
+// A propósito NO toca el contador de pagos de una deuda: ese contador solo lo
+// mueve registrarPagoDeCompromiso, y por definición estos compromisos nunca
+// pasaron por ahí. Restarle uno aquí lo dejaría en negativo respecto de la
+// realidad y la deuda empezaría a generar compromisos de más.
+function devolverPagoAPendientes(compromisoId) {
+  const datos = leerDatos();
+  const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoId; });
+
+  if (!compromiso) {
+    return;
+  }
+
+  compromiso.pagado = false;
+  compromiso.montoReal = null;
+
+  guardarDatos(datos);
+  renderizarTodo();
+  mostrarMensaje("\"" + compromiso.nombre + "\" volvió a pendientes. Regístralo como cualquier otro pago.");
+}
+
+function renderizarPagosSinRegistro() {
+  const datos = leerDatos();
+  const lista = document.getElementById("listaPagosSinRegistro");
+  const sospechosos = obtenerPagosMarcadosSinRegistro(datos);
+
+  if (sospechosos.length === 0) {
+    lista.innerHTML = "<li class=\"vacio\">Todos los pagos marcados tienen su movimiento. Nada que reparar.</li>";
+    return;
+  }
+
+  lista.innerHTML = sospechosos.map(function (compromiso) {
+    const destinatario = resolverDestinatarioDeCompromiso(compromiso, datos);
+    const etiquetaDestinatario = destinatario ? " · " + escaparHTML(destinatario) : "";
+    const monto = compromiso.montoReal === null ? compromiso.montoEstimado : compromiso.montoReal;
+
+    return "<li data-compromiso-id=\"" + compromiso.id + "\">" +
+      "<div><strong>" + escaparHTML(compromiso.nombre) + "</strong>" + etiquetaDestinatario +
+        " <span class=\"detalle\">(ciclo " + escaparHTML(compromiso.cicloId) + ", " +
+        escaparHTML(compromiso.fechaProgramada) + ", " + formatearMoneda(monto) + ")</span></div>" +
+      "<button type=\"button\" class=\"boton-devolver-a-pendientes\">Devolver a pendientes</button>" +
+    "</li>";
+  }).join("");
+
+  lista.querySelectorAll("li[data-compromiso-id]").forEach(function (filaLi) {
+    filaLi.querySelector(".boton-devolver-a-pendientes").addEventListener("click", function () {
+      const compromisoId = filaLi.getAttribute("data-compromiso-id");
+      const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoId; });
+
+      // Confirmación siempre: devolver un pago a pendientes cambia lo que la
+      // app cree que debes, y un dedo en la fila equivocada no se deshace
+      // desde aquí (habría que volver a pagarlo).
+      if (confirm("¿Devolver \"" + compromiso.nombre + "\" a pendientes? " +
+          "Volverá a aparecer como pago por hacer del ciclo " + compromiso.cicloId + ".")) {
+        devolverPagoAPendientes(compromisoId);
+      }
+    });
+  });
+}
+
+// ============================================================
 // PANTALLA DE DEPURACIÓN (heredada de la Etapa 1)
 // ============================================================
 

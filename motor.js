@@ -1605,24 +1605,57 @@ function calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, numeroDeSem
     .reduce(function (suma, gasto) { return suma + Number(gasto.monto); }, 0);
 }
 
-function calcularPresupuestoVariablePendiente(ciclo, datos) {
+// Cuánto del presupuesto de UNA categoría sigue apartado en lo que queda del
+// ciclo. Se extrajo del cálculo de abajo (4 ago 2026) para que la barra
+// superior pueda preguntar por una sola categoría sin escribir su propia
+// versión de la cuenta: dos caminos al mismo número es exactamente lo que ya
+// rompió esta app antes.
+function calcularPresupuestoPendienteDeCategoria(categoria, ciclo, datos) {
   const semanaDeHoy = calcularSemanaDeLaFecha(formatearFechaISO(new Date()), ciclo);
+  let apartado = 0;
 
+  // Las semanas que ya cerraron no apartan nada: lo que se gastó en ellas
+  // ya está restado como gasto, y lo que sobró se fue con la semana.
+  for (let semana = Math.max(semanaDeHoy, 1); semana <= SEMANAS_POR_CICLO; semana++) {
+    const bolsa = calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, semana);
+    const gastado = calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, semana);
+    apartado += Math.max(0, bolsa - gastado);
+  }
+
+  return apartado;
+}
+
+// Lo mismo, sumado sobre todas las categorías variables. Es lo que descuenta
+// el disponible real: la comida y la gasolina están tan comprometidas como un
+// recibo, aunque no tengan fecha.
+function calcularPresupuestoVariablePendiente(ciclo, datos) {
   return datos.config.categorias
     .filter(function (categoria) { return categoria.esVariableSemanal; })
     .reduce(function (total, categoria) {
-      let apartadoDeLaCategoria = 0;
-
-      // Las semanas que ya cerraron no apartan nada: lo que se gastó en ellas
-      // ya está restado como gasto, y lo que sobró se fue con la semana.
-      for (let semana = Math.max(semanaDeHoy, 1); semana <= SEMANAS_POR_CICLO; semana++) {
-        const bolsa = calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, semana);
-        const gastado = calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, semana);
-        apartadoDeLaCategoria += Math.max(0, bolsa - gastado);
-      }
-
-      return total + apartadoDeLaCategoria;
+      return total + calcularPresupuestoPendienteDeCategoria(categoria, ciclo, datos);
     }, 0);
+}
+
+// Todo lo que una categoría lleva consumido de su bolsa en el ciclo completo.
+// Reúne las cuatro semanas usando la misma función que ya usan la barra de
+// Captura y el §3 del estudio, para que las tres pantallas no puedan discrepar.
+function calcularGastadoDeLaBolsaEnElCiclo(categoria, ciclo, datos) {
+  let total = 0;
+  for (let semana = 1; semana <= SEMANAS_POR_CICLO; semana++) {
+    total += calcularGastadoDeLaBolsaEnLaSemana(categoria, ciclo, datos, semana);
+  }
+  return total;
+}
+
+// El presupuesto completo de una categoría para un ciclo entero, sin importar
+// en qué día vamos. Es lo que se muestra de un ciclo futuro, donde no hay nada
+// consumido que descontar.
+function calcularBolsaCompletaDeCategoria(categoria, ciclo, datos) {
+  let total = 0;
+  for (let semana = 1; semana <= SEMANAS_POR_CICLO; semana++) {
+    total += calcularBolsaSemanalDeCategoria(categoria, ciclo, datos, semana);
+  }
+  return total;
 }
 
 // Cuánto se puede gastar libremente en lo que queda del ciclo.

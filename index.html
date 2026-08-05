@@ -571,6 +571,15 @@
     <p class="pista">Se generan solos a partir de recurrentes, deudas y tarjetas.</p>
     <ul class="lista-items" id="listaCompromisos"></ul>
   </section>
+
+  <!-- Reparación: pagos que dicen "pagado" pero que nunca se registraron
+       desde la app, así que no tienen ningún movimiento que los respalde.
+       Ver renderizarPagosSinRegistro en ajustes.js. -->
+  <section>
+    <h2>Pagos marcados sin registro</h2>
+    <p class="pista">Compromisos que aparecen como pagados pero no tienen ningún movimiento que los respalde: nunca pasaron por la pantalla de pago. Casi siempre vienen de un respaldo viejo. Si alguno en realidad <strong>no</strong> lo pagaste, devuélvelo a pendientes desde aquí y regístralo como cualquier otro pago. No toques los que sí pagaste.</p>
+    <ul class="lista-items" id="listaPagosSinRegistro"></ul>
+  </section>
         </div>
       </div>
     </div>
