@@ -195,6 +195,15 @@ details summary {
   border-left: 3px solid #f87171;
   padding-left: 8px;
 }
+/* Los bloques de edición desplegable de Ajustes. Viven solo dentro del modal
+   (los dibuja ajustes.js), o sea dentro de #vistaAncha, así que pueden pedir
+   sus tokens aunque el selector sea global: las variables CSS se heredan por
+   el DOM, no por el selector.
+
+   Tenían el fondo oscuro de la paleta vieja. Al migrar a papel (4 ago 2026)
+   las etiquetas se volvieron tinta oscura y quedaron invisibles sobre él —
+   el Director no podía saber qué campo estaba llenando. El borde sustituye
+   al contraste de fondo que antes separaba el bloque de la lista. */
 .edicion-categoria,
 .edicion-recurrente,
 .edicion-deuda,
@@ -202,7 +211,8 @@ details summary {
 .edicion-ingreso {
   margin-top: 10px;
   padding: 10px;
-  background-color: #221f27;
+  background-color: var(--superficie-a);
+  border: 1px solid var(--borde-a);
   border-radius: 8px;
 }
 .estado-deuda-item {
@@ -241,7 +251,7 @@ details summary {
   position: relative;
   margin-top: 12px;
   padding: 10px;
-  background-color: #221f27;
+  background-color: var(--superficie-a);
   border-radius: 8px;
 }
 .grafica-trayectoria svg {
@@ -251,20 +261,20 @@ details summary {
   overflow: visible;
 }
 .grafica-eje-texto {
-  fill: #948e9c;
+  fill: var(--texto-3a);
   font-size: 10px;
 }
 .grafica-linea-referencia {
-  stroke: #35313c;
+  stroke: var(--borde-a);
   stroke-width: 1;
 }
 .grafica-linea-hoy {
-  stroke: #6f6a78;
+  stroke: var(--texto-3a);
   stroke-width: 1;
   stroke-dasharray: 2 2;
 }
 .grafica-crosshair {
-  stroke: #f6f3ef;
+  stroke: var(--texto-a);
   stroke-width: 1;
   pointer-events: none;
   display: none;
@@ -275,7 +285,7 @@ details summary {
   flex-wrap: wrap;
   margin-top: 6px;
   font-size: 12px;
-  color: #948e9c;
+  color: var(--texto-2a);
 }
 .grafica-leyenda span {
   display: inline-flex;
@@ -290,8 +300,8 @@ details summary {
 .grafica-tooltip {
   position: absolute;
   pointer-events: none;
-  background-color: #18161c;
-  border: 1px solid #35313c;
+  background-color: var(--superficie-alta-a);
+  border: 1px solid var(--borde-a);
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 12px;
@@ -301,7 +311,7 @@ details summary {
 }
 .grafica-tooltip .valor {
   font-weight: 600;
-  color: #f6f3ef;
+  color: var(--texto-a);
 }
 
 /* ============================================================
@@ -1441,13 +1451,17 @@ details summary {
   --mal-tenue-a: rgba(179, 38, 30, 0.10);
 
   /* La rampa de compromiso del §2 Estructura: un solo tono en tres escalones,
-     de lo más forzoso a lo más libre. Re-entonada para papel — el escalón
-     claro de antes (#ddd6fe) desaparecía sobre crema. No es semáforo ni
-     identidad de categoría: es una escala ordinal, y por eso un solo matiz.
-     Vive como token para que el JavaScript la pida con var(). */
-  --tramo-fijo-a: #5b21b6;
-  --tramo-presupuestado-a: #8b5cf6;
-  --tramo-discrecional-a: #bfaef0;
+     de lo más forzoso a lo más libre.
+     Es una escala ordinal, no un estado ni una identidad de categoría — las
+     dos únicas cosas que en esta app tienen derecho a color. Por eso va en
+     los neutros cálidos de la propia paleta y no en un matiz propio: la
+     barra del §1 es grande y un violeta saturado se llevaba la periferia
+     completa para decir algo que no es una alerta (juicio del Director,
+     4 ago 2026). El peso lo carga la oscuridad del escalón, que es
+     justamente lo que se quiere leer: qué tan forzoso es cada pedazo. */
+  --tramo-fijo-a: #4a4335;
+  --tramo-presupuestado-a: #8c8371;
+  --tramo-discrecional-a: #c6bda8;
 
   --mono-a: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
