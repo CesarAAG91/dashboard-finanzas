@@ -871,12 +871,31 @@ function renderizarEncabezadoDelCiclo() {
 
   const fichaIngresos = htmlDeFicha("Ingresos", formatearMoneda(resumen.ingreso));
 
-  const fichaComprometido = htmlDeFicha("Comprometido", formatearMoneda(resumen.comprometido), {
-    pie: resumen.pagosHechos + " de " + resumen.pagosTotales + " pagados",
-    barra: { valor: proporcionPagada, color: "#5eead4" },
-    titulo: "Ya pagado: " + formatearMoneda(resumen.comprometidoPagado) +
-      " · por pagar: " + formatearMoneda(resumen.faltaPagar)
-  });
+  // La cifra grande es lo que FALTA por pagar, no el total comprometido del
+  // ciclo (4 ago 2026). El total es un número de planeación: sirve al abrir
+  // el ciclo y al cerrarlo, pero a media quincena ya no dice nada, porque no
+  // se mueve aunque el usuario lleve ocho pagos hechos. Lo que falta sí baja
+  // con cada pago, que es la pregunta del día a día. El total no se pierde:
+  // baja al pie, junto al conteo de pagos.
+  //
+  // Es además el mismo trato que ya recibía su vecina: "Variable por gastar"
+  // muestra lo que queda y manda lo gastado al pie. Las dos fichas envejecen
+  // ahora igual durante el ciclo.
+  //
+  // En un ciclo futuro no hay nada pagado, así que "por pagar" sería otra vez
+  // el total y el pie repetiría la misma cifra. Ahí la ficha se queda en el
+  // total previsto, sin barra: una barra en cero no informa de nada.
+  const fichaComprometido = resumen.esCicloActual
+    ? htmlDeFicha("Por pagar", formatearMoneda(resumen.faltaPagar), {
+        pie: resumen.pagosHechos + " de " + resumen.pagosTotales + " pagados · de " +
+          formatearMoneda(resumen.comprometido),
+        barra: { valor: proporcionPagada, color: "#5eead4" },
+        titulo: "Lo que todavía tiene que salir de la cuenta este ciclo. Ya pagado: " +
+          formatearMoneda(resumen.comprometidoPagado) + " de " + formatearMoneda(resumen.comprometido)
+      })
+    : htmlDeFicha("Comprometido", formatearMoneda(resumen.comprometido), {
+        pie: resumen.pagosTotales + " pagos programados"
+      });
 
   // En un ciclo futuro no hay nada consumido que medir: la ficha se queda
   // en el presupuesto previsto, sin barra ni pie.
