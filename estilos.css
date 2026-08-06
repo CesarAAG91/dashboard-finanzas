@@ -1656,8 +1656,77 @@ details summary {
   color: var(--texto-2a);
 }
 #vistaAncha .texto-trayectoria strong { color: var(--texto-a); }
-#vistaAncha .grafica-trayectoria-banda { line-height: 0; }
-#vistaAncha .grafica-trayectoria-banda svg { width: 100%; height: 54px; display: block; }
+/* Relativo porque el globo del cursor se posiciona contra él. */
+#vistaAncha .grafica-trayectoria-banda {
+  line-height: 0;
+  position: relative;
+}
+/* 69px = 54 de curva + 15 de la banda con los números de día. */
+#vistaAncha .grafica-trayectoria-banda svg { width: 100%; height: 69px; display: block; }
+
+/* Los números de día bajo la curva: la referencia mínima para ubicarse.
+   Deliberadamente apagados y chicos — son el fondo contra el que se lee la
+   línea, y en cuanto compiten con ella dejan de ayudar. */
+#vistaAncha .marca-dia-trayectoria {
+  fill: var(--texto-3a);
+  font-family: var(--mono-a);
+  font-size: 9px;
+}
+
+/* La guía del cursor. Solo se ve mientras se señala la curva: es lo que
+   permite leer un día concreto sin llenar la línea de puntos fijos. */
+#vistaAncha .guia-trayectoria {
+  stroke: var(--texto-3a);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+#vistaAncha .punto-guia-trayectoria {
+  fill: var(--superficie-a);
+  stroke: var(--texto-a);
+  stroke-width: 1.5;
+}
+
+/* El globo, debajo de la curva y centrado en el día señalado. Va hacia
+   abajo y no hacia arriba porque arriba está la barra de simulación, que es
+   justo lo que no se debe tapar mientras se ajusta un pago. */
+#vistaAncha .globo-trayectoria {
+  position: absolute;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 280px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background-color: var(--superficie-a);
+  border: 1px solid var(--texto-3a);
+  box-shadow: 0 8px 20px rgba(34, 31, 26, 0.18);
+  font-size: 11px;
+  line-height: 1.35;
+  /* El globo persigue al cursor: si atrapara el ratón se dispararía su
+     propio mouseleave y parpadearía sin parar. */
+  pointer-events: none;
+}
+#vistaAncha .globo-trayectoria[hidden] { display: none; }
+#vistaAncha .dia-del-globo {
+  color: var(--texto-3a);
+  font-family: var(--mono-a);
+}
+#vistaAncha .restante-del-globo {
+  color: var(--texto-a);
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+/* Los nombres pueden ser varios y largos: aquí sí se permite que el globo
+   crezca a dos renglones antes que cortar la lista con puntos suspensivos.
+   Saber que ese día caen tres recibos y no uno es justo el dato. */
+#vistaAncha .pagos-del-globo {
+  color: var(--texto-2a);
+  white-space: normal;
+}
 #vistaAncha .linea-real {
   fill: none;
   stroke: var(--texto-a);
@@ -1717,7 +1786,9 @@ details summary {
 }
 
 /* Superficie apenas levantada del fondo: se distingue como grupo sin pedir
-   un borde por chip, que a cuatro chips ya sería ruido. */
+   un borde por chip, que a cuatro chips ya sería ruido.
+   Es un <button> desde el 6 ago 2026: abre la misma ventana que la fila del
+   muro, así que necesita heredar la tipografía y anunciarse como tocable. */
 #vistaAncha .chip-siguiente {
   flex: 0 1 auto;
   min-width: 0;
@@ -1728,8 +1799,23 @@ details summary {
   border-radius: 999px;
   background-color: var(--superficie-alta-a);
   border: 1px solid var(--borde-sutil-a);
+  font-family: inherit;
   font-size: 12px;
+  color: inherit;
+  text-align: left;
   white-space: nowrap;
+  cursor: pointer;
+}
+#vistaAncha .chip-siguiente:hover { border-color: var(--texto-3a); }
+#vistaAncha .chip-siguiente:focus-visible {
+  outline: 2px solid var(--texto-2a);
+  outline-offset: 1px;
+}
+/* El chip abierto se queda marcado, igual que la fila del muro: con la
+   ventanita encima hay que ver sobre cuál de los cuatro está. */
+#vistaAncha .chip-siguiente.esta-abierta {
+  border-color: var(--texto-2a);
+  background-color: var(--superficie-a);
 }
 
 /* Lo vencido es lo único que cambia de tono: el punto ya lo dice, pero un
@@ -1761,11 +1847,28 @@ details summary {
   font-variant-numeric: tabular-nums;
 }
 
-/* No es un chip más: dice cuántos quedaron fuera y a dónde ir por ellos. */
+/* No es un chip más: dice cuántos quedaron fuera y los trae. Se mantiene
+   deliberadamente discreto —sin fondo ni borde— para que no compita con los
+   cuatro chips, que son la información; este es la puerta. El subrayado
+   punteado es lo único que lo anuncia como tocable. */
 #vistaAncha .resto-siguiente {
   flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  padding: 4px 2px;
+  font-family: inherit;
   font-size: 11px;
   color: var(--texto-3a);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#vistaAncha .resto-siguiente:hover { color: var(--texto-a); }
+#vistaAncha .resto-siguiente:focus-visible {
+  outline: 2px solid var(--texto-2a);
+  outline-offset: 1px;
+  border-radius: 4px;
 }
 
 /* ---------- Muro de pagos ---------- */
@@ -1864,13 +1967,13 @@ details summary {
   min-width: 0;
   color: var(--texto-2a);
 }
-/* Segunda línea: a quién corresponde este pago. Mismo tratamiento que los
-   títulos de subcategoría (chico, apagado), para que se lea como apoyo del
-   nombre y no como otro pago. */
+/* A quién corresponde este pago, en el mismo renglón que el nombre y en tono
+   apagado: "Agua Zafiro" se lee como una sola cosa, no como dos datos.
+   Fue una segunda línea hasta el 6 ago 2026 — costaba el doble de alto por
+   fila, y el muro se auto-escala para caber sin scroll, así que ese alto lo
+   terminaban pagando todas las demás filas. */
 #vistaAncha .destinatario-fila-muro {
-  display: block;
-  font-size: 0.82em;
-  line-height: 1.2;
+  font-size: 0.92em;
   color: var(--texto-3a);
 }
 #vistaAncha .fila-muro.es-pagado .nombre-fila-muro { color: var(--texto-3a); }
@@ -2444,8 +2547,95 @@ details summary {
 #cuerpoOpcionesPago {
   padding: 13px 14px 12px;
   /* Si el panel se recorta por falta de espacio, el que hace scroll es
-     el cuerpo: el encabezado con el nombre se tiene que quedar visible. */
+     el cuerpo: el encabezado con el nombre se tiene que quedar visible.
+     El min-height: 0 no es decorativo — sin él, un hijo de un flex column
+     no encoge por debajo de su contenido, el overflow-y nunca se activa y
+     la lista de pendientes se cortaría sin poder llegar a los últimos. */
+  min-height: 0;
   overflow-y: auto;
+}
+
+/* ---------- La lista de pendientes dentro de la ventanita ---------- */
+/* La misma ventana sirve dos contenidos: el detalle de un pago y la lista
+   completa por vencimiento. La lista pide más ancho —lleva fecha, nombre,
+   destinatario y monto en el mismo renglón— así que el panel se ensancha
+   solo mientras la muestra. */
+#panelOpcionesPago.con-lista { width: 330px; }
+
+#vistaAncha .volver-en-panel,
+#panelOpcionesPago .volver-en-panel {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--texto-3a);
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1;
+  padding: 2px 6px;
+  margin-left: -6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#panelOpcionesPago .volver-en-panel:hover { color: var(--texto-a); }
+
+/* El nombre empuja al × hacia la derecha; con el "‹" delante, el hueco
+   sobrante tiene que quedar entre el nombre y el ×, no repartido. */
+#encabezadoOpcionesPago .nombre-en-panel { margin-right: auto; }
+
+#panelOpcionesPago .lista-pendientes {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Cada renglón es un botón que abre el detalle de ese pago. Mismo orden de
+   lectura que la fila del muro —punto, fecha, nombre, monto— para que no
+   haya que reaprender a leerlo al cambiar de ventana. */
+#panelOpcionesPago .fila-pendiente-lista {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background-color: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+#panelOpcionesPago .fila-pendiente-lista:hover {
+  background-color: var(--superficie-alta-a);
+  border-color: var(--borde-a);
+}
+#panelOpcionesPago .fila-pendiente-lista:focus-visible {
+  outline: 2px solid var(--texto-2a);
+  outline-offset: 1px;
+}
+#panelOpcionesPago .fecha-pendiente-lista {
+  flex: 0 0 auto;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--texto-3a);
+}
+/* El nombre es lo único que puede ceder ancho: fecha y monto son datos
+   cortos que no se deben cortar nunca. */
+#panelOpcionesPago .nombre-pendiente-lista {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--texto-2a);
+}
+#panelOpcionesPago .monto-pendiente-lista {
+  flex: 0 0 auto;
+  font-family: var(--mono-a);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto-a);
 }
 
 /* Los campos en columna, cada uno con su etiqueta encima: en 268px de

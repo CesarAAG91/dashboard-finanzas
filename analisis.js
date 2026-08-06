@@ -172,36 +172,20 @@ function elRecuadroNecesitaTitulos(gruposCandidatos) {
 // distintas: el "Agua" de un domicilio y el "Agua" del otro. Con el nombre
 // solo, el muro miente — se ven idénticos.
 //
-// Cuando un nombre se repite dentro del mismo recuadro, la fila se parte
-// en dos líneas y el destinatario baja a la segunda, en texto secundario
-// chico (el mismo tratamiento que ya tienen los títulos de subcategoría).
-// Si un pago es el único con su nombre, su destinatario no desambigua
-// nada y la fila se queda en una línea, que es lo que mantiene el muro
-// compacto.
+// Hasta el 6 ago 2026 el destinatario solo aparecía cuando dos pagos del
+// mismo recuadro se llamaban igual: la idea era ahorrar tinta cuando el
+// nombre ya bastaba para distinguirlos. El uso real la tumbó — si en el
+// ciclo cae un solo recibo de "Agua", esa regla lo deja mudo y no hay forma
+// de saber de qué domicilio es. Que un nombre no se repita este mes no
+// significa que se explique solo. Ahora se muestra siempre que exista.
 //
-// Devuelve un índice de "a qué pagos hay que bajarles el destinatario",
-// no lo escribe en ningún lado: es una decisión de dibujo, no un dato.
+// Devuelve un índice de "qué destinatario le toca a qué pago", no lo
+// escribe en ningún lado: es una decisión de dibujo, no un dato.
 function calcularDestinatariosVisiblesDelRecuadro(grupos, datos) {
-  const pagosPorNombre = {};
+  const destinatarioPorPago = {};
 
   grupos.forEach(function (grupo) {
     grupo.pagos.forEach(function (pago) {
-      const nombre = String(pago.nombre).trim().toLowerCase();
-      if (!pagosPorNombre[nombre]) {
-        pagosPorNombre[nombre] = [];
-      }
-      pagosPorNombre[nombre].push(pago);
-    });
-  });
-
-  const destinatarioPorPago = {};
-
-  Object.keys(pagosPorNombre).forEach(function (nombre) {
-    const pagosQueSeLlamanIgual = pagosPorNombre[nombre];
-    if (pagosQueSeLlamanIgual.length < 2) {
-      return;
-    }
-    pagosQueSeLlamanIgual.forEach(function (pago) {
       const destinatario = resolverDestinatarioDeCompromiso(pago, datos);
       if (destinatario) {
         destinatarioPorPago[pago.idSimulado || pago.id] = destinatario;
@@ -393,14 +377,16 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
         // lado: dos blancos chiquitos que acertar en la misma línea.
         const montoHTML = "<span class=\"monto-fila-muro\">" + formatearMoneda(monto) + "</span>";
 
-        // El destinatario solo baja a una segunda línea cuando hace falta
-        // para no confundir dos pagos que se llaman igual (ver
-        // calcularDestinatariosVisiblesDelRecuadro). Nunca se trunca: si el
-        // nombre es largo, la fila crece, y el muro se reacomoda solo
-        // porque su ajuste mide el contenido real.
+        // El destinatario va pegado al nombre, en el mismo renglón y en tono
+        // apagado: "Agua Zafiro" se lee de corrido, como una sola cosa.
+        // Estuvo en una segunda línea hasta el 6 ago 2026 — cada pago con
+        // destinatario costaba el doble de alto, y el muro se auto-escala
+        // para caber sin scroll, así que ese alto lo pagaban todos.
+        // Nunca se trunca: si el nombre es largo, la fila crece, y el muro
+        // se reacomoda solo porque su ajuste mide el contenido real.
         const destinatarioVisible = (recuadro.destinatariosVisibles || {})[pago.idSimulado || pago.id];
-        const segundaLinea = destinatarioVisible
-          ? "<span class=\"destinatario-fila-muro\">" + escaparHTML(destinatarioVisible) + "</span>"
+        const marcaDestinatario = destinatarioVisible
+          ? " <span class=\"destinatario-fila-muro\">" + escaparHTML(destinatarioVisible) + "</span>"
           : "";
 
         // La fila ENTERA es el botón: nombre, día y monto. Antes había que
@@ -412,7 +398,7 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
         // Un pago ya pagado no es botón: no hay nada que decidir sobre él.
         const interior =
           "<span class=\"punto-estado " + estado + "\"></span>" +
-          "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + etiquetaCredito + segundaLinea + "</span>" +
+          "<span class=\"nombre-fila-muro\">" + escaparHTML(pago.nombre) + marcaDestinatario + etiquetaCredito + "</span>" +
           "<span class=\"dia-fila-muro\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
           montoHTML;
 
@@ -581,15 +567,28 @@ function pintarMuro(recuadros, columnas, mostrarTitulos) {
     });
   });
 
-  // La fila entera abre su ventanita, y volver a tocarla la cierra: si no
-  // fuera así, la única forma de cerrarla sería acertarle a la ×.
-  document.querySelectorAll("#muroPagos [data-opciones-de]").forEach(function (fila) {
-    fila.addEventListener("click", function () {
-      const id = fila.getAttribute("data-opciones-de");
+  conectarAperturaDeOpciones(document.getElementById("muroPagos"), false);
+}
+
+// La fila entera abre su ventanita, y volver a tocarla la cierra: si no
+// fuera así, la única forma de cerrarla sería acertarle a la ×.
+//
+// La usan los tres lugares desde donde se puede tocar un pago: el muro, la
+// franja "Lo que sigue" y la lista de pendientes. Los tres abren la misma
+// ventana sobre el mismo pago, y por eso el cableado vive en un solo sitio.
+//
+// `vengoDeLaLista` cambia dos cosas: la ventana ofrece un "‹ Pendientes"
+// para regresar, y NO se re-ancla al elemento tocado — esas filas viven
+// dentro del propio panel y desaparecen al cambiarle el contenido, así que
+// medir contra ellas dejaría la ventana en cualquier lado.
+function conectarAperturaDeOpciones(contenedor, vengoDeLaLista) {
+  contenedor.querySelectorAll("[data-opciones-de]").forEach(function (elemento) {
+    elemento.addEventListener("click", function () {
+      const id = elemento.getAttribute("data-opciones-de");
       if (idDePagoConOpcionesAbiertas === id) {
         cerrarOpcionesDePago();
       } else {
-        abrirOpcionesDePago(id);
+        abrirOpcionesDePago(id, vengoDeLaLista ? null : elemento, vengoDeLaLista);
       }
     });
   });
@@ -610,7 +609,7 @@ function pintarMuro(recuadros, columnas, mostrarTitulos) {
 // una tarjeta a otra tarjeta, y no se puede diferir si ninguna tarjeta tiene
 // marcado que permite meses sin intereses).
 
-function abrirOpcionesDePago(idSimulado) {
+function abrirOpcionesDePago(idSimulado, elementoAncla, vengoDeLaLista) {
   const item = compromisosMaterializadosSimulacion.find(function (m) { return m.idSimulado === idSimulado; });
   if (!item) { return; }
 
@@ -618,10 +617,22 @@ function abrirOpcionesDePago(idSimulado) {
     return t.permiteDiferirAMeses;
   });
 
+  // El regreso solo se ofrece si se llegó desde la lista. Abrir un pago
+  // desde el muro y encontrarse un "‹ Pendientes" sería una puerta a un
+  // lugar donde nunca se estuvo.
+  const botonVolver = vengoDeLaLista
+    ? "<button type=\"button\" id=\"botonVolverAPendientes\" class=\"volver-en-panel\" " +
+        "aria-label=\"Volver a la lista de pendientes\">‹</button>"
+    : "";
+
+  // El nombre lleva su destinatario: es justo aquí donde se acaba de tocar
+  // un pago para saber cuál es, y "Agua" a secas no lo dice.
   const panel = document.getElementById("panelOpcionesPago");
+  panel.classList.remove("con-lista");
   panel.innerHTML =
     "<header id=\"encabezadoOpcionesPago\">" +
-      "<span class=\"nombre-en-panel\">" + escaparHTML(item.nombre) + "</span>" +
+      botonVolver +
+      "<span class=\"nombre-en-panel\">" + etiquetaCompletaDeCompromiso(item, obtenerDatosVisibles()) + "</span>" +
       "<button type=\"button\" id=\"botonCerrarOpcionesPago\" aria-label=\"Cerrar\">×</button>" +
     "</header>" +
     "<div id=\"cuerpoOpcionesPago\">" +
@@ -633,6 +644,12 @@ function abrirOpcionesDePago(idSimulado) {
   document.getElementById("capaOpcionesPago").hidden = false;
   document.getElementById("botonCerrarOpcionesPago").addEventListener("click", cerrarOpcionesDePago);
 
+  if (vengoDeLaLista) {
+    document.getElementById("botonVolverAPendientes").addEventListener("click", function () {
+      abrirListaDePendientes();
+    });
+  }
+
   // Los mismos manejadores del motor: cada cambio marca el item y redibuja
   // toda la pantalla, así que el balance y la trayectoria responden en vivo.
   conectarEventosDeFilaCompromisoSimulado(panel);
@@ -640,25 +657,51 @@ function abrirOpcionesDePago(idSimulado) {
   // Al redibujar, la ventana se queda abierta sobre el mismo pago para poder
   // probar varias combinaciones sin volver a buscarlo.
   idDePagoConOpcionesAbiertas = idSimulado;
+  laListaDePendientesEstaAbierta = false;
 
-  anclarPanelDeOpcionesALaFila(idSimulado);
+  marcarLoQueEstaAbierto();
+  anclarPanelDeOpciones(elementoAncla);
 }
 
-// Coloca la ventanita pegada a la fila que se tocó, no en el centro de la
+// Deja marcado el chip o la fila del pago abierto, y desmarca los demás.
+//
+// La clase también se escribe al construir el HTML, pero eso solo sirve
+// cuando algo redibuja la pantalla — y abrir la ventanita no redibuja nada.
+// Sin esto, el chip solo se marcaba después de tocarle un campo, que es
+// justo cuando ya no hace falta saber cuál se abrió.
+function marcarLoQueEstaAbierto() {
+  document.querySelectorAll("[data-opciones-de]").forEach(function (elemento) {
+    const esElAbierto = elemento.getAttribute("data-opciones-de") === idDePagoConOpcionesAbiertas;
+    elemento.classList.toggle("esta-abierta", esElAbierto);
+  });
+}
+
+// Coloca la ventanita pegada al elemento que se tocó, no en el centro de la
 // pantalla. Se posiciona con position: fixed y coordenadas medidas, y no
-// como hijo de la fila, porque el muro recorta lo que se sale de sus
+// como hijo de ese elemento, porque el muro recorta lo que se sale de sus
 // recuadros y la ventana quedaría cortada.
 //
-// Debajo de la fila si cabe; encima si no. Y siempre dentro de la
-// ventana del navegador, aunque la fila esté pegada a un borde.
-function anclarPanelDeOpcionesALaFila(idSimulado) {
-  const fila = document.querySelector("#muroPagos [data-opciones-de=\"" + idSimulado + "\"]");
+// Debajo del elemento si cabe; encima si no. Y siempre dentro de la
+// ventana del navegador, aunque esté pegado a un borde.
+//
+// Recibe el elemento y no un id porque el mismo pago aparece hasta en tres
+// lugares a la vez —el muro, la franja de arriba y la lista— y buscarlo por
+// id devolvería el primero del documento, que es el de la franja: tocar una
+// fila del muro abriría la ventana pegada al techo de la pantalla.
+function anclarPanelDeOpciones(elementoAncla) {
   const panel = document.getElementById("panelOpcionesPago");
-  if (!fila) { return; }
+
+  // Sin ancla nueva se reusa la última: cuando la ventana navega dentro de
+  // sí misma (lista → detalle → lista) no debe brincar de lugar. Y si el
+  // ancla murió en un redibujado, se deja donde está en vez de medir contra
+  // un elemento huérfano, que devuelve ceros y la mandaría a la esquina.
+  const ancla = elementoAncla || elementoAnclaDeOpciones;
+  if (!ancla || !ancla.isConnected) { return; }
+  elementoAnclaDeOpciones = ancla;
 
   const MARGEN = 10;
   const SEPARACION = 6;
-  const rectFila = fila.getBoundingClientRect();
+  const rectFila = ancla.getBoundingClientRect();
 
   // Se mide el panel ya dibujado, sin tope de altura, para saber cuánto
   // quiere ocupar. El tope se le pone después, según el hueco que haya.
@@ -694,11 +737,88 @@ function anclarPanelDeOpcionesALaFila(idSimulado) {
 }
 
 let idDePagoConOpcionesAbiertas = null;
+let laListaDePendientesEstaAbierta = false;
+
+// El elemento contra el que se midió la posición de la ventana. Se guarda
+// porque la ventana navega —de la lista al detalle de un pago y de vuelta—
+// y en esos saltos hay que seguir midiendo contra el botón de origen.
+let elementoAnclaDeOpciones = null;
+
+// La lista completa de lo que falta por pagar, ordenada por vencimiento.
+//
+// El muro ya tiene todos los pendientes, pero agrupados por categoría, que
+// es como se decide el presupuesto; para saber en qué orden vencen hay que
+// barrer las columnas comparando fechas a ojo. La franja de arriba resuelve
+// eso para los primeros cuatro, y esta lista para todos los demás, sin
+// mover el muro de sitio ni obligarlo a reordenarse.
+//
+// Muestra TODOS los pendientes del ciclo, no solo los que no cupieron en la
+// franja: la lista es "qué falta por pagar", y empezar en el quinto sería
+// una lista que arranca a media frase.
+function abrirListaDePendientes(elementoAncla) {
+  const datos = obtenerDatosVisibles();
+  const pendientes = ordenarPagosDelMuro(obtenerPendientesDelCicloEnfocado());
+
+  if (pendientes.length === 0) {
+    cerrarOpcionesDePago();
+    return;
+  }
+
+  const total = pendientes.reduce(function (suma, pago) {
+    return suma + Number(pago.montoEstimado);
+  }, 0);
+
+  const filas = pendientes.map(function (pago) {
+    const estado = calcularEstadoDePago(pago);
+    return "<button type=\"button\" class=\"fila-pendiente-lista " + estado + "\"" +
+        " data-opciones-de=\"" + pago.idSimulado + "\"" +
+        " aria-label=\"Ajustar " + escaparHTML(pago.nombre) + "\">" +
+        "<span class=\"punto-estado " + estado + "\"></span>" +
+        "<span class=\"fecha-pendiente-lista\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
+        "<span class=\"nombre-pendiente-lista\">" + etiquetaCompletaDeCompromiso(pago, datos) + "</span>" +
+        "<span class=\"monto-pendiente-lista\">" + formatearMoneda(Number(pago.montoEstimado)) + "</span>" +
+      "</button>";
+  }).join("");
+
+  // La clase va antes de anclar: el anclaje mide el ancho ya dibujado para
+  // decidir de qué lado cabe, y con la medida vieja se saldría de pantalla.
+  const panel = document.getElementById("panelOpcionesPago");
+  panel.classList.add("con-lista");
+  panel.innerHTML =
+    "<header id=\"encabezadoOpcionesPago\">" +
+      // El conteo y el total van en el encabezado y no al pie: con muchos
+      // pendientes la lista se lleva todo el alto disponible y un pie queda
+      // debajo del scroll, que es como no estar.
+      "<span class=\"nombre-en-panel\">Por pagar · " + pendientes.length + " · " +
+        formatearMoneda(total) + "</span>" +
+      "<button type=\"button\" id=\"botonCerrarOpcionesPago\" aria-label=\"Cerrar\">×</button>" +
+    "</header>" +
+    "<div id=\"cuerpoOpcionesPago\">" +
+      "<div class=\"lista-pendientes\">" + filas + "</div>" +
+    "</div>";
+
+  document.getElementById("capaOpcionesPago").hidden = false;
+  document.getElementById("botonCerrarOpcionesPago").addEventListener("click", cerrarOpcionesDePago);
+
+  // Las filas de esta lista abren el detalle del pago dentro de la misma
+  // ventana, no una segunda encima: dos ventanas apiladas sobre el muro
+  // dejan de ser un ajuste rápido y se vuelven una interrupción.
+  conectarAperturaDeOpciones(panel, true);
+
+  idDePagoConOpcionesAbiertas = null;
+  laListaDePendientesEstaAbierta = true;
+
+  marcarLoQueEstaAbierto();
+  anclarPanelDeOpciones(elementoAncla);
+}
 
 function cerrarOpcionesDePago() {
   document.getElementById("capaOpcionesPago").hidden = true;
   document.getElementById("panelOpcionesPago").innerHTML = "";
   idDePagoConOpcionesAbiertas = null;
+  laListaDePendientesEstaAbierta = false;
+  elementoAnclaDeOpciones = null;
+  marcarLoQueEstaAbierto();
 }
 
 function opcionesDePagoEstanAbiertas() {
@@ -802,24 +922,38 @@ function acomodarMuroDePagos(recuadros) {
 // Esta franja es la versión de laptop de lo que el teléfono ya tenía arriba
 // de todo: los próximos pagos, cruzando categorías, ordenados por fecha.
 //
-// Los chips son informativos, no botones: el muro sigue siendo el único
-// lugar donde se paga. Dos vías para la misma acción es una de más.
+// Los chips nacieron informativos, a propósito: el muro era el único lugar
+// donde se tocaba un pago, y dos vías para la misma acción parecían una de
+// más. El uso real lo desmintió (6 ago 2026) — si el pago que hay que mover
+// está a la vista aquí arriba, mandar al usuario a buscarlo otra vez entre
+// las columnas del muro es la vía de más. Ahora el chip abre la misma
+// ventana que la fila del muro, sobre el mismo pago.
 
 // Cuántos pagos alcanzan a leerse de un vistazo sin que la franja se vuelva
 // una lista. Más de esto deja de ser "lo que sigue" y empieza a ser el muro
 // otra vez, pero en horizontal.
 const CUANTOS_PAGOS_MUESTRA_LO_QUE_SIGUE = 4;
 
+// Lo que todavía pide dinero en el ciclo enfocado.
+//
+// Una sola definición para los tres que la necesitan: los chips, el conteo
+// del "+N pendientes" y la lista que ese botón abre. Filtrando cada uno por
+// su cuenta, el botón podría acabar diciendo "+10 pendientes" y la lista
+// mostrar doce, y no habría forma de saber cuál de los dos miente.
+//
+// Los de monto cero no entran, misma regla que en el teléfono: una tarjeta
+// sin compras del periodo no es un pendiente, y un pago de cero no se puede
+// registrar. Los diferidos a crédito tampoco: ya no salen de este ciclo.
+function obtenerPendientesDelCicloEnfocado() {
+  return obtenerItemsSimuladosDelCicloEnfocado().filter(function (pago) {
+    return !pago.pagado && !pago.estadoCredito && Number(pago.montoEstimado) > 0;
+  });
+}
+
 function renderizarBandaLoQueSigue() {
   const banda = document.getElementById("bandaLoQueSigue");
   const datos = obtenerDatosVisibles();
-
-  // Solo lo que todavía pide algo. Los de monto cero no entran, misma regla
-  // que en el teléfono: una tarjeta sin compras del periodo no es un
-  // pendiente, y un pago de cero no se puede registrar.
-  const pendientes = obtenerItemsSimuladosDelCicloEnfocado().filter(function (pago) {
-    return !pago.pagado && !pago.estadoCredito && Number(pago.montoEstimado) > 0;
-  });
+  const pendientes = obtenerPendientesDelCicloEnfocado();
 
   // Sin pendientes la franja se va del todo, en vez de quedarse diciendo
   // "nada": el alto que ocupa lo necesita el muro, que se auto-escala para
@@ -837,24 +971,46 @@ function renderizarBandaLoQueSigue() {
   const chips = proximos.map(function (pago) {
     const estado = calcularEstadoDePago(pago);
 
+    // El chip abierto se queda marcado, igual que la fila del muro: con la
+    // ventanita encima hay que poder ver sobre cuál de los cuatro está.
+    const abierto = idDePagoConOpcionesAbiertas === pago.idSimulado ? " esta-abierta" : "";
+
     // etiquetaCompletaDeCompromiso ya devuelve HTML escapado, y resuelve el
     // destinatario para que dos recibos que se llaman "Agua" no se confundan.
-    return "<span class=\"chip-siguiente " + estado + "\">" +
+    return "<button type=\"button\" class=\"chip-siguiente " + estado + abierto + "\"" +
+        " data-opciones-de=\"" + pago.idSimulado + "\"" +
+        " aria-label=\"Ajustar " + escaparHTML(pago.nombre) + "\">" +
         "<span class=\"punto-estado " + estado + "\"></span>" +
         "<span class=\"fecha-chip\">" + formatearDiaYMes(pago.fechaProgramada) + "</span>" +
         "<span class=\"nombre-chip\">" + etiquetaCompletaDeCompromiso(pago, datos) + "</span>" +
         "<span class=\"monto-chip\">" + formatearMoneda(Number(pago.montoEstimado)) + "</span>" +
-      "</span>";
+      "</button>";
   }).join("");
 
+  // Decía "+10 en el muro", que describía dónde buscarlos en vez de qué son.
+  // Ahora dice qué son y además los trae: abre la lista completa por fecha.
   const resto = cuantosNoCaben > 0
-    ? "<span class=\"resto-siguiente\">+" + cuantosNoCaben + " en el muro</span>"
+    ? "<button type=\"button\" class=\"resto-siguiente\" id=\"botonVerPendientes\">+" +
+        cuantosNoCaben + " pendiente" + (cuantosNoCaben === 1 ? "" : "s") + "</button>"
     : "";
 
   banda.hidden = false;
   banda.innerHTML =
     "<span class=\"etiqueta-ancha\">Lo que sigue</span>" +
     "<div class=\"chips-siguientes\">" + chips + resto + "</div>";
+
+  conectarAperturaDeOpciones(banda, false);
+
+  const botonPendientes = document.getElementById("botonVerPendientes");
+  if (botonPendientes) {
+    botonPendientes.addEventListener("click", function () {
+      if (laListaDePendientesEstaAbierta) {
+        cerrarOpcionesDePago();
+      } else {
+        abrirListaDePendientes(botonPendientes);
+      }
+    });
+  }
 }
 
 function renderizarMuroDePagos() {
@@ -1410,11 +1566,71 @@ function cambiarFechaSimulada(idSimulado, nuevaFecha) {
 
 const ALTO_GRAFICA_TRAYECTORIA = 54;
 
+// Banda de abajo, reservada para los números de día. Va fuera del alto del
+// trazo y no encima: escribiendo los números sobre el área de la curva, la
+// línea los cruza justo cuando el ciclo va mal, que es cuando más se miran.
+const ALTO_EJE_TRAYECTORIA = 15;
+
+// Cada cuántos días se escribe una referencia bajo la curva. Todos los días
+// serían treinta números pegados e ilegibles; de cinco en cinco alcanza
+// para ubicarse, que es lo único que se le pide al eje.
+const CADA_CUANTOS_DIAS_UNA_MARCA = 5;
+
 // El primer día en que el dinero restante se vuelve negativo. null si el
 // ciclo cierra sin quedarse sin dinero.
 function calcularDiaEnQueSeAcabaElDinero(trayectoria, ingresos) {
   const diaSinDinero = trayectoria.find(function (dia) { return dia.acumulado > ingresos; });
   return diaSinDinero || null;
+}
+
+// Qué se paga cada día del ciclo. Es el tercer renglón del globo: la curva
+// dice cuánto baja el dinero ese día, y esto dice de qué.
+//
+// Se incluyen los ya pagados: si el 12 de agosto salió el Agua, ese día el
+// dinero bajó y el globo tiene que poder explicarlo. Los diferidos a crédito
+// no, porque dejaron de salir de este ciclo — la misma regla con la que el
+// muro los atenúa y los saca del total de su categoría.
+function calcularPagosPorDiaDelCicloEnfocado() {
+  const pagosPorFecha = {};
+
+  obtenerItemsSimuladosDelCicloEnfocado().forEach(function (pago) {
+    const monto = Number(pago.pagado ? pago.montoReal : pago.montoEstimado);
+    if (pago.estadoCredito || !(monto > 0)) {
+      return;
+    }
+    if (!pagosPorFecha[pago.fechaProgramada]) {
+      pagosPorFecha[pago.fechaProgramada] = [];
+    }
+    pagosPorFecha[pago.fechaProgramada].push(pago);
+  });
+
+  return pagosPorFecha;
+}
+
+// Los nombres de lo que se paga un día, como una sola frase y sin montos.
+// El monto ya está contado en la caída de la línea; repetirlo pago por pago
+// convertiría un globo de tres renglones en una tabla.
+//
+// Si todo lo del día es del mismo destinatario, el destinatario va una sola
+// vez al final: "Agua, Luz, Totalplay Zafiro" en lugar de repetir "Zafiro"
+// tres veces. En cuanto hay dos destinatarios distintos cada nombre carga el
+// suyo, porque ahí la repetición sí está diciendo algo.
+function frasearPagosDelDia(pagos, datos) {
+  const destinatarios = pagos.map(function (pago) {
+    return resolverDestinatarioDeCompromiso(pago, datos) || "";
+  });
+
+  const todosDelMismo = destinatarios.every(function (destinatario) {
+    return destinatario === destinatarios[0];
+  });
+
+  if (todosDelMismo && destinatarios[0]) {
+    return pagos.map(function (pago) { return pago.nombre; }).join(", ") + " " + destinatarios[0];
+  }
+
+  return pagos.map(function (pago, indice) {
+    return pago.nombre + (destinatarios[indice] ? " " + destinatarios[indice] : "");
+  }).join(", ");
 }
 
 function renderizarTrayectoriaDeLaPrimeraPantalla() {
@@ -1465,7 +1681,77 @@ function renderizarTrayectoriaDeLaPrimeraPantalla() {
       "</strong> si el ritmo no cambia.";
   }
 
-  contenedor.innerHTML = construirSVGDeTrayectoria(trayectoria, ingresos, contenedor.clientWidth);
+  const dibujo = construirSVGDeTrayectoria(trayectoria, ingresos, contenedor.clientWidth);
+  contenedor.innerHTML = dibujo.svg + "<div class=\"globo-trayectoria\" hidden></div>";
+
+  conectarGloboDeLaTrayectoria(contenedor, dibujo.puntos, datos);
+}
+
+// El globo que aparece al pasar el cursor por la curva.
+//
+// Se escucha el movimiento sobre todo el contenedor y se calcula qué día
+// cae bajo el cursor, en vez de poner una zona sensible por día: treinta
+// nodos invisibles encima de una franja de 54px no dibujan mejor y hay que
+// mantenerlos alineados con la curva.
+//
+// Tres renglones, en el orden en que se pregunta: qué día es, cuánto queda
+// ese día, y qué se paga. El tercero se omite si ese día no se paga nada —
+// un renglón vacío se lee como un dato faltante, no como un día libre.
+function conectarGloboDeLaTrayectoria(contenedor, puntos, datos) {
+  const globo = contenedor.querySelector(".globo-trayectoria");
+  const guia = contenedor.querySelector(".guia-trayectoria");
+  const puntoGuia = contenedor.querySelector(".punto-guia-trayectoria");
+  const pagosPorFecha = calcularPagosPorDiaDelCicloEnfocado();
+
+  function esconderGlobo() {
+    globo.hidden = true;
+    guia.setAttribute("visibility", "hidden");
+    puntoGuia.setAttribute("visibility", "hidden");
+  }
+
+  contenedor.addEventListener("mousemove", function (evento) {
+    const rect = contenedor.getBoundingClientRect();
+    if (rect.width === 0) { return; }
+
+    // El SVG se dibujó en píxeles reales del contenedor, así que la posición
+    // del cursor dentro de él ya está en las mismas unidades que la curva.
+    const posicion = (evento.clientX - rect.left) / rect.width;
+    const indice = Math.min(
+      Math.max(Math.round(posicion * (puntos.length - 1)), 0),
+      puntos.length - 1
+    );
+    const punto = puntos[indice];
+    const fecha = crearFechaLocal(punto.fechaISO);
+    const pagosDelDia = pagosPorFecha[punto.fechaISO] || [];
+
+    const tercerRenglon = pagosDelDia.length > 0
+      ? "<span class=\"pagos-del-globo\">" +
+          escaparHTML(frasearPagosDelDia(pagosDelDia, datos)) + "</span>"
+      : "";
+
+    globo.innerHTML =
+      "<span class=\"dia-del-globo\">" + fecha.getDate() + " de " +
+        NOMBRES_DE_MESES[fecha.getMonth()].toLowerCase() + "</span>" +
+      "<span class=\"restante-del-globo\">" + formatearMoneda(punto.restante) + "</span>" +
+      tercerRenglon;
+
+    globo.hidden = false;
+
+    // El globo se centra en el día señalado y se frena en los bordes, para
+    // que en el primer y el último día no se salga del contenedor.
+    const mitadDelGlobo = globo.offsetWidth / 2;
+    const izquierda = Math.min(Math.max(punto.x, mitadDelGlobo), rect.width - mitadDelGlobo);
+    globo.style.left = izquierda + "px";
+
+    guia.setAttribute("x1", punto.x.toFixed(2));
+    guia.setAttribute("x2", punto.x.toFixed(2));
+    guia.setAttribute("visibility", "visible");
+    puntoGuia.setAttribute("cx", punto.x.toFixed(2));
+    puntoGuia.setAttribute("cy", punto.y.toFixed(2));
+    puntoGuia.setAttribute("visibility", "visible");
+  });
+
+  contenedor.addEventListener("mouseleave", esconderGlobo);
 }
 
 // La gráfica se dibuja en píxeles reales, con el ancho medido del
@@ -1473,12 +1759,18 @@ function renderizarTrayectoriaDeLaPrimeraPantalla() {
 // ancho de la pantalla, el punteado de la línea proyectada se deforma con él
 // y la curva se ve como una hilera de guiones sueltos en vez de una línea.
 // Al cambiar el tamaño de la ventana se vuelve a generar.
+//
+// Devuelve el SVG y además la geometría de cada día —dónde quedó cada punto
+// y cuánto vale— porque el globo del cursor necesita exactamente eso para
+// saber qué día está señalando. Calcularlo dos veces abriría la puerta a que
+// el globo y la curva no coincidan.
 function construirSVGDeTrayectoria(trayectoria, ingresos, anchoEnPixeles) {
   const ancho = Math.max(anchoEnPixeles || 0, 120);
   const restantes = trayectoria.map(function (dia) { return ingresos - dia.acumulado; });
   const maximo = Math.max.apply(null, restantes.concat([ingresos]));
   const minimo = Math.min.apply(null, restantes.concat([0]));
   const alcance = (maximo - minimo) || 1;
+  const altoTotal = ALTO_GRAFICA_TRAYECTORIA + ALTO_EJE_TRAYECTORIA;
 
   function coordenadaX(indice) {
     return (indice / Math.max(trayectoria.length - 1, 1)) * ancho;
@@ -1519,17 +1811,76 @@ function construirSVGDeTrayectoria(trayectoria, ingresos, anchoEnPixeles) {
   const puntoDeHoy = "<circle class=\"punto-hoy\" cx=\"" + xDeHoy.toFixed(2) +
     "\" cy=\"" + coordenadaY(restantes[indiceDeHoy]).toFixed(2) + "\" r=\"2.5\"/>";
 
-  return "<svg viewBox=\"0 0 " + ancho + " " + ALTO_GRAFICA_TRAYECTORIA + "\" " +
+  // Los números de día bajo la curva. Solo eso: sin rayitas de tick ni línea
+  // de eje, que a este tamaño se leen como una segunda curva.
+  //
+  // Un ciclo cruza de mes (6 de agosto a 5 de septiembre), así que el número
+  // solo no basta cuando reinicia: al primer día del ciclo y al primero de
+  // cada mes nuevo se les agrega el mes abreviado, y a los demás no. Es la
+  // cantidad mínima de texto que evita leer "5" como el 5 de agosto.
+  let mesDeLaMarcaAnterior = -1;
+  const marcasDeDia = trayectoria.map(function (dia, indice) {
+    const esUltimo = indice === trayectoria.length - 1;
+    if (indice % CADA_CUANTOS_DIAS_UNA_MARCA !== 0 && !esUltimo) {
+      return "";
+    }
+    // El último día se salta si le cae encima a la marca anterior; vale más
+    // el ritmo parejo del eje que cerrar con el número exacto del cierre.
+    if (esUltimo && (trayectoria.length - 1) % CADA_CUANTOS_DIAS_UNA_MARCA < 2) {
+      return "";
+    }
+
+    const fecha = crearFechaLocal(dia.fechaISO);
+    const cambioDeMes = fecha.getMonth() !== mesDeLaMarcaAnterior;
+    mesDeLaMarcaAnterior = fecha.getMonth();
+
+    const texto = cambioDeMes
+      ? fecha.getDate() + " " + NOMBRES_DE_MESES[fecha.getMonth()].toLowerCase().slice(0, 3)
+      : String(fecha.getDate());
+
+    // Las marcas de los extremos se recargan hacia adentro para que no se
+    // salgan del contenedor; las de en medio van centradas en su día.
+    const anclaje = indice === 0
+      ? "start"
+      : (esUltimo ? "end" : "middle");
+
+    return "<text class=\"marca-dia-trayectoria\" x=\"" + coordenadaX(indice).toFixed(2) +
+      "\" y=\"" + (ALTO_GRAFICA_TRAYECTORIA + 11) + "\" text-anchor=\"" + anclaje + "\">" +
+      escaparHTML(texto) + "</text>";
+  }).join("");
+
+  // La guía que sigue al cursor. Nace escondida y solo el hover la mueve:
+  // es un punto y una línea, no un punto por día — la curva tiene que
+  // seguirse viendo como una curva cuando nadie la está señalando.
+  const guiaDelCursor =
+    "<line class=\"guia-trayectoria\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"" +
+      ALTO_GRAFICA_TRAYECTORIA + "\" visibility=\"hidden\"/>" +
+    "<circle class=\"punto-guia-trayectoria\" cx=\"0\" cy=\"0\" r=\"3\" visibility=\"hidden\"/>";
+
+  const svg = "<svg viewBox=\"0 0 " + ancho + " " + altoTotal + "\" " +
     "role=\"img\" aria-label=\"Dinero restante día por día en el ciclo\">" +
     "<line class=\"linea-cero\" x1=\"0\" y1=\"" + yDelCero.toFixed(2) +
       "\" x2=\"" + ancho + "\" y2=\"" + yDelCero.toFixed(2) + "\"/>" +
     "<line class=\"marca-hoy\" x1=\"" + xDeHoy.toFixed(2) + "\" y1=\"0\" x2=\"" + xDeHoy.toFixed(2) +
       "\" y2=\"" + ALTO_GRAFICA_TRAYECTORIA + "\"/>" +
+    marcasDeDia +
     "<polyline class=\"linea-real\" points=\"" + puntosReales + "\"/>" +
     "<polyline class=\"linea-proyectada\" points=\"" + puntosProyectados + "\"/>" +
     puntoDeHoy +
     marcaQuiebre +
+    guiaDelCursor +
   "</svg>";
+
+  const puntos = trayectoria.map(function (dia, indice) {
+    return {
+      fechaISO: dia.fechaISO,
+      restante: restantes[indice],
+      x: coordenadaX(indice),
+      y: coordenadaY(restantes[indice])
+    };
+  });
+
+  return { svg: svg, puntos: puntos };
 }
 
 // ============================================================
