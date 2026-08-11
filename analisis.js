@@ -427,6 +427,15 @@ function htmlDeRecuadroDelMuro(recuadro, mostrarTitulos, conAccionDePago) {
             "<label>Monto real" +
               "<input type=\"number\" min=\"0\" step=\"0.01\" class=\"monto-real-pendiente\" value=\"" + pago.montoEstimado + "\">" +
             "</label>" +
+            // Viene puesto en hoy, que es lo que era antes de existir el
+            // campo. Se cambia cuando el pago se registra tarde: el gasto
+            // queda fechado el día en que salió el dinero, y con eso decide
+            // a qué ciclo pertenece.
+            "<label>Pagado el" +
+              "<input type=\"date\" class=\"fecha-pago-pendiente\"" +
+                " max=\"" + formatearFechaISO(new Date()) + "\"" +
+                " value=\"" + formatearFechaISO(new Date()) + "\">" +
+            "</label>" +
             "<label>Fuente" +
               "<select class=\"fuente-pendiente\">" +
                 "<option value=\"debito\">Débito</option>" +

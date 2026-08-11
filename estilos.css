@@ -663,6 +663,95 @@ details summary {
   letter-spacing: 0.06em;
   color: var(--tinta-ter-c);
 }
+/* Cuando la fecha se puede tocar es un <button>, y hay que devolverle la
+   apariencia del <span> que sustituye: el navegador le pone fondo, borde y
+   otra tipografía. */
+#vistaCaptura button.ticket-fecha {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 3px 5px;
+  font-family: inherit;
+  cursor: pointer;
+}
+/* El aviso de que el ticket NO va a hoy. Es la única marca de color de la
+   cabecera, y existe porque el día elegido se queda puesto de un ticket al
+   siguiente: sin ella, capturar mañana un gasto con la fecha del sábado
+   pasaría inadvertido. */
+#vistaCaptura .ticket-fecha.desfasada {
+  color: var(--ambar-papel-c);
+  border-color: var(--ambar-papel-c);
+  font-weight: 700;
+}
+
+/* ---------- Panel de fechas (ocupa el hueco del teclado) ----------
+
+   Va apretado a propósito: tiene que caber en el mismo hueco que el teclado
+   numérico, y en un iPhone SE ese hueco son ~164px. Los días van en tres
+   columnas y el campo de "otro día" comparte renglón con el botón Listo. */
+#vistaCaptura .panel-fechas {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  /* Red de seguridad, no el plan: en un iPhone real cabe entero (medido en
+     un SE, el más chico en uso). Solo se activa en pantallas más bajas que
+     cualquier iPhone actual, donde sin esto el botón Listo quedaría cortado
+     y fuera de alcance. */
+  overflow-y: auto;
+}
+#vistaCaptura .dias-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+#vistaCaptura .dia-panel {
+  background-color: var(--papel-relleno-c);
+  border: 1px solid var(--papel-linea-c);
+  border-radius: 4px;
+  padding: 10px 4px;
+  color: var(--tinta-c);
+  font-family: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#vistaCaptura .dia-panel:active { background-color: var(--papel-toque-c); }
+#vistaCaptura .dia-panel.activo {
+  border-color: var(--tinta-c);
+  border-width: 2px;
+  font-weight: 700;
+}
+#vistaCaptura .pie-panel-fechas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+#vistaCaptura .panel-fechas .otro-dia {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--tinta-sec-c);
+  /* En una sola línea: partido en dos ("Otro" / "día") desalinea el campo
+     con el botón Listo de al lado. */
+  white-space: nowrap;
+}
+#vistaCaptura .panel-fechas input[type="date"] {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--tinta-c);
+  border-radius: 0;
+  padding: 4px 2px;
+  color: var(--tinta-c);
+  font-family: inherit;
+  font-size: 14px;
+}
 
 /* ---------- Vencimientos al frente (pantalla 1) ---------- */
 #vistaCaptura .vencimientos-ticket {

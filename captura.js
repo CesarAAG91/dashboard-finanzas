@@ -161,15 +161,19 @@ function obtenerPendientesDelCiclo(datos, cicloId) {
 }
 
 // Puente para la vista ancha: el cajón del calendario marca sus pagos con
-// un bloque de campos (".monto-real-pendiente", ".fuente-pendiente") y un
-// botón. Esta función lee esos campos y delega en la de abajo, que es la
-// que de verdad escribe. Captura no la usa: allá el monto y la fuente ya
-// viven en el estado del ticket, no en un formulario.
+// un bloque de campos (".monto-real-pendiente", ".fuente-pendiente",
+// ".fecha-pago-pendiente") y un botón. Esta función lee esos campos y delega
+// en la de abajo, que es la que de verdad escribe. Captura no la usa: allá el
+// monto, la fuente y la fecha ya viven en el estado del ticket, no en un
+// formulario.
 function confirmarPagoDeCompromiso(compromisoId, contenedorDeCampos) {
+  const campoDeFecha = contenedorDeCampos.querySelector(".fecha-pago-pendiente");
+
   const resultado = registrarPagoDeCompromiso(
     compromisoId,
     Number(contenedorDeCampos.querySelector(".monto-real-pendiente").value),
-    contenedorDeCampos.querySelector(".fuente-pendiente").value
+    contenedorDeCampos.querySelector(".fuente-pendiente").value,
+    campoDeFecha ? campoDeFecha.value : null
   );
 
   if (resultado.aviso) {
@@ -187,13 +191,30 @@ function confirmarPagoDeCompromiso(compromisoId, contenedorDeCampos) {
 // Devuelve si guardó y, si aplica, el aviso que hay que darle al usuario.
 // No lo muestra ella: el teléfono y la laptop lo enseñan en sitios
 // distintos, y esta función no tiene por qué saber desde dónde la llamaron.
-function registrarPagoDeCompromiso(compromisoId, montoReal, fuente) {
-  const datos = leerDatos();
-  const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoId; });
+//
+// fechaDelPago es opcional y va en null cuando el pago se registra el mismo
+// día que ocurrió, que es el caso normal. Se pasa cuando el pago se captura
+// tarde ("esto lo pagué el sábado"): el gasto tiene que quedar fechado el día
+// en que salió el dinero, no el día en que uno se acordó de anotarlo.
+function registrarPagoDeCompromiso(compromisoId, montoReal, fuente, fechaDelPago) {
+  const fechaDelGasto = fechaDelPago || formatearFechaISO(new Date());
 
-  if (!compromiso || !montoReal || montoReal <= 0) {
+  // Se valida contra una lectura propia y desechable, antes de tocar nada:
+  // así un pago inválido no llega a crear el ciclo de la línea siguiente.
+  const compromisoParaValidar = leerDatos().compromisos.find(function (c) { return c.id === compromisoId; });
+
+  if (!compromisoParaValidar || !montoReal || montoReal <= 0) {
     return { guardado: false, aviso: "" };
   }
+
+  // El ciclo al que pertenece la fecha del pago puede no existir todavía, y
+  // crearlo escribe en localStorage. Por eso va ANTES del leerDatos() de
+  // abajo: al revés, el guardado del final pisaría el ciclo recién creado con
+  // una copia de los datos que no lo incluye.
+  const cicloDeLaFechaDelPago = obtenerOCrearCicloParaFecha(crearFechaLocal(fechaDelGasto));
+
+  const datos = leerDatos();
+  const compromiso = datos.compromisos.find(function (c) { return c.id === compromisoId; });
 
   // Alerta obligatoria de SPEC.md: si el pago de una tarjeta es menor al
   // calculado (compras a crédito del periodo de corte), avisar que el
@@ -225,39 +246,45 @@ function registrarPagoDeCompromiso(compromisoId, montoReal, fuente) {
   }
 
   const ahora = new Date();
-  const cicloActual = asegurarCicloActual();
 
   // El gasto se guarda en el ciclo del compromiso, que no siempre es el
-  // ciclo de hoy (se puede adelantar el pago de algo del ciclo que viene),
-  // así que su semana tiene que medirse contra ese mismo ciclo. Medirla
-  // contra el ciclo actual daba una semana que no existe dentro del ciclo
+  // ciclo en que se paga (se puede adelantar el pago de algo del ciclo que
+  // viene), así que su semana tiene que medirse contra ese mismo ciclo.
+  // Medirla contra otro ciclo daba una semana que no existe dentro del ciclo
   // al que el gasto pertenece.
-  const cicloDelCompromiso = datos.ciclos.find(function (c) { return c.id === compromiso.cicloId; }) || cicloActual;
-  const hoyTexto = formatearFechaISO(ahora);
+  const cicloDelCompromiso = datos.ciclos.find(function (c) { return c.id === compromiso.cicloId; }) || cicloDeLaFechaDelPago;
 
-  // Excepción: un compromiso de un ciclo YA CERRADO.
+  // Excepción: un compromiso de un ciclo YA CERRADO el día en que se pagó.
   //
-  // Pagar algo vencido de un ciclo pasado es dinero que sale HOY, así que el
-  // gasto tiene que vivir en el ciclo de hoy. Con la regla de arriba se iba al
-  // ciclo viejo y ni el saldo actual ni el disponible lo sentían: los dos
-  // seguían prometiendo dinero que ya no estaba. Le pasó al Director el 4 ago
-  // 2026 al pagar el Sky de julio y su tarjeta Nu — su saldo decía $1,187 de
-  // más. Hasta ese día el caso era inalcanzable, porque no había forma de
-  // llegar a un pendiente de un ciclo pasado.
+  // Pagar algo vencido de un ciclo pasado es dinero que sale el día del pago,
+  // así que el gasto tiene que vivir en el ciclo de ese día. Con la regla de
+  // arriba se iba al ciclo viejo y ni el saldo actual ni el disponible lo
+  // sentían: los dos seguían prometiendo dinero que ya no estaba. Le pasó al
+  // Director el 4 ago 2026 al pagar el Sky de julio y su tarjeta Nu — su saldo
+  // decía $1,187 de más.
+  //
+  // La comparación es contra la fecha del pago y no contra hoy: si el recibo
+  // de julio se pagó el 28 de julio y se captura en agosto, ese día el ciclo
+  // de julio seguía abierto y el dinero salió de ahí. Cuando el pago es del
+  // día (el caso normal), la fecha del pago es hoy y la regla se comporta
+  // exactamente como el 4 de agosto.
   //
   // Adelantar un pago del ciclo que VIENE se queda como estaba, a propósito
   // (decisión del Director, 4 ago 2026): ahí el gasto pertenece al
   // presupuesto del ciclo que se está adelantando, y moverlo obligaría además
   // a que ese ciclo dejara de contarlo en su proyección.
-  const vieneDeUnCicloCerrado = compromiso.cicloId !== cicloActual.id &&
-    cicloDelCompromiso.fechaFin < hoyTexto;
-  const cicloDelGasto = vieneDeUnCicloCerrado ? cicloActual : cicloDelCompromiso;
+  const vieneDeUnCicloCerrado = compromiso.cicloId !== cicloDeLaFechaDelPago.id &&
+    cicloDelCompromiso.fechaFin < fechaDelGasto;
+  const cicloDelGasto = vieneDeUnCicloCerrado ? cicloDeLaFechaDelPago : cicloDelCompromiso;
 
   datos.gastos.push({
     id: generarId("gas"),
     cicloId: cicloDelGasto.id,
-    semana: calcularSemanaDeLaFecha(hoyTexto, cicloDelGasto),
-    fecha: hoyTexto,
+    semana: calcularSemanaDeLaFecha(fechaDelGasto, cicloDelGasto),
+    fecha: fechaDelGasto,
+    // La hora es siempre la del momento en que se captura: de un pago de hace
+    // tres días no hay forma de saberla, y solo se usa para ordenar dentro
+    // del día. Inventar un "12:00" no sería más cierto y sí más engañoso.
     hora: String(ahora.getHours()).padStart(2, "0") + ":" + String(ahora.getMinutes()).padStart(2, "0"),
     monto: montoReal,
     categoriaId: categoriaId,
@@ -764,8 +791,42 @@ let pasoAlQueRegresaElPago = PASO_OPCIONES;
 // llevaría a una pantalla por la que nunca se pasó.
 let pasoAlQueRegresaElGasto = PASO_SUBCATEGORIA;
 // Qué campo de texto está abierto ocupando el lugar del teclado numérico.
+// Vale "descripcion" o "fecha", o null cuando se ve el teclado.
 let campoDeTextoAbierto = null;
 let elTicketDebeEntrarImprimiendose = false;
+
+// Cuándo ocurrió de verdad lo que se está capturando.
+//
+// Va en null mientras sea hoy, que es el caso normal, y solo guarda un texto
+// de fecha cuando el Director dice otra cosa. Guardar null en vez del texto
+// de hoy importa: con la app abierta toda la noche, un "2026-08-11" fijado al
+// abrirla seguiría diciendo 11 después de la medianoche.
+//
+// A diferencia del resto del estado, esta NO se limpia al desprenderse el
+// ticket: cuando se suben dos o tres días juntos, todos los gastos suelen ser
+// del mismo día, y volver a elegirlo en cada ticket haría que la opción se
+// dejara de usar. El precio es que la fecha se queda puesta sin que nadie la
+// haya vuelto a tocar, y por eso la cabecera la marca en ámbar mientras no
+// sea hoy — en todos los pasos, no solo en el del monto.
+let fechaElegidaEnElTicket = null;
+
+// Cuántos días atrás ofrece el panel como botón. Seis, en dos filas de tres:
+// cubre el caso real (se juntaron unos días) y es lo que cabe en el hueco del
+// teclado de un iPhone SE sin obligar a hacer scroll — se midió, y con siete
+// no cabía. Para ir más atrás está el campo de fecha del sistema, sin tope.
+const DIAS_EN_EL_PANEL_DE_FECHAS = 6;
+
+// La fecha con la que se va a guardar. Es la única que deben usar los
+// guardados: nunca "new Date()" directo.
+function fechaDelTicket() {
+  return fechaElegidaEnElTicket || formatearFechaISO(new Date());
+}
+
+// Si el ticket está apuntando a un día que no es hoy. Es lo que enciende la
+// marca ámbar de la cabecera.
+function elTicketVaAOtroDia() {
+  return fechaDelTicket() !== formatearFechaISO(new Date());
+}
 
 // "Otros" no es variable, pero sí es gasto libre: es la salida para lo que no
 // encaja en ninguna categoría y nunca va a tener un compromiso detrás. Ahí
@@ -875,14 +936,38 @@ function guardarGastoDelTicket() {
   }
 
   const ahora = new Date();
-  const cicloActual = asegurarCicloActual();
+  const fechaDelGasto = fechaDelTicket();
+
+  // El ciclo del gasto sale de SU fecha, no del reloj. Un gasto del 28 de
+  // julio capturado en agosto pertenece al ciclo de julio: ahí se hizo y ahí
+  // se gastó el presupuesto. Crear el ciclo escribe en localStorage, así que
+  // esto va antes del leerDatos() de la línea siguiente.
+  const cicloDelGasto = obtenerOCrearCicloParaFecha(crearFechaLocal(fechaDelGasto));
+
+  // Un gasto que cae fuera del ciclo en curso mueve números de un ciclo que
+  // ya se dio por cerrado (su semáforo, su cierre, su Estudio). No se
+  // prohíbe —a veces es justo lo que hay que hacer— pero no puede pasar en
+  // silencio por un día mal elegido.
+  if (cicloDelGasto.id !== asegurarCicloActual().id) {
+    const continuar = confirm(
+      "Este gasto va a contar en el ciclo del " +
+      formatearDiaYMes(cicloDelGasto.fechaInicio) + " al " +
+      formatearDiaYMes(cicloDelGasto.fechaFin) + ", no en el actual.\n\n¿Guardarlo ahí?"
+    );
+    if (!continuar) {
+      return;
+    }
+  }
+
   const datos = leerDatos();
 
   datos.gastos.push({
     id: generarId("gas"),
-    cicloId: cicloActual.id,
-    semana: calcularSemanaDeLaFecha(formatearFechaISO(ahora), cicloActual),
-    fecha: formatearFechaISO(ahora),
+    cicloId: cicloDelGasto.id,
+    semana: calcularSemanaDeLaFecha(fechaDelGasto, cicloDelGasto),
+    fecha: fechaDelGasto,
+    // Siempre la hora de captura: de un gasto de anteayer no se conoce, y
+    // solo sirve para ordenar los movimientos dentro de su día.
     hora: String(ahora.getHours()).padStart(2, "0") + ":" + String(ahora.getMinutes()).padStart(2, "0"),
     monto: monto,
     categoriaId: categoriaSeleccionadaGasto,
@@ -918,7 +1003,12 @@ function guardarPagoDelTicket() {
     return;
   }
 
-  const resultado = registrarPagoDeCompromiso(compromisoQueSeEstaPagando, monto, fuenteSeleccionadaGasto);
+  const resultado = registrarPagoDeCompromiso(
+    compromisoQueSeEstaPagando,
+    monto,
+    fuenteSeleccionadaGasto,
+    fechaDelTicket()
+  );
 
   if (!resultado.guardado) {
     return;
@@ -953,16 +1043,41 @@ function cerrarElTicketYEmpezarOtro() {
 
 // Cabecera común: la flecha para regresar, a dónde va lo que se está
 // capturando, y la fecha en la esquina como en cualquier recibo.
-function htmlCabeceraDelTicket(titulo, color, conFlecha) {
-  const hoy = new Date();
-  const fecha = DIAS_SEMANA_ABREVIADOS[hoy.getDay()] + " " + hoy.getDate() + " " + MESES_ABREVIADOS[hoy.getMonth()];
+//
+// Esa fecha de la esquina dejó de ser decorativa: es el día al que se va a
+// apuntar el gasto. En los pasos donde ya hay un monto que guardar
+// (fechaTocable) se puede tocar para cambiarla; en los demás solo se ve, y si
+// está apuntando a otro día se ve marcada y tocarla la devuelve a hoy.
+function htmlCabeceraDelTicket(titulo, color, conFlecha, fechaTocable) {
+  const enOtroDia = elTicketVaAOtroDia();
+  const textoDeLaFecha = etiquetaCortaDeFecha(fechaDelTicket());
+
+  let fecha = "";
+  if (fechaTocable) {
+    fecha = "<button type=\"button\" class=\"ticket-fecha mono" + (enOtroDia ? " desfasada" : "") + "\"" +
+      " data-accion=\"abrir-fecha\">" + escaparHTML(textoDeLaFecha) + "</button>";
+  } else if (enOtroDia) {
+    // Fuera del paso del monto no hay panel que abrir, así que el único
+    // gesto útil es deshacer: un toque y el ticket vuelve a hoy.
+    fecha = "<button type=\"button\" class=\"ticket-fecha mono desfasada\"" +
+      " data-accion=\"volver-a-hoy\">" + escaparHTML(textoDeLaFecha) + " ✕</button>";
+  } else {
+    fecha = "<span class=\"ticket-fecha mono\">" + escaparHTML(textoDeLaFecha) + "</span>";
+  }
 
   return "<div class=\"ticket-cabecera\">" +
     (conFlecha ? "<button type=\"button\" class=\"boton-atras\" data-accion=\"atras\" aria-label=\"Regresar un paso\">←</button>" : "") +
     (color ? "<span class=\"marca-categoria\" style=\"--color-categoria: " + color + ";\"></span>" : "") +
     "<span class=\"ticket-titulo\">" + titulo + "</span>" +
-    "<span class=\"ticket-fecha mono\">" + fecha + "</span>" +
+    fecha +
   "</div>";
+}
+
+// "vie 8 ago", el formato de la esquina del recibo. Es el mismo de siempre,
+// solo que ahora se le puede pedir cualquier fecha y no únicamente hoy.
+function etiquetaCortaDeFecha(fechaTexto) {
+  const fecha = crearFechaLocal(fechaTexto);
+  return DIAS_SEMANA_ABREVIADOS[fecha.getDay()] + " " + fecha.getDate() + " " + MESES_ABREVIADOS[fecha.getMonth()];
 }
 
 // Una rejilla de botones grandes. Se usa para categorías, subcategorías,
@@ -1638,7 +1753,7 @@ function htmlPasoMonto() {
     titulo = escaparHTML(categoria.nombre) + " · " + escaparHTML(subcategoriaSeleccionadaGasto);
   }
 
-  return htmlCabeceraDelTicket(titulo, color, true) +
+  return htmlCabeceraDelTicket(titulo, color, true, true) +
     htmlDelRenglonInformativo(
       categoriaDelRenglon,
       fuenteSeleccionadaGasto,
@@ -1648,7 +1763,7 @@ function htmlPasoMonto() {
     htmlDelMonto() +
     htmlDeLaFuente(datos, esPago) +
     (esPago ? "" : htmlDeLosDetalles(datos)) +
-    (campoDeTextoAbierto ? htmlDelCampoDeTexto() : htmlDelTeclado()) +
+    htmlDelPieDelTicket() +
     "<button type=\"button\" class=\"boton-guardar-ticket\" data-accion=\"guardar\"" +
       (montoDelTicketComoNumero() > 0 ? "" : " disabled") + ">" +
       (esPago ? "Confirmar pago" : "Guardar") +
@@ -1771,6 +1886,53 @@ function htmlDelTeclado() {
         (esBorrar ? "⌫" : tecla) +
       "</button>";
     }).join("") +
+  "</div>";
+}
+
+// Abajo del todo va siempre una de tres cosas, nunca dos: el teclado
+// numérico, el campo de descripción o el panel de fechas. Los dos últimos
+// ocupan el hueco del teclado en vez de sumarse a la pantalla — es lo que
+// mantiene el ticket sin scroll.
+function htmlDelPieDelTicket() {
+  if (campoDeTextoAbierto === "fecha") {
+    return htmlDelPanelDeFechas();
+  }
+  if (campoDeTextoAbierto) {
+    return htmlDelCampoDeTexto();
+  }
+  return htmlDelTeclado();
+}
+
+// El panel para decir qué día fue. Los últimos días como botones —con sus
+// nombres de siempre, "Hoy", "Ayer", "sáb 9 ago"— y al pie el campo de fecha
+// del sistema para cualquier otro día.
+//
+// No lleva rótulo ni título: el panel sale de tocar la fecha, así que ya se
+// sabe de qué se está hablando, y ese renglón era alto que no sobra.
+//
+// El campo lleva tope en hoy: un gasto futuro no es un gasto, es un plan, y
+// para eso ya existen los compromisos.
+function htmlDelPanelDeFechas() {
+  const hoyTexto = formatearFechaISO(new Date());
+  const elegida = fechaDelTicket();
+
+  let botones = "";
+  for (let diasAtras = 0; diasAtras < DIAS_EN_EL_PANEL_DE_FECHAS; diasAtras++) {
+    const fecha = formatearFechaISO(sumarDias(crearFechaLocal(hoyTexto), -diasAtras));
+    botones += "<button type=\"button\" class=\"dia-panel" + (fecha === elegida ? " activo" : "") + "\"" +
+      " data-accion=\"elegir-fecha\" data-fecha=\"" + fecha + "\">" +
+      escaparHTML(nombreDelDiaDeMovimientos(fecha)) +
+    "</button>";
+  }
+
+  return "<div class=\"panel-fechas\">" +
+    "<div class=\"dias-panel\">" + botones + "</div>" +
+    "<div class=\"pie-panel-fechas\">" +
+      "<label class=\"otro-dia\">Otro día" +
+        "<input type=\"date\" data-campo=\"fecha\" max=\"" + hoyTexto + "\" value=\"" + elegida + "\">" +
+      "</label>" +
+      "<button type=\"button\" class=\"boton-listo\" data-accion=\"cerrar-fecha\">Listo</button>" +
+    "</div>" +
   "</div>";
 }
 
@@ -2128,6 +2290,36 @@ function manejarToqueEnElTicket(evento) {
     return;
   }
 
+  // El panel de fechas ocupa el lugar del teclado, igual que la descripción.
+  if (accion === "abrir-fecha") {
+    campoDeTextoAbierto = "fecha";
+    renderizarTicket();
+    return;
+  }
+
+  if (accion === "cerrar-fecha") {
+    campoDeTextoAbierto = null;
+    renderizarTicket();
+    return;
+  }
+
+  // Elegir el día cierra el panel de una vez: es un solo dato y ya está
+  // dado, dejar el panel abierto obligaría a un toque de más.
+  if (accion === "elegir-fecha") {
+    fijarLaFechaDelTicket(boton.getAttribute("data-fecha"));
+    campoDeTextoAbierto = null;
+    renderizarTicket();
+    return;
+  }
+
+  // La marca ámbar de la cabecera, fuera del paso del monto: deshace el día
+  // elegido y devuelve el ticket a hoy.
+  if (accion === "volver-a-hoy") {
+    fechaElegidaEnElTicket = null;
+    renderizarTicket();
+    return;
+  }
+
   if (accion === "guardar") {
     if (pasoDelTicket === PASO_PAGO) {
       guardarPagoDelTicket();
@@ -2212,4 +2404,25 @@ function manejarCambioEnElTicket(evento) {
   if (evento.target.getAttribute("data-campo") === "destinatario") {
     destinatarioElegidoEnElTicket = evento.target.value;
   }
+
+  // El campo de fecha del sistema. A diferencia de los botones del panel,
+  // este no lo cierra: el usuario puede seguir ajustando el día antes de
+  // darle a "Listo", y redibujar mientras la rueda está abierta la cerraría.
+  if (evento.target.getAttribute("data-campo") === "fecha") {
+    fijarLaFechaDelTicket(evento.target.value);
+  }
+}
+
+// Guarda el día elegido, con dos cuidados: hoy se guarda como null (para que
+// siga siendo hoy si la app pasa la medianoche abierta) y una fecha futura o
+// vacía se ignora en vez de guardarse a medias — el campo del sistema entrega
+// valores incompletos mientras se teclea.
+function fijarLaFechaDelTicket(fechaTexto) {
+  const hoyTexto = formatearFechaISO(new Date());
+
+  if (!fechaTexto || fechaTexto > hoyTexto) {
+    return;
+  }
+
+  fechaElegidaEnElTicket = fechaTexto === hoyTexto ? null : fechaTexto;
 }
